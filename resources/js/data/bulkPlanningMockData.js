@@ -1,0 +1,42 @@
+export const savedPlansMockData = [
+  {
+    id: 1,
+    name: 'week 34',
+    weekLabel: 'Week 27, 2026',
+    recipeCount: 3,
+    status: 'draft',
+    recipes: [],
+  },
+  {
+    id: 2,
+    name: 'Aoife Wedding',
+    weekLabel: 'Week 25, 2026',
+    recipeCount: 5,
+    status: 'draft',
+    recipes: [],
+  },
+  {
+    id: 3,
+    name: 'Week 23',
+    weekLabel: 'Week 24, 2026',
+    recipeCount: 3,
+    status: 'draft',
+    recipes: [],
+  },
+  {
+    id: 4,
+    name: 'Plan 6/1/2026',
+    weekLabel: 'Week 24, 2026',
+    recipeCount: 3,
+    status: 'draft',
+    recipes: [],
+  },
+  {
+    id: 5,
+    name: 'Plan 6/1/2026',
+    weekLabel: '',
+    recipeCount: 3,
+    status: 'draft',
+    recipes: [],
+  },
+];
