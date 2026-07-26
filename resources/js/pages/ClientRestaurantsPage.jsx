@@ -19,7 +19,7 @@ import {
 import { useAuth } from '../features/auth/hooks/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import Modal from '../components/common/Modal';
+
 import StatusBadge from '../components/common/StatusBadge';
 import EmptyState from '../components/common/EmptyState';
 import Loader from '../components/common/Loader';
@@ -31,28 +31,31 @@ const ClientRestaurantsPage = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [clientInfo, setClientInfo] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [form, setForm] = useState({
-    restaurantName: '', branchName: '', registrationNumber: '',
-    addressLine1: '', addressLine2: '', city: '', county: '',
-    postalCode: '', country: 'Ireland', contactPerson: '',
-    phone: '', email: '', foodBusinessType: 'Restaurant',
-    openingTime: '09:00', closingTime: '22:00',
-    haccpResponsiblePerson: '', notes: '',
-  });
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const [rests, clients] = await Promise.all([
         getRestaurantsByClient(user.id),
-        getClients(),
+        getClients().catch(() => []),
       ]);
       setRestaurants(rests);
-      const myClient = clients.find((c) => c.id === user.id);
+      let myClient = clients.find((c) => c.id === user.id || c.email === user.email);
+
+      // Fallback to database tenant relation from Laravel Auth
+      if (!myClient && user?.tenant) {
+        myClient = {
+          id: user.tenant_id,
+          clientName: user.name,
+          businessName: user.tenant.name,
+          email: user.email,
+          restaurantLimit: user.tenant.restaurant_limit,
+          subscriptionPlan: user.tenant.subscription_plan,
+          status: user.tenant.status,
+        };
+      }
+
       setClientInfo(myClient || null);
     } catch (err) {
       console.error('Failed to load restaurants:', err);
@@ -72,46 +75,7 @@ const ClientRestaurantsPage = () => {
   const canAdd = clientInfo && restaurants.length < clientInfo.restaurantLimit;
   const remaining = clientInfo ? clientInfo.restaurantLimit - restaurants.length : 0;
 
-  const resetForm = () => {
-    setForm({
-      restaurantName: '', branchName: '', registrationNumber: '',
-      addressLine1: '', addressLine2: '', city: '', county: '',
-      postalCode: '', country: 'Ireland', contactPerson: '',
-      phone: '', email: '', foodBusinessType: 'Restaurant',
-      openingTime: '09:00', closingTime: '22:00',
-      haccpResponsiblePerson: '', notes: '',
-    });
-    setError('');
-  };
 
-  const handleOpenModal = () => {
-    resetForm();
-    setModalOpen(true);
-  };
-
-  const handleSaveRestaurant = async () => {
-    setError('');
-    if (!form.restaurantName.trim()) { setError('Restaurant name is required.'); return; }
-    if (!form.addressLine1.trim()) { setError('Address is required.'); return; }
-    if (!form.city.trim()) { setError('City is required.'); return; }
-    if (!form.country.trim()) { setError('Country is required.'); return; }
-    if (!form.contactPerson.trim()) { setError('Contact person is required.'); return; }
-    if (!form.phone.trim()) { setError('Phone is required.'); return; }
-    if (!form.email.trim()) { setError('Email is required.'); return; }
-
-    setSaving(true);
-    try {
-      await createRestaurant(user.id, form);
-      setModalOpen(false);
-      setSuccess('Restaurant added successfully!');
-      setTimeout(() => setSuccess(''), 3000);
-      fetchData();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleEnterDashboard = (restaurant) => {
     selectRestaurant(restaurant);
@@ -177,7 +141,7 @@ const ClientRestaurantsPage = () => {
 
             {/* Add Button / Limit Warning */}
             <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <Button variant="primary" icon={Plus} onClick={handleOpenModal} disabled={!canAdd}>
+              <Button variant="primary" icon={Plus} onClick={() => router.visit('/client/restaurants/create')} disabled={!canAdd}>
                 Add Restaurant
               </Button>
               {!canAdd && (
@@ -227,111 +191,7 @@ const ClientRestaurantsPage = () => {
         )}
       </main>
 
-      {/* Add Restaurant Modal */}
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="Add Restaurant"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleSaveRestaurant} disabled={saving}>
-              {saving ? 'Saving...' : 'Add Restaurant'}
-            </Button>
-          </>
-        }
-      >
-        {error && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-red-pale)', border: '1px solid var(--color-red-border)', color: 'var(--color-danger)', fontSize: '13px', marginBottom: '16px' }}>
-            <AlertCircle size={14} /><span>{error}</span>
-          </div>
-        )}
-        <div className="form-group">
-          <label className="form-label">Restaurant Name <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-          <input className="form-input" value={form.restaurantName} onChange={(e) => setForm({ ...form, restaurantName: e.target.value })} placeholder="e.g. Aoife Bistro" />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Branch / Location Name</label>
-          <input className="form-input" value={form.branchName} onChange={(e) => setForm({ ...form, branchName: e.target.value })} placeholder="e.g. Dublin Central" />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Registration Number</label>
-          <input className="form-input" value={form.registrationNumber} onChange={(e) => setForm({ ...form, registrationNumber: e.target.value })} placeholder="e.g. CRO123456" />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Address Line 1 <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-          <input className="form-input" value={form.addressLine1} onChange={(e) => setForm({ ...form, addressLine1: e.target.value })} placeholder="Street address" />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Address Line 2</label>
-          <input className="form-input" value={form.addressLine2} onChange={(e) => setForm({ ...form, addressLine2: e.target.value })} placeholder="Apt, suite, etc." />
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">City / Town <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-            <input className="form-input" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Dublin" />
-          </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">County / State</label>
-            <input className="form-input" value={form.county} onChange={(e) => setForm({ ...form, county: e.target.value })} placeholder="Dublin" />
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Postal Code</label>
-            <input className="form-input" value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} placeholder="D01 AB12" />
-          </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Country <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-            <input className="form-input" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder="Ireland" />
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Contact Person <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-          <input className="form-input" value={form.contactPerson} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} placeholder="Manager name" />
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Phone <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-            <input className="form-input" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+353 123456789" />
-          </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Email <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-            <input className="form-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="manager@restaurant.com" />
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Food Business Type</label>
-          <select className="form-select" value={form.foodBusinessType} onChange={(e) => setForm({ ...form, foodBusinessType: e.target.value })}>
-            <option value="Restaurant">Restaurant</option>
-            <option value="Cafe">Cafe</option>
-            <option value="Cloud Kitchen">Cloud Kitchen</option>
-            <option value="Catering Unit">Catering Unit</option>
-            <option value="Hotel Kitchen">Hotel Kitchen</option>
-            <option value="Bakery">Bakery</option>
-            <option value="Takeaway">Takeaway</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Opening Time</label>
-            <input className="form-input" type="time" value={form.openingTime} onChange={(e) => setForm({ ...form, openingTime: e.target.value })} />
-          </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Closing Time</label>
-            <input className="form-input" type="time" value={form.closingTime} onChange={(e) => setForm({ ...form, closingTime: e.target.value })} />
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">HACCP Responsible Person</label>
-          <input className="form-input" value={form.haccpResponsiblePerson} onChange={(e) => setForm({ ...form, haccpResponsiblePerson: e.target.value })} placeholder="Person responsible for HACCP" />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Notes</label>
-          <textarea className="form-textarea" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Additional notes..." />
-        </div>
-      </Modal>
+
     </div>
   );
 };

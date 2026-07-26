@@ -21,7 +21,7 @@ class TenantController extends Controller
             return [
                 'id' => 'TN' . str_pad($tenant->id, 3, '0', STR_PAD_LEFT),
                 'real_id' => $tenant->id,
-                'tenantName' => $owner ? $owner->name : 'N/A',
+                'TenantName' => $owner ? $owner->name : 'N/A',
                 'businessName' => $tenant->name,
                 'email' => $owner ? $owner->email : 'N/A',
                 'phone' => null,
@@ -39,12 +39,11 @@ class TenantController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'tenantName' => 'required|string',
+            'TenantName' => 'required|string',
             'businessName' => 'required|string',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
             'restaurantLimit' => 'required|integer|min:1',
-            'subscriptionPlan' => 'required|string',
             'status' => 'required|string',
         ]);
 
@@ -53,12 +52,12 @@ class TenantController extends Controller
             $tenant = Tenant::create([
                 'name' => $request->businessName,
                 'restaurant_limit' => $request->restaurantLimit,
-                'subscription_plan' => $request->subscriptionPlan,
+                'subscription_plan' => 'Standard',
                 'status' => $request->status,
             ]);
 
             $user = User::create([
-                'name' => $request->tenantName,
+                'name' => $request->TenantName,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'role' => 'client',
@@ -78,11 +77,10 @@ class TenantController extends Controller
         $tenant = Tenant::findOrFail($id);
         
         $request->validate([
-            'tenantName' => 'required|string',
+            'TenantName' => 'required|string',
             'businessName' => 'required|string',
             'email' => 'required|email',
             'restaurantLimit' => 'required|integer|min:1',
-            'subscriptionPlan' => 'required|string',
             'status' => 'required|string',
         ]);
 
@@ -91,13 +89,12 @@ class TenantController extends Controller
             $tenant->update([
                 'name' => $request->businessName,
                 'restaurant_limit' => $request->restaurantLimit,
-                'subscription_plan' => $request->subscriptionPlan,
                 'status' => $request->status,
             ]);
 
             $owner = $tenant->users()->where('role', 'client')->first();
             if ($owner) {
-                $owner->name = $request->tenantName;
+                $owner->name = $request->TenantName;
                 if ($owner->email !== $request->email) {
                     $request->validate(['email' => 'unique:users,email']);
                     $owner->email = $request->email;

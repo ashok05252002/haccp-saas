@@ -72,7 +72,7 @@ const SuperAdminTenantsPage = () => {
   const handleOpenCreate = () => { resetForm(); setModalOpen(true); };
 
   const handleOpenEdit = (Tenant) => {
-    setEditId(Tenant.id);
+    setEditId(Tenant.real_id);
     setForm({
       TenantName: Tenant.TenantName,
       businessName: Tenant.businessName || '',
@@ -126,24 +126,32 @@ const SuperAdminTenantsPage = () => {
     }
   };
 
-  const handleToggleStatus = async (TenantId) => {
-    try {
-      await toggleTenantStatus(TenantId);
-      fetchTenants();
-    } catch (err) {
-      console.error(err);
+  const handleToggleStatus = async (tenant) => {
+    const action = tenant.status === 'Active' ? 'suspend' : 'activate';
+    if (!window.confirm(`Are you sure you want to ${action} the tenant "${tenant.businessName}"?`)) {
+      return;
     }
-  };
-
-  const handleDelete = async (TenantId) => {
-    if (!window.confirm('Are you sure you want to delete this Tenant?')) return;
     try {
-      await deleteTenant(TenantId);
-      setSuccess('Tenant deleted.');
+      await toggleTenantStatus(tenant.real_id);
+      setSuccess(`Tenant status changed to ${tenant.status === 'Active' ? 'Suspended' : 'Active'} successfully!`);
       setTimeout(() => setSuccess(''), 3000);
       fetchTenants();
     } catch (err) {
       console.error(err);
+      setError('Failed to toggle status.');
+    }
+  };
+
+  const handleDelete = async (tenant) => {
+    if (!window.confirm(`Are you sure you want to delete the tenant "${tenant.businessName}"?`)) return;
+    try {
+      await deleteTenant(tenant.real_id);
+      setSuccess('Tenant deleted successfully.');
+      setTimeout(() => setSuccess(''), 3000);
+      fetchTenants();
+    } catch (err) {
+      console.error(err);
+      setError('Failed to delete tenant.');
     }
   };
 
@@ -196,13 +204,6 @@ const SuperAdminTenantsPage = () => {
             <option value="Active">Active</option>
             <option value="Suspended">Suspended</option>
           </select>
-          <select className="form-select" value={planFilter} onChange={(e) => setPlanFilter(e.target.value)} style={{ width: '160px' }}>
-            <option value="all">All Plans</option>
-            <option value="Basic">Basic</option>
-            <option value="Standard">Standard</option>
-            <option value="Premium">Premium</option>
-            <option value="Enterprise">Enterprise</option>
-          </select>
           <Button variant="primary" icon={Plus} onClick={handleOpenCreate}>Create Tenant</Button>
         </div>
 
@@ -221,10 +222,9 @@ const SuperAdminTenantsPage = () => {
                     <th style={styles.th}>Tenant Name</th>
                     <th style={styles.th}>Business</th>
                     <th style={styles.th}>Email</th>
-                    <th style={styles.th}>Plan</th>
                     <th style={styles.th}>Status</th>
                     <th style={styles.th}>Rest. Limit</th>
-                    <th style={styles.th}>Created</th>
+                    <th style={styles.th}>Phone</th>
                     <th style={styles.th}>Created</th>
                     <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
                   </tr>
@@ -237,11 +237,6 @@ const SuperAdminTenantsPage = () => {
                       <td style={styles.td}>{Tenant.businessName || '—'}</td>
                       <td style={styles.td}>{Tenant.email}</td>
                       <td style={styles.td}>
-                        <span style={{ ...styles.planBadge, backgroundColor: planColors[Tenant.subscriptionPlan]?.bg || '#F3F4F6', color: planColors[Tenant.subscriptionPlan]?.text || '#374151' }}>
-                          {Tenant.subscriptionPlan}
-                        </span>
-                      </td>
-                      <td style={styles.td}>
                         <StatusBadge label={Tenant.status} type={Tenant.status === 'Active' ? 'success' : 'warning'} />
                       </td>
                       <td style={styles.td}>{Tenant.restaurantsCreated || 0} / {Tenant.restaurantLimit}</td>
@@ -249,11 +244,12 @@ const SuperAdminTenantsPage = () => {
                       <td style={styles.td}>{Tenant.createdAt}</td>
                       <td style={{ ...styles.td, textAlign: 'right' }}>
                         <div style={styles.actions}>
+                          <button onClick={() => router.visit(`/tenants/${Tenant.real_id}`)} style={styles.actionBtn} title="View"><Eye size={14} /></button>
                           <button onClick={() => handleOpenEdit(Tenant)} style={styles.actionBtn} title="Edit"><Pencil size={14} /></button>
-                          <button onClick={() => handleToggleStatus(Tenant.id)} style={styles.actionBtn} title={Tenant.status === 'Active' ? 'Suspend' : 'Activate'}>
+                          <button onClick={() => handleToggleStatus(Tenant)} style={styles.actionBtn} title={Tenant.status === 'Active' ? 'Suspend' : 'Activate'}>
                             {Tenant.status === 'Active' ? <ToggleRight size={14} color="var(--color-primary)" /> : <ToggleLeft size={14} color="var(--color-warning)" />}
                           </button>
-                          <button onClick={() => handleDelete(Tenant.id)} style={{ ...styles.actionBtn, color: 'var(--color-danger)' }} title="Delete"><Trash2 size={14} /></button>
+                          <button onClick={() => handleDelete(Tenant)} style={{ ...styles.actionBtn, color: 'var(--color-danger)' }} title="Delete"><Trash2 size={14} /></button>
                         </div>
                       </td>
                     </tr>
@@ -317,20 +313,9 @@ const SuperAdminTenantsPage = () => {
             </div>
           </div>
         )}
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Restaurant Limit <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-            <input className="form-input" type="number" min="1" value={form.restaurantLimit} onChange={(e) => setForm({ ...form, restaurantLimit: e.target.value })} />
-          </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Plan</label>
-            <select className="form-select" value={form.subscriptionPlan} onChange={(e) => setForm({ ...form, subscriptionPlan: e.target.value })}>
-              <option value="Basic">Basic</option>
-              <option value="Standard">Standard</option>
-              <option value="Premium">Premium</option>
-              <option value="Enterprise">Enterprise</option>
-            </select>
-          </div>
+        <div className="form-group">
+          <label className="form-label">Restaurant Limit <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+          <input className="form-input" type="number" min="1" value={form.restaurantLimit} onChange={(e) => setForm({ ...form, restaurantLimit: e.target.value })} />
         </div>
         <div className="form-group">
           <label className="form-label">Status</label>

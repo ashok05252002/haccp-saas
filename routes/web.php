@@ -24,6 +24,12 @@ Route::domain('admin.' . parse_url(config('app.url'), PHP_URL_HOST))->group(func
             return Inertia::render('SuperAdminTenantsPage');
         })->name('super-admin.tenants');
 
+        Route::get('/tenants/{tenant}', function (\App\Models\Tenant $tenant) {
+            return Inertia::render('SuperAdminTenantViewPage', [
+                'tenant' => $tenant->load('users'),
+            ]);
+        })->name('super-admin.tenants.view');
+
         // Tenant API routes
         Route::get('/api/tenants', [TenantController::class, 'index']);
         Route::post('/api/tenants', [TenantController::class, 'store']);
@@ -42,6 +48,10 @@ Route::middleware(['auth', 'role:client'])->group(function () {
     Route::get('/client/restaurants', function () {
         return Inertia::render('ClientRestaurantsPage');
     })->name('client.restaurants');
+
+    Route::get('/client/restaurants/create', function () {
+        return Inertia::render('ClientCreateRestaurantPage');
+    })->name('client.restaurants.create');
 
     Route::get('/dashboard', function () {
         return Inertia::render('DashboardPage');

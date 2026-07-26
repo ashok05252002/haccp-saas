@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import { Mail, Info } from 'lucide-react';
+import axios from 'axios';
 import AuthLayout from '../features/auth/components/AuthLayout';
 import ClientBranding from '../features/auth/components/ClientBranding';
 import PasswordInput from '../components/ui/PasswordInput';
 
 const LoginPage = () => {
-  const { data, setData, post, processing, errors } = useForm({
+  const [submitting, setSubmitting] = useState(false);
+  const { data, setData, errors, setError, clearErrors } = useForm({
     email: '',
     password: '',
     remember: false,
@@ -14,7 +16,28 @@ const LoginPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    post('/login');
+    clearErrors();
+    setSubmitting(true);
+
+    axios.post('/login', {
+      email: data.email,
+      password: data.password,
+      remember: data.remember,
+    })
+    .then(response => {
+      window.location.href = response.data.redirectUrl || '/client/restaurants';
+    })
+    .catch(err => {
+      setSubmitting(false);
+      if (err.response && err.response.status === 422) {
+        const backendErrors = err.response.data.errors;
+        Object.keys(backendErrors).forEach((key) => {
+          setError(key, backendErrors[key][0]);
+        });
+      } else {
+        setError('email', 'Authentication failed. Please check your credentials or network connection.');
+      }
+    });
   };
 
   return (
@@ -52,9 +75,14 @@ const LoginPage = () => {
                 value={data.email}
                 onChange={(e) => setData('email', e.target.value)}
                 placeholder="client@demo.com"
-                style={{ paddingLeft: 38, width: '100%', boxSizing: 'border-box' }}
+                style={{ paddingLeft: 38, width: '100%', boxSizing: 'border-box', borderColor: errors.email ? 'var(--color-danger)' : undefined }}
               />
             </div>
+            {errors.email && (
+              <span style={{ color: 'var(--color-danger)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                {errors.email}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
@@ -62,7 +90,13 @@ const LoginPage = () => {
             <PasswordInput 
               value={data.password} 
               onChange={(e) => setData('password', e.target.value)} 
+              style={errors.password ? { borderColor: 'var(--color-danger)' } : undefined}
             />
+            {errors.password && (
+              <span style={{ color: 'var(--color-danger)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                {errors.password}
+              </span>
+            )}
           </div>
 
           <div style={styles.optionsRow}>
@@ -83,28 +117,13 @@ const LoginPage = () => {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={processing}
+            disabled={submitting}
             style={{ width: '100%', padding: '12px', fontSize: '15px', marginTop: '4px', boxSizing: 'border-box' }}
           >
-            {processing ? 'Signing in...' : 'Sign In'}
+            {submitting ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        {/* Demo credentials */}
-        <div style={styles.demoBox}>
-          <div style={styles.demoHeader}>
-            <Info size={16} color="var(--color-primary)" />
-            <span style={styles.demoTitle}>Demo Client Credentials</span>
-          </div>
-          <div style={styles.demoRow}>
-            <span style={styles.demoLabel}>Email:</span>
-            <code style={styles.demoCode}>client@demo.com</code>
-          </div>
-          <div style={styles.demoRow}>
-            <span style={styles.demoLabel}>Password:</span>
-            <code style={styles.demoCode}>client123</code>
-          </div>
-        </div>
 
         {/* Super Admin link */}
         <div style={styles.adminLink}>

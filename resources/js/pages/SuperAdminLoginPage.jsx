@@ -1,19 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import { Mail, Info, Shield } from 'lucide-react';
+import axios from 'axios';
 import AuthLayout from '../features/auth/components/AuthLayout';
 import SuperAdminBranding from '../features/auth/components/SuperAdminBranding';
 import PasswordInput from '../components/ui/PasswordInput';
 
 const SuperAdminLoginPage = () => {
-  const { data, setData, post, processing, errors } = useForm({
+  const [submitting, setSubmitting] = useState(false);
+  const { data, setData, errors, setError, clearErrors } = useForm({
     email: '',
     password: '',
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    post('/login');
+    clearErrors();
+    setSubmitting(true);
+
+    axios.post('/login', {
+      email: data.email,
+      password: data.password,
+    })
+    .then(response => {
+      window.location.href = response.data.redirectUrl || '/dashboard';
+    })
+    .catch(err => {
+      setSubmitting(false);
+      if (err.response && err.response.status === 422) {
+        const backendErrors = err.response.data.errors;
+        Object.keys(backendErrors).forEach((key) => {
+          setError(key, backendErrors[key][0]);
+        });
+      } else {
+        setError('email', 'Authentication failed. Please check your credentials or network connection.');
+      }
+    });
   };
 
   return (
@@ -53,9 +75,14 @@ const SuperAdminLoginPage = () => {
                 value={data.email}
                 onChange={(e) => setData('email', e.target.value)}
                 placeholder="superadmin@chef2comply.com"
-                style={{ paddingLeft: 38, width: '100%', boxSizing: 'border-box' }}
+                style={{ paddingLeft: 38, width: '100%', boxSizing: 'border-box', borderColor: errors.email ? 'var(--color-danger)' : undefined }}
               />
             </div>
+            {errors.email && (
+              <span style={{ color: 'var(--color-danger)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                {errors.email}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
@@ -63,34 +90,25 @@ const SuperAdminLoginPage = () => {
             <PasswordInput 
               value={data.password} 
               onChange={(e) => setData('password', e.target.value)} 
+              style={errors.password ? { borderColor: 'var(--color-danger)' } : undefined}
             />
+            {errors.password && (
+              <span style={{ color: 'var(--color-danger)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                {errors.password}
+              </span>
+            )}
           </div>
 
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={processing}
+            disabled={submitting}
             style={{ width: '100%', justifyContent: 'center', height: '42px', marginTop: '12px', boxSizing: 'border-box' }}
           >
-            {processing ? 'Signing in...' : 'Sign In'}
+            {submitting ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        {/* Demo credentials */}
-        <div style={styles.demoBox}>
-          <div style={styles.demoHeader}>
-            <Info size={16} color="var(--color-primary)" />
-            <span style={styles.demoTitle}>Demo Credentials</span>
-          </div>
-          <div style={styles.demoRow}>
-            <span style={styles.demoLabel}>Email:</span>
-            <code style={styles.demoCode}>superadmin@chef2comply.com</code>
-          </div>
-          <div style={styles.demoRow}>
-            <span style={styles.demoLabel}>Password:</span>
-            <code style={styles.demoCode}>super123</code>
-          </div>
-        </div>
 
         {/* Client login link */}
         <div style={styles.clientLink}>

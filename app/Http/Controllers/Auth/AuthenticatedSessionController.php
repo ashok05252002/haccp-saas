@@ -31,28 +31,52 @@ class AuthenticatedSessionController extends Controller
         ]);
     }
 
-    /**
-     * Handle an incoming authentication request.
-     */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request)
     {
         $request->authenticate();
 
         $user = Auth::user();
+        
+        if ($user->tenant_id) {
+            $tenant = \App\Models\Tenant::find($user->tenant_id);
+            if ($tenant && $tenant->status !== 'Active') {
+                Auth::guard('web')->logout();
+                $error = 'Your account has been deactivated by the admin. Please contact support for more information.';
+                if ($request->wantsJson()) {
+                    return response()->json(['errors' => ['email' => [$error]]], 422);
+                }
+                return back()->withErrors(['email' => $error]);
+            }
+        }
+
         $host = $request->getHost();
         $isAdminSubdomain = str_starts_with($host, 'admin.');
 
         if ($isAdminSubdomain && $user->role !== 'super_admin') {
             Auth::guard('web')->logout();
-            return back()->withErrors(['email' => 'This account does not have Super Admin privileges.']);
+            $error = 'This account does not have Super Admin privileges.';
+            if ($request->wantsJson()) {
+                return response()->json(['errors' => ['email' => [$error]]], 422);
+            }
+            return back()->withErrors(['email' => $error]);
         }
 
         if (!$isAdminSubdomain && $user->role === 'super_admin') {
             Auth::guard('web')->logout();
-            return back()->withErrors(['email' => 'Super Admins must log in through the admin portal.']);
+            $error = 'Super Admins must log in through the admin portal.';
+            if ($request->wantsJson()) {
+                return response()->json(['errors' => ['email' => [$error]]], 422);
+            }
+            return back()->withErrors(['email' => $error]);
         }
 
         $request->session()->regenerate();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'redirectUrl' => $user->role === 'super_admin' ? '/dashboard' : '/client/restaurants'
+            ]);
+        }
 
         if ($user->role === 'super_admin') {
             return redirect()->intended('/dashboard');

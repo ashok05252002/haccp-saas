@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 
-const PasswordInput = ({ value, onChange, placeholder = "Enter password" }) => {
+const PasswordInput = ({ value, onChange, placeholder = "Enter password", style = {}, ...props }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -17,7 +17,14 @@ const PasswordInput = ({ value, onChange, placeholder = "Enter password" }) => {
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        style={{ paddingLeft: 38, paddingRight: 38, width: '100%', boxSizing: 'border-box' }}
+        style={{ 
+          paddingLeft: 38, 
+          paddingRight: 38, 
+          width: '100%', 
+          boxSizing: 'border-box',
+          ...style 
+        }}
+        {...props}
       />
       <button
         type="button"
