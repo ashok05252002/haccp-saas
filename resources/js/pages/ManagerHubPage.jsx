@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -16,6 +16,14 @@ const ManagerHubPage = () => {
       icon: ChefHat, 
       active: true,
       route: '/manager-hub/ingredients'
+    },
+    { 
+      key: 'food-items', 
+      label: 'Food Items', 
+      desc: 'Manage food/menu items, default UOM, and storage type rules.',
+      icon: Package, 
+      active: true,
+      route: '/manager-hub/food-items'
     },
     { 
       key: 'uom', 

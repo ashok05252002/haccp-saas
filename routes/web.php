@@ -7,6 +7,8 @@ use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\IngredientCategoryController;
 use App\Http\Controllers\UomController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\StorageTypeController;
+use App\Http\Controllers\FoodItemController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -128,6 +130,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         ]);
     })->name('manager.hub.suppliers.edit');
 
+    // Food Items Master Page Route
+    Route::get('/manager-hub/food-items', function () {
+        return Inertia::render('FoodItemsPage');
+    })->name('manager.hub.food-items');
+
     // Ingredients API Routes
     Route::get('/api/ingredients', [IngredientController::class, 'index']);
     Route::post('/api/ingredients', [IngredientController::class, 'store']);
@@ -163,6 +170,16 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/suppliers/{id}', [SupplierController::class, 'show']);
     Route::put('/api/suppliers/{id}', [SupplierController::class, 'update']);
     Route::patch('/api/suppliers/{id}/toggle-status', [SupplierController::class, 'toggleStatus']);
+
+    // Storage Types API Routes
+    Route::get('/api/storage-types', [StorageTypeController::class, 'index']);
+    Route::post('/api/storage-types', [StorageTypeController::class, 'store']);
+    Route::put('/api/storage-types/{id}', [StorageTypeController::class, 'update']);
+
+    // Food Items API Routes
+    Route::get('/api/food-items', [FoodItemController::class, 'index']);
+    Route::post('/api/food-items', [FoodItemController::class, 'store']);
+    Route::put('/api/food-items/{id}', [FoodItemController::class, 'update']);
 });
 
 require __DIR__.'/settings.php';
