@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -43,11 +43,19 @@ const ManagerHubPage = () => {
     },
     { 
       key: 'cleaning', 
-      label: 'Cleaning & Sanitation', 
-      desc: 'Manage cleaning spaces, kitchen areas, weekly schedules, and sign-offs.',
+      label: 'Cleaning Areas', 
+      desc: 'Manage cleaning areas, cleaning frequency, instructions, and active status.',
       icon: Sparkles, 
-      active: false,
-      route: null
+      active: true,
+      route: '/manager-hub/cleaning-areas'
+    },
+    { 
+      key: 'cleaning-checklist', 
+      label: 'Cleaning Checklist', 
+      desc: 'Manage cleaning checklist sections, questions, frequencies, and active status.',
+      icon: ClipboardCheck, 
+      active: true,
+      route: '/manager-hub/cleaning-checklist'
     },
   ];
 

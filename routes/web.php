@@ -9,6 +9,9 @@ use App\Http\Controllers\UomController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\StorageTypeController;
 use App\Http\Controllers\FoodItemController;
+use App\Http\Controllers\CleaningAreaController;
+use App\Http\Controllers\CleaningChecklistSectionController;
+use App\Http\Controllers\CleaningChecklistQuestionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -135,6 +138,16 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('FoodItemsPage');
     })->name('manager.hub.food-items');
 
+    // Cleaning Areas Master Page Route
+    Route::get('/manager-hub/cleaning-areas', function () {
+        return Inertia::render('CleaningAreasPage');
+    })->name('manager.hub.cleaning-areas');
+
+    // Cleaning Checklist Master Page Route
+    Route::get('/manager-hub/cleaning-checklist', function () {
+        return Inertia::render('CleaningChecklistPage');
+    })->name('manager.hub.cleaning-checklist');
+
     // Ingredients API Routes
     Route::get('/api/ingredients', [IngredientController::class, 'index']);
     Route::post('/api/ingredients', [IngredientController::class, 'store']);
@@ -180,6 +193,21 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/food-items', [FoodItemController::class, 'index']);
     Route::post('/api/food-items', [FoodItemController::class, 'store']);
     Route::put('/api/food-items/{id}', [FoodItemController::class, 'update']);
+
+    // Cleaning Areas API Routes
+    Route::get('/api/cleaning-areas', [CleaningAreaController::class, 'index']);
+    Route::post('/api/cleaning-areas', [CleaningAreaController::class, 'store']);
+    Route::put('/api/cleaning-areas/{id}', [CleaningAreaController::class, 'update']);
+
+    // Cleaning Checklist Sections API Routes
+    Route::get('/api/cleaning-checklist-sections', [CleaningChecklistSectionController::class, 'index']);
+    Route::post('/api/cleaning-checklist-sections', [CleaningChecklistSectionController::class, 'store']);
+    Route::put('/api/cleaning-checklist-sections/{id}', [CleaningChecklistSectionController::class, 'update']);
+
+    // Cleaning Checklist Questions API Routes
+    Route::get('/api/cleaning-checklist-questions', [CleaningChecklistQuestionController::class, 'index']);
+    Route::post('/api/cleaning-checklist-questions', [CleaningChecklistQuestionController::class, 'store']);
+    Route::put('/api/cleaning-checklist-questions/{id}', [CleaningChecklistQuestionController::class, 'update']);
 });
 
 require __DIR__.'/settings.php';
