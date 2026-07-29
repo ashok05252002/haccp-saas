@@ -20,12 +20,6 @@ import { useAuth } from '../../features/auth/hooks/AuthContext';
 
 const menuItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/haccp-logs', label: 'HACCP Logs', icon: ClipboardCheck },
-  { path: '/haccp-reports', label: 'HACCP Reports', icon: FileBarChart },
-  { path: '/supervisor-review', label: 'Supervisor Review', icon: ShieldCheck },
-  { path: '/recipes', label: 'Recipes', icon: ChefHat },
-  { path: '/calculator', label: 'Calculator', icon: Calculator },
-  { path: '/bulk-planning', label: 'Bulk Planning', icon: CalendarDays },
   { path: '/manager-hub', label: 'Manager Hub', icon: Settings },
 ];
 
@@ -92,10 +86,12 @@ const Sidebar = () => {
         })}
 
         {/* Switch Restaurant */}
-        <button onClick={handleSwitchRestaurant} style={styles.switchBtn}>
-          <ArrowLeftRight size={18} style={{ opacity: 0.8 }} />
-          <span>Switch Restaurant</span>
-        </button>
+        {user?.role === 'client' && (
+          <button onClick={handleSwitchRestaurant} style={styles.switchBtn}>
+            <ArrowLeftRight size={18} style={{ opacity: 0.8 }} />
+            <span>Switch Restaurant</span>
+          </button>
+        )}
       </nav>
 
       {/* User footer */}
@@ -106,7 +102,9 @@ const Sidebar = () => {
           </div>
           <div>
             <div style={styles.userName}>{user?.name || 'User'}</div>
-            <div style={styles.userRole}>Client Admin</div>
+            <div style={styles.userRole}>
+              {user?.role === 'super_admin' ? 'Super Admin' : (user?.role === 'client' ? 'Client Admin' : 'Branch Manager')}
+            </div>
           </div>
         </div>
         <button onClick={handleLogout} style={styles.logoutBtn} title="Logout">

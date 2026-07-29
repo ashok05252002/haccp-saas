@@ -29,10 +29,9 @@ const ClientCreateRestaurantPage = () => {
     contactPerson: '',
     phone: '',
     email: '',
-    foodBusinessType: 'Restaurant',
-    openingTime: '09:00',
-    closingTime: '22:00',
-    haccpResponsiblePerson: '',
+    password: '',
+    confirmPassword: '',
+    branchManager: '',
     notes: '',
   });
 
@@ -51,13 +50,18 @@ const ClientCreateRestaurantPage = () => {
     if (!form.contactPerson.trim()) { setError('Contact person is required.'); return; }
     if (!form.phone.trim()) { setError('Phone is required.'); return; }
     if (!form.email.trim()) { setError('Email is required.'); return; }
+    if (!form.password.trim()) { setError('Password is required.'); return; }
+    if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (form.password !== form.confirmPassword) { setError('Passwords do not match.'); return; }
 
     setSaving(true);
     try {
       await createRestaurant(user.id, form);
       router.visit('/client/restaurants');
     } catch (err) {
-      setError(err.message);
+      // Extract validation message if sent from backend
+      const errMsg = err.response?.data?.message || err.message;
+      setError(errMsg);
     } finally {
       setSaving(false);
     }
@@ -104,7 +108,8 @@ const ClientCreateRestaurantPage = () => {
           )}
 
           <form onSubmit={handleSaveRestaurant}>
-            <div style={styles.formGrid}>
+            <div style={styles.scrollableFormBody}>
+              <div style={styles.formGrid}>
               <div style={styles.fullWidth} className="form-group">
                 <label className="form-label">Restaurant Name <span style={{ color: 'var(--color-danger)' }}>*</span></label>
                 <input
@@ -227,51 +232,35 @@ const ClientCreateRestaurantPage = () => {
                 />
               </div>
 
-              <div style={styles.fullWidth} className="form-group">
-                <label className="form-label">Food Business Type</label>
-                <select
-                  className="form-select"
-                  value={form.foodBusinessType}
-                  onChange={(e) => setForm({ ...form, foodBusinessType: e.target.value })}
-                >
-                  <option value="Restaurant">Restaurant</option>
-                  <option value="Cafe">Cafe</option>
-                  <option value="Cloud Kitchen">Cloud Kitchen</option>
-                  <option value="Catering Unit">Catering Unit</option>
-                  <option value="Hotel Kitchen">Hotel Kitchen</option>
-                  <option value="Bakery">Bakery</option>
-                  <option value="Takeaway">Takeaway</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
               <div className="form-group">
-                <label className="form-label">Opening Time</label>
+                <label className="form-label">Password <span style={{ color: 'var(--color-danger)' }}>*</span></label>
                 <input
                   className="form-input"
-                  type="time"
-                  value={form.openingTime}
-                  onChange={(e) => setForm({ ...form, openingTime: e.target.value })}
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Manager login password"
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Closing Time</label>
+                <label className="form-label">Confirm Password <span style={{ color: 'var(--color-danger)' }}>*</span></label>
                 <input
                   className="form-input"
-                  type="time"
-                  value={form.closingTime}
-                  onChange={(e) => setForm({ ...form, closingTime: e.target.value })}
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                  placeholder="Confirm manager password"
                 />
               </div>
 
               <div style={styles.fullWidth} className="form-group">
-                <label className="form-label">HACCP Responsible Person</label>
+                <label className="form-label">Branch Manager</label>
                 <input
                   className="form-input"
-                  value={form.haccpResponsiblePerson}
-                  onChange={(e) => setForm({ ...form, haccpResponsiblePerson: e.target.value })}
-                  placeholder="Person responsible for HACCP"
+                  value={form.branchManager}
+                  onChange={(e) => setForm({ ...form, branchManager: e.target.value })}
+                  placeholder="e.g. John Doe"
                 />
               </div>
 
@@ -284,6 +273,7 @@ const ClientCreateRestaurantPage = () => {
                   placeholder="Additional notes..."
                   rows={4}
                 />
+              </div>
               </div>
             </div>
 
@@ -330,7 +320,13 @@ const styles = {
   errorBox: { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-red-pale)', border: '1px solid var(--color-red-border)', color: 'var(--color-danger)', fontSize: '14px', fontWeight: 500, marginBottom: '24px' },
   formGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' },
   fullWidth: { gridColumn: 'span 2' },
-  footerActions: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid var(--color-border-light)' },
+  scrollableFormBody: {
+    maxHeight: '480px',
+    overflowY: 'auto',
+    paddingRight: '12px',
+    marginBottom: '16px',
+  },
+  footerActions: { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', paddingTop: '20px', borderTop: '1px solid var(--color-border-light)' },
 };
 
 export default ClientCreateRestaurantPage;

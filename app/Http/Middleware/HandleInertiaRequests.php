@@ -43,7 +43,11 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user() ? $request->user()->load('tenant') : null,
+                'user' => $request->user() ? (
+                    $request->user()->role === 'client'
+                        ? $request->user()->load(['tenant', 'tenant.branches'])
+                        : $request->user()->load(['tenant', 'branch'])
+                ) : null,
             ],
         ]);
     }

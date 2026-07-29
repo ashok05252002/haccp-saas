@@ -4,24 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Branch extends Model
+class Supplier extends Model
 {
     protected $fillable = [
         'tenant_id',
         'name',
-        'branch_name',
-        'registration_number',
-        'address_line1',
-        'address_line2',
-        'city',
-        'county',
-        'postal_code',
-        'country',
         'contact_person',
         'phone',
         'email',
-        'branch_manager',
-        'notes',
+        'order_day',
+        'address',
         'status',
     ];
 
@@ -30,8 +22,13 @@ class Branch extends Model
         return $this->belongsTo(Tenant::class);
     }
 
-    public function users()
+    public function categories()
     {
-        return $this->hasMany(User::class);
+        return $this->belongsToMany(IngredientCategory::class, 'supplier_ingredient_categories');
+    }
+
+    public function ingredients()
+    {
+        return $this->belongsToMany(Ingredient::class, 'supplier_ingredients');
     }
 }

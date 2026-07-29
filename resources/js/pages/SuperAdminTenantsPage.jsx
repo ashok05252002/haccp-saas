@@ -43,6 +43,9 @@ const SuperAdminTenantsPage = () => {
     password: '', confirmPassword: '', restaurantLimit: 1,
     subscriptionPlan: 'Standard', status: 'Active',
   });
+  const [statusConfirmModalOpen, setStatusConfirmModalOpen] = useState(false);
+  const [statusConfirmTenant, setStatusConfirmTenant] = useState(null);
+  const [statusConfirmSaving, setStatusConfirmSaving] = useState(false);
 
   const fetchTenants = async () => {
     setLoading(true);
@@ -126,19 +129,26 @@ const SuperAdminTenantsPage = () => {
     }
   };
 
-  const handleToggleStatus = async (tenant) => {
-    const action = tenant.status === 'Active' ? 'suspend' : 'activate';
-    if (!window.confirm(`Are you sure you want to ${action} the tenant "${tenant.businessName}"?`)) {
-      return;
-    }
+  const handleToggleStatus = (tenant) => {
+    setStatusConfirmTenant(tenant);
+    setStatusConfirmModalOpen(true);
+  };
+
+  const confirmToggleStatus = async () => {
+    if (!statusConfirmTenant) return;
+    setStatusConfirmSaving(true);
     try {
-      await toggleTenantStatus(tenant.real_id);
-      setSuccess(`Tenant status changed to ${tenant.status === 'Active' ? 'Suspended' : 'Active'} successfully!`);
+      await toggleTenantStatus(statusConfirmTenant.real_id);
+      setStatusConfirmModalOpen(false);
+      setSuccess(`Tenant status changed to ${statusConfirmTenant.status === 'Active' ? 'Suspended' : 'Active'} successfully!`);
       setTimeout(() => setSuccess(''), 3000);
       fetchTenants();
     } catch (err) {
       console.error(err);
       setError('Failed to toggle status.');
+    } finally {
+      setStatusConfirmSaving(false);
+      setStatusConfirmTenant(null);
     }
   };
 
@@ -324,6 +334,42 @@ const SuperAdminTenantsPage = () => {
             <option value="Suspended">Suspended</option>
           </select>
         </div>
+      </Modal>
+
+      {/* Status Toggle Confirmation Modal */}
+      <Modal
+        isOpen={statusConfirmModalOpen}
+        onClose={() => setStatusConfirmModalOpen(false)}
+        title="Confirm Status Change"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setStatusConfirmModalOpen(false)} disabled={statusConfirmSaving}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={confirmToggleStatus} disabled={statusConfirmSaving}>
+              {statusConfirmSaving ? 'Saving...' : 'Yes, Confirm'}
+            </Button>
+          </>
+        }
+      >
+        {statusConfirmTenant && (
+          <div style={{ fontSize: '14px', color: 'var(--color-text-primary)', lineHeight: '1.5' }}>
+            <p style={{ marginBottom: '12px' }}>
+              Are you sure you want to <strong>{statusConfirmTenant.status === 'Active' ? 'suspend' : 'activate'}</strong> the tenant <strong>{statusConfirmTenant.businessName}</strong>?
+            </p>
+            {statusConfirmTenant.status === 'Active' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-red-pale)', border: '1px solid var(--color-red-border)', color: 'var(--color-danger)', fontSize: '13px' }}>
+                <AlertCircle size={14} />
+                <span>Suspending this tenant will immediately block access for all users under this account.</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-pale)', border: '1px solid #B8DBCA', color: 'var(--color-primary)', fontSize: '13px' }}>
+                <CheckCircle size={14} />
+                <span>Activating this tenant will restore system access for all users under this account.</span>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

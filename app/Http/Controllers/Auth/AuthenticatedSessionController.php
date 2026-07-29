@@ -49,6 +49,18 @@ class AuthenticatedSessionController extends Controller
             }
         }
 
+        if ($user->role === 'restaurant' && $user->branch_id) {
+            $branch = \App\Models\Branch::find($user->branch_id);
+            if ($branch && $branch->status !== 'Active') {
+                Auth::guard('web')->logout();
+                $error = 'This restaurant branch is currently inactive. Please contact your administrator.';
+                if ($request->wantsJson()) {
+                    return response()->json(['errors' => ['email' => [$error]]], 422);
+                }
+                return back()->withErrors(['email' => $error]);
+            }
+        }
+
         $host = $request->getHost();
         $isAdminSubdomain = str_starts_with($host, 'admin.');
 
@@ -73,12 +85,16 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         if ($request->wantsJson()) {
+            $redirectUrl = '/client/restaurants';
+            if ($user->role === 'super_admin' || $user->role === 'restaurant') {
+                $redirectUrl = '/dashboard';
+            }
             return response()->json([
-                'redirectUrl' => $user->role === 'super_admin' ? '/dashboard' : '/client/restaurants'
+                'redirectUrl' => $redirectUrl
             ]);
         }
 
-        if ($user->role === 'super_admin') {
+        if ($user->role === 'super_admin' || $user->role === 'restaurant') {
             return redirect()->intended('/dashboard');
         }
 

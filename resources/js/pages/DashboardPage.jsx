@@ -1,7 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { router } from '@inertiajs/react';
 import PageLayout from '../components/layout/PageLayout';
+import { useAuth } from '../features/auth/hooks/AuthContext';
 
 const DashboardPage = () => {
+  const { user, selectedRestaurant } = useAuth();
+
+  useEffect(() => {
+    if (user && user.role === 'client' && !selectedRestaurant) {
+      router.visit('/client/restaurants');
+    }
+  }, [user, selectedRestaurant]);
+
   return (
     <PageLayout>
       <div className="page-header">

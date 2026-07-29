@@ -10,11 +10,12 @@ import {
   Mail,
   ShieldCheck,
   Calendar,
-  ArrowRight,
+  Eye,
   AlertCircle,
   AlertTriangle,
   CheckCircle,
   Building2,
+  User,
 } from 'lucide-react';
 import { useAuth } from '../features/auth/hooks/AuthContext';
 import Card from '../components/common/Card';
@@ -172,16 +173,16 @@ const ClientRestaurantsPage = () => {
                       <div style={styles.detailRow}><MapPin size={14} /> <span>{rest.addressLine1}, {rest.city}, {rest.country}</span></div>
                       <div style={styles.detailRow}><Phone size={14} /> <span>{rest.phone}</span></div>
                       <div style={styles.detailRow}><Mail size={14} /> <span>{rest.email}</span></div>
-                      <div style={styles.detailRow}><ShieldCheck size={14} /> <span>HACCP: {rest.haccpResponsiblePerson}</span></div>
+                      <div style={styles.detailRow}><User size={14} /> <span>Manager: {rest.branchManager}</span></div>
                       <div style={styles.detailRow}><Calendar size={14} /> <span>Created: {rest.createdAt}</span></div>
                     </div>
                     <Button
-                      variant="primary"
-                      icon={ArrowRight}
-                      onClick={() => handleEnterDashboard(rest)}
+                      variant="outline"
+                      icon={Eye}
+                      onClick={() => router.visit(`/client/restaurants/${rest.id}`)}
                       style={{ marginTop: '20px', width: '100%' }}
                     >
-                      Enter Dashboard
+                      View Details
                     </Button>
                   </Card>
                 ))}

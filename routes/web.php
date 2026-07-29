@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\BranchController;
+use App\Http\Controllers\IngredientController;
+use App\Http\Controllers\IngredientCategoryController;
+use App\Http\Controllers\UomController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -53,39 +58,112 @@ Route::middleware(['auth', 'role:client'])->group(function () {
         return Inertia::render('ClientCreateRestaurantPage');
     })->name('client.restaurants.create');
 
+    // Branch / Restaurant API Routes
+    Route::get('/api/branches', [BranchController::class, 'index']);
+    Route::post('/api/branches', [BranchController::class, 'store']);
+    Route::put('/api/branches/{id}', [BranchController::class, 'update']);
+    Route::delete('/api/branches/{id}', [BranchController::class, 'destroy']);
+
+    Route::get('/client/restaurants/{id}', function ($id) {
+        $tenantId = Auth::user()->tenant_id;
+        $branch = \App\Models\Branch::where('tenant_id', $tenantId)->findOrFail($id);
+        
+        return Inertia::render('ClientRestaurantViewPage', [
+            'restaurant' => [
+                'id' => $branch->id,
+                'restaurantName' => $branch->name,
+                'branchName' => $branch->branch_name,
+                'registrationNumber' => $branch->registration_number,
+                'addressLine1' => $branch->address_line1,
+                'addressLine2' => $branch->address_line2,
+                'city' => $branch->city,
+                'county' => $branch->county,
+                'postalCode' => $branch->postal_code,
+                'country' => $branch->country,
+                'contactPerson' => $branch->contact_person,
+                'phone' => $branch->phone,
+                'email' => $branch->email,
+                'branchManager' => $branch->branch_manager,
+                'notes' => $branch->notes,
+                'haccpStatus' => $branch->status ?? 'Active',
+                'createdAt' => $branch->created_at ? $branch->created_at->toDateString() : date('Y-m-d'),
+            ]
+        ]);
+    })->name('client.restaurants.view');
+
+    Route::patch('/api/branches/{id}/toggle-status', [BranchController::class, 'toggleStatus']);
+});
+
+Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('DashboardPage');
     })->name('dashboard');
 
-    Route::get('/haccp-logs', function () {
-        return Inertia::render('HaccpLogsPage');
-    })->name('haccp.logs');
-
-    Route::get('/haccp-reports', function () {
-        return Inertia::render('HaccpReportsPage');
-    })->name('haccp.reports');
-
-    Route::get('/supervisor-review', function () {
-        return Inertia::render('SupervisorReviewPage');
-    })->name('supervisor.review');
-
-    Route::get('/recipes', function () {
-        return Inertia::render('RecipesPage');
-    })->name('recipes');
-
-    Route::get('/calculator', function () {
-        return Inertia::render('CalculatorPage');
-    })->name('calculator');
-
-    Route::get('/bulk-planning', function () {
-        return Inertia::render('BulkPlanningPage');
-    })->name('bulk-planning');
-
     Route::get('/manager-hub', function () {
         return Inertia::render('ManagerHubPage');
     })->name('manager.hub');
+
+    Route::get('/manager-hub/ingredients', function () {
+        return Inertia::render('IngredientsPage');
+    })->name('manager.hub.ingredients');
+
+    Route::get('/manager-hub/uom', function () {
+        return Inertia::render('UomMasterPage');
+    })->name('manager.hub.uom');
+
+    // Supplier Master Page Routes
+    Route::get('/manager-hub/suppliers', function () {
+        return Inertia::render('SuppliersPage');
+    })->name('manager.hub.suppliers');
+
+    Route::get('/manager-hub/suppliers/create', function () {
+        return Inertia::render('SupplierFormPage', [
+            'supplierId' => null,
+        ]);
+    })->name('manager.hub.suppliers.create');
+
+    Route::get('/manager-hub/suppliers/{id}/edit', function ($id) {
+        return Inertia::render('SupplierFormPage', [
+            'supplierId' => (int) $id,
+        ]);
+    })->name('manager.hub.suppliers.edit');
+
+    // Ingredients API Routes
+    Route::get('/api/ingredients', [IngredientController::class, 'index']);
+    Route::post('/api/ingredients', [IngredientController::class, 'store']);
+    Route::put('/api/ingredients/{id}', [IngredientController::class, 'update']);
+    Route::delete('/api/ingredients/{id}', [IngredientController::class, 'destroy']);
+
+    // Ingredient Categories API Routes
+    Route::get('/api/ingredient-categories', [IngredientCategoryController::class, 'index']);
+    Route::post('/api/ingredient-categories', [IngredientCategoryController::class, 'store']);
+    Route::put('/api/ingredient-categories/{id}', [IngredientCategoryController::class, 'update']);
+
+    // UOM API Routes
+    Route::get('/api/uoms', [UomController::class, 'index']);
+    Route::post('/api/uoms', [UomController::class, 'store']);
+    Route::put('/api/uoms/{id}', [UomController::class, 'update']);
+    Route::delete('/api/uoms/{id}', [UomController::class, 'destroy']);
+
+    // Unit Types API Routes
+    Route::get('/api/unit-types', [UomController::class, 'indexUnitTypes']);
+    Route::post('/api/unit-types', [UomController::class, 'storeUnitType']);
+    Route::put('/api/unit-types/{id}', [UomController::class, 'updateUnitType']);
+    Route::delete('/api/unit-types/{id}', [UomController::class, 'destroyUnitType']);
+
+    // Base Units API Routes
+    Route::get('/api/base-units', [UomController::class, 'indexBaseUnits']);
+    Route::post('/api/base-units', [UomController::class, 'storeBaseUnit']);
+    Route::put('/api/base-units/{id}', [UomController::class, 'updateBaseUnit']);
+    Route::delete('/api/base-units/{id}', [UomController::class, 'destroyBaseUnit']);
+
+    // Supplier API Routes
+    Route::get('/api/suppliers', [SupplierController::class, 'index']);
+    Route::post('/api/suppliers', [SupplierController::class, 'store']);
+    Route::get('/api/suppliers/{id}', [SupplierController::class, 'show']);
+    Route::put('/api/suppliers/{id}', [SupplierController::class, 'update']);
+    Route::patch('/api/suppliers/{id}/toggle-status', [SupplierController::class, 'toggleStatus']);
 });
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
-
