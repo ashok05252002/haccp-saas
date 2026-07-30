@@ -32,11 +32,11 @@ class CleaningAreaController extends Controller
     {
         $request->validate([
             'name'        => 'required|string|max:255',
-            'frequency'   => 'required|string|in:Daily,Weekly,Monthly,Quarterly,As Needed',
+            'frequency'   => 'required|string|in:Daily,Weekly,Monthly',
             'description' => 'nullable|string',
             'status'      => 'required|string|in:Active,Inactive',
         ], [
-            'frequency.in' => 'Selected cleaning frequency must be one of: Daily, Weekly, Monthly, Quarterly, or As Needed.',
+            'frequency.in' => 'Selected cleaning frequency must be one of: Daily, Weekly, or Monthly.',
         ]);
 
         $tenantId = Auth::user()->tenant_id;
@@ -73,11 +73,11 @@ class CleaningAreaController extends Controller
 
         $request->validate([
             'name'        => 'required|string|max:255',
-            'frequency'   => 'required|string|in:Daily,Weekly,Monthly,Quarterly,As Needed',
+            'frequency'   => 'required|string|in:Daily,Weekly,Monthly',
             'description' => 'nullable|string',
             'status'      => 'required|string|in:Active,Inactive',
         ], [
-            'frequency.in' => 'Selected cleaning frequency must be one of: Daily, Weekly, Monthly, Quarterly, or As Needed.',
+            'frequency.in' => 'Selected cleaning frequency must be one of: Daily, Weekly, or Monthly.',
         ]);
 
         // Duplicate check excluding current id

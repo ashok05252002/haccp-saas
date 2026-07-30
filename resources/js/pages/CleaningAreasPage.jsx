@@ -21,8 +21,6 @@ const FREQUENCY_OPTIONS = [
   'Daily',
   'Weekly',
   'Monthly',
-  'Quarterly',
-  'As Needed',
 ];
 
 const CleaningAreasPage = () => {

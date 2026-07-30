@@ -10,7 +10,6 @@ class CleaningChecklistQuestion extends Model
         'tenant_id',
         'section_id',
         'question',
-        'frequency',
         'status',
     ];
 

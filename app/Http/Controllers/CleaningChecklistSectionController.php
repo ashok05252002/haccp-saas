@@ -33,11 +33,11 @@ class CleaningChecklistSectionController extends Controller
     {
         $request->validate([
             'title'       => 'required|string|max:255',
-            'frequency'   => 'required|string|in:Daily,Weekly,Monthly,Quarterly,As Needed',
+            'frequency'   => 'required|string|in:Daily,Weekly,Monthly',
             'description' => 'nullable|string',
             'status'      => 'required|string|in:Active,Inactive',
         ], [
-            'frequency.in' => 'Frequency must be one of: Daily, Weekly, Monthly, Quarterly, or As Needed.',
+            'frequency.in' => 'Frequency must be one of: Daily, Weekly, or Monthly.',
         ]);
 
         $tenantId = Auth::user()->tenant_id;
@@ -74,11 +74,11 @@ class CleaningChecklistSectionController extends Controller
 
         $request->validate([
             'title'       => 'required|string|max:255',
-            'frequency'   => 'required|string|in:Daily,Weekly,Monthly,Quarterly,As Needed',
+            'frequency'   => 'required|string|in:Daily,Weekly,Monthly',
             'description' => 'nullable|string',
             'status'      => 'required|string|in:Active,Inactive',
         ], [
-            'frequency.in' => 'Frequency must be one of: Daily, Weekly, Monthly, Quarterly, or As Needed.',
+            'frequency.in' => 'Frequency must be one of: Daily, Weekly, or Monthly.',
         ]);
 
         // Duplicate title check (excluding current id)

@@ -17,12 +17,10 @@ const Toggle = ({ checked, onChange }) => (
   </label>
 );
 
-const FREQUENCY_OPTIONS = [
+const SECTION_FREQUENCY_OPTIONS = [
   'Daily',
   'Weekly',
   'Monthly',
-  'Quarterly',
-  'As Needed',
 ];
 
 const CleaningChecklistPage = () => {
@@ -57,7 +55,7 @@ const CleaningChecklistPage = () => {
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [qModalOpen, setQModalOpen] = useState(false);
   const [qEditId, setQEditId] = useState(null);
-  const [qForm, setQForm] = useState({ question: '', section_id: '', frequency: 'Daily', status: 'Active' });
+  const [qForm, setQForm] = useState({ question: '', section_id: '', status: 'Active' });
   const [qFormError, setQFormError] = useState('');
 
   const [qConfirmModalOpen, setQConfirmModalOpen] = useState(false);
@@ -190,10 +188,6 @@ const CleaningChecklistPage = () => {
       setQFormError('Checklist Section is required.');
       return;
     }
-    if (!qForm.frequency) {
-      setQFormError('Frequency is required.');
-      return;
-    }
 
     try {
       if (qEditId) {
@@ -203,7 +197,7 @@ const CleaningChecklistPage = () => {
         await axios.post('/api/cleaning-checklist-questions', qForm);
         setSuccess('Checklist question added successfully!');
       }
-      setQForm({ question: '', section_id: '', frequency: 'Daily', status: 'Active' });
+      setQForm({ question: '', section_id: '', status: 'Active' });
       setQModalOpen(false);
       setQEditId(null);
       fetchData();
@@ -211,7 +205,6 @@ const CleaningChecklistPage = () => {
     } catch (err) {
       const errMsg = err.response?.data?.errors?.question?.[0] || 
                      err.response?.data?.errors?.section_id?.[0] || 
-                     err.response?.data?.errors?.frequency?.[0] || 
                      'An error occurred while saving question.';
       setQFormError(errMsg);
     }
@@ -222,7 +215,6 @@ const CleaningChecklistPage = () => {
     setQForm({
       question: qItem.question,
       section_id: qItem.section_id ? String(qItem.section_id) : '',
-      frequency: qItem.frequency || 'Daily',
       status: qItem.status || 'Active',
     });
     setQFormError('');
@@ -242,7 +234,6 @@ const CleaningChecklistPage = () => {
       await axios.put(`/api/cleaning-checklist-questions/${qConfirmRecord.id}`, {
         question: qConfirmRecord.question,
         section_id: qConfirmRecord.section_id,
-        frequency: qConfirmRecord.frequency,
         status: nextStatus,
       });
       setQConfirmModalOpen(false);
@@ -262,7 +253,7 @@ const CleaningChecklistPage = () => {
   const openAddQModal = () => {
     setQEditId(null);
     const defaultSectionId = activeSections.length > 0 ? String(activeSections[0].id) : '';
-    setQForm({ question: '', section_id: defaultSectionId, frequency: 'Daily', status: 'Active' });
+    setQForm({ question: '', section_id: defaultSectionId, status: 'Active' });
     setQFormError('');
     setQModalOpen(true);
   };
@@ -279,8 +270,7 @@ const CleaningChecklistPage = () => {
   const filteredQuestions = questions.filter(qItem => {
     const qMatch = qItem.question.toLowerCase().includes(query);
     const secMatch = (qItem.section?.title || '').toLowerCase().includes(query);
-    const freqMatch = (qItem.frequency || '').toLowerCase().includes(query);
-    return qMatch || secMatch || freqMatch;
+    return qMatch || secMatch;
   });
 
   return (
@@ -466,7 +456,6 @@ const CleaningChecklistPage = () => {
                     <tr>
                       <th style={styles.th}>Question / Task</th>
                       <th style={styles.th}>Section</th>
-                      <th style={styles.th}>Frequency</th>
                       <th style={styles.th}>Status</th>
                       <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
                     </tr>
@@ -482,11 +471,6 @@ const CleaningChecklistPage = () => {
                           <td style={styles.td}>
                             <span style={styles.secBadge}>
                               {sectionTitle}
-                            </span>
-                          </td>
-                          <td style={styles.td}>
-                            <span style={styles.freqBadge}>
-                              {qItem.frequency}
                             </span>
                           </td>
                           <td style={styles.td}>
@@ -574,7 +558,7 @@ const CleaningChecklistPage = () => {
                 style={styles.select}
                 required
               >
-                {FREQUENCY_OPTIONS.map((opt) => (
+                {SECTION_FREQUENCY_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
                     {opt}
                   </option>
@@ -655,23 +639,6 @@ const CleaningChecklistPage = () => {
                   No active sections available. Please create a section first.
                 </div>
               )}
-            </div>
-
-            {/* Frequency Dropdown */}
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Frequency *</label>
-              <select
-                value={qForm.frequency}
-                onChange={(e) => setQForm({ ...qForm, frequency: e.target.value })}
-                style={styles.select}
-                required
-              >
-                {FREQUENCY_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {/* Active Toggle */}
