@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -64,6 +64,14 @@ const ManagerHubPage = () => {
       icon: Thermometer, 
       active: true,
       route: '/manager-hub/thermometers'
+    },
+    { 
+      key: 'health-declaration', 
+      label: 'Health Declaration Setup', 
+      desc: 'Manage health declaration sections, staff questionnaire items, and active status.',
+      icon: HeartPulse, 
+      active: true,
+      route: '/manager-hub/health-declaration'
     },
   ];
 

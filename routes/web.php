@@ -13,6 +13,8 @@ use App\Http\Controllers\CleaningAreaController;
 use App\Http\Controllers\CleaningChecklistSectionController;
 use App\Http\Controllers\CleaningChecklistQuestionController;
 use App\Http\Controllers\ThermometerController;
+use App\Http\Controllers\HealthDeclarationSectionController;
+use App\Http\Controllers\HealthDeclarationQuestionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -154,6 +156,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('ThermometersPage');
     })->name('manager.hub.thermometers');
 
+    // Health Declaration Setup Page Route
+    Route::get('/manager-hub/health-declaration', function () {
+        return Inertia::render('HealthDeclarationPage');
+    })->name('manager.hub.health-declaration');
+
     // Ingredients API Routes
     Route::get('/api/ingredients', [IngredientController::class, 'index']);
     Route::post('/api/ingredients', [IngredientController::class, 'store']);
@@ -219,6 +226,16 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/thermometers', [ThermometerController::class, 'index']);
     Route::post('/api/thermometers', [ThermometerController::class, 'store']);
     Route::put('/api/thermometers/{id}', [ThermometerController::class, 'update']);
+
+    // Health Declaration Sections API Routes
+    Route::get('/api/health-declaration-sections', [HealthDeclarationSectionController::class, 'index']);
+    Route::post('/api/health-declaration-sections', [HealthDeclarationSectionController::class, 'store']);
+    Route::put('/api/health-declaration-sections/{id}', [HealthDeclarationSectionController::class, 'update']);
+
+    // Health Declaration Questions API Routes
+    Route::get('/api/health-declaration-questions', [HealthDeclarationQuestionController::class, 'index']);
+    Route::post('/api/health-declaration-questions', [HealthDeclarationQuestionController::class, 'store']);
+    Route::put('/api/health-declaration-questions/{id}', [HealthDeclarationQuestionController::class, 'update']);
 });
 
 require __DIR__.'/settings.php';
