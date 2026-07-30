@@ -4,12 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class CleaningChecklistQuestion extends Model
+class HealthDeclarationQuestion extends Model
 {
     protected $fillable = [
         'tenant_id',
         'section_id',
-        'question',
+        'question_text',
         'status',
     ];
 
@@ -20,6 +20,6 @@ class CleaningChecklistQuestion extends Model
 
     public function section()
     {
-        return $this->belongsTo(CleaningChecklistSection::class, 'section_id');
+        return $this->belongsTo(HealthDeclarationSection::class, 'section_id');
     }
 }

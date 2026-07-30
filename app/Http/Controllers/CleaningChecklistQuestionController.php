@@ -35,12 +35,10 @@ class CleaningChecklistQuestionController extends Controller
         $request->validate([
             'question'   => 'required|string',
             'section_id' => 'required|integer|exists:cleaning_checklist_sections,id',
-            'frequency'  => 'required|string|in:Daily,Weekly,Monthly,Quarterly,As Needed',
             'status'     => 'required|string|in:Active,Inactive',
         ], [
             'section_id.required' => 'Checklist Section is required.',
             'section_id.exists'   => 'Selected Checklist Section is invalid.',
-            'frequency.in'        => 'Frequency must be one of: Daily, Weekly, Monthly, Quarterly, or As Needed.',
         ]);
 
         $tenantId = Auth::user()->tenant_id;
@@ -61,7 +59,6 @@ class CleaningChecklistQuestionController extends Controller
             'tenant_id'  => $tenantId,
             'section_id' => $request->section_id,
             'question'   => $request->question,
-            'frequency'  => $request->frequency,
             'status'     => $request->status,
         ]);
 
@@ -79,12 +76,10 @@ class CleaningChecklistQuestionController extends Controller
         $request->validate([
             'question'   => 'required|string',
             'section_id' => 'required|integer|exists:cleaning_checklist_sections,id',
-            'frequency'  => 'required|string|in:Daily,Weekly,Monthly,Quarterly,As Needed',
             'status'     => 'required|string|in:Active,Inactive',
         ], [
             'section_id.required' => 'Checklist Section is required.',
             'section_id.exists'   => 'Selected Checklist Section is invalid.',
-            'frequency.in'        => 'Frequency must be one of: Daily, Weekly, Monthly, Quarterly, or As Needed.',
         ]);
 
         // Duplicate question check (excluding current id)
@@ -100,7 +95,6 @@ class CleaningChecklistQuestionController extends Controller
         $question->update([
             'section_id' => $request->section_id,
             'question'   => $request->question,
-            'frequency'  => $request->frequency,
             'status'     => $request->status,
         ]);
 

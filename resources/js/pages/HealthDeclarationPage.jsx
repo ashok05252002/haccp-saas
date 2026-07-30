@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ArrowLeft, Plus, Pencil, Check, Search, X, ClipboardCheck, ShieldAlert
+  ArrowLeft, Plus, Pencil, Check, Search, X, HeartPulse, ShieldAlert
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
@@ -17,13 +17,7 @@ const Toggle = ({ checked, onChange }) => (
   </label>
 );
 
-const SECTION_FREQUENCY_OPTIONS = [
-  'Daily',
-  'Weekly',
-  'Monthly',
-];
-
-const CleaningChecklistPage = () => {
+const HealthDeclarationPage = () => {
   const [activeTab, setActiveTab] = useState('sections'); // 'sections' | 'questions'
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -41,7 +35,7 @@ const CleaningChecklistPage = () => {
   const [sectionsLoading, setSectionsLoading] = useState(false);
   const [secModalOpen, setSecModalOpen] = useState(false);
   const [secEditId, setSecEditId] = useState(null);
-  const [secForm, setSecForm] = useState({ title: '', description: '', frequency: 'Daily', status: 'Active' });
+  const [secForm, setSecForm] = useState({ title: '', status: 'Active' });
   const [secFormError, setSecFormError] = useState('');
 
   const [secConfirmModalOpen, setSecConfirmModalOpen] = useState(false);
@@ -55,7 +49,7 @@ const CleaningChecklistPage = () => {
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [qModalOpen, setQModalOpen] = useState(false);
   const [qEditId, setQEditId] = useState(null);
-  const [qForm, setQForm] = useState({ question: '', section_id: '', status: 'Active' });
+  const [qForm, setQForm] = useState({ question_text: '', section_id: '', status: 'Active' });
   const [qFormError, setQFormError] = useState('');
 
   const [qConfirmModalOpen, setQConfirmModalOpen] = useState(false);
@@ -68,14 +62,14 @@ const CleaningChecklistPage = () => {
     setQuestionsLoading(true);
     try {
       const [secRes, qRes] = await Promise.all([
-        axios.get('/api/cleaning-checklist-sections'),
-        axios.get('/api/cleaning-checklist-questions'),
+        axios.get('/api/health-declaration-sections'),
+        axios.get('/api/health-declaration-questions'),
       ]);
       setSections(secRes.data);
       setQuestions(qRes.data);
     } catch (err) {
       console.error(err);
-      setError('Failed to fetch cleaning checklist data.');
+      setError('Failed to fetch health declaration setup data.');
     } finally {
       setSectionsLoading(false);
       setQuestionsLoading(false);
@@ -99,28 +93,22 @@ const CleaningChecklistPage = () => {
       setSecFormError('Section Title is required.');
       return;
     }
-    if (!secForm.frequency) {
-      setSecFormError('Frequency is required.');
-      return;
-    }
 
     try {
       if (secEditId) {
-        await axios.put(`/api/cleaning-checklist-sections/${secEditId}`, secForm);
-        setSuccess('Checklist section updated successfully!');
+        await axios.put(`/api/health-declaration-sections/${secEditId}`, secForm);
+        setSuccess('Declaration section updated successfully!');
       } else {
-        await axios.post('/api/cleaning-checklist-sections', secForm);
-        setSuccess('Checklist section added successfully!');
+        await axios.post('/api/health-declaration-sections', secForm);
+        setSuccess('Declaration section added successfully!');
       }
-      setSecForm({ title: '', description: '', frequency: 'Daily', status: 'Active' });
+      setSecForm({ title: '', status: 'Active' });
       setSecModalOpen(false);
       setSecEditId(null);
       fetchData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      const errMsg = err.response?.data?.errors?.title?.[0] || 
-                     err.response?.data?.errors?.frequency?.[0] || 
-                     'An error occurred while saving section.';
+      const errMsg = err.response?.data?.errors?.title?.[0] || 'An error occurred while saving section.';
       setSecFormError(errMsg);
     }
   };
@@ -129,8 +117,6 @@ const CleaningChecklistPage = () => {
     setSecEditId(sec.id);
     setSecForm({
       title: sec.title,
-      description: sec.description || '',
-      frequency: sec.frequency || 'Daily',
       status: sec.status || 'Active',
     });
     setSecFormError('');
@@ -147,10 +133,8 @@ const CleaningChecklistPage = () => {
     setSecConfirmSaving(true);
     const nextStatus = secConfirmRecord.status === 'Active' ? 'Inactive' : 'Active';
     try {
-      await axios.put(`/api/cleaning-checklist-sections/${secConfirmRecord.id}`, {
+      await axios.put(`/api/health-declaration-sections/${secConfirmRecord.id}`, {
         title: secConfirmRecord.title,
-        description: secConfirmRecord.description,
-        frequency: secConfirmRecord.frequency,
         status: nextStatus,
       });
       setSecConfirmModalOpen(false);
@@ -169,7 +153,7 @@ const CleaningChecklistPage = () => {
 
   const openAddSecModal = () => {
     setSecEditId(null);
-    setSecForm({ title: '', description: '', frequency: 'Daily', status: 'Active' });
+    setSecForm({ title: '', status: 'Active' });
     setSecFormError('');
     setSecModalOpen(true);
   };
@@ -180,30 +164,30 @@ const CleaningChecklistPage = () => {
   const handleSaveQuestion = async (e) => {
     e.preventDefault();
     setQFormError('');
-    if (!qForm.question.trim()) {
-      setQFormError('Question / Task is required.');
+    if (!qForm.question_text.trim()) {
+      setQFormError('Question Text is required.');
       return;
     }
     if (!qForm.section_id) {
-      setQFormError('Checklist Section is required.');
+      setQFormError('Section is required.');
       return;
     }
 
     try {
       if (qEditId) {
-        await axios.put(`/api/cleaning-checklist-questions/${qEditId}`, qForm);
-        setSuccess('Checklist question updated successfully!');
+        await axios.put(`/api/health-declaration-questions/${qEditId}`, qForm);
+        setSuccess('Declaration question updated successfully!');
       } else {
-        await axios.post('/api/cleaning-checklist-questions', qForm);
-        setSuccess('Checklist question added successfully!');
+        await axios.post('/api/health-declaration-questions', qForm);
+        setSuccess('Declaration question added successfully!');
       }
-      setQForm({ question: '', section_id: '', status: 'Active' });
+      setQForm({ question_text: '', section_id: '', status: 'Active' });
       setQModalOpen(false);
       setQEditId(null);
       fetchData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      const errMsg = err.response?.data?.errors?.question?.[0] || 
+      const errMsg = err.response?.data?.errors?.question_text?.[0] || 
                      err.response?.data?.errors?.section_id?.[0] || 
                      'An error occurred while saving question.';
       setQFormError(errMsg);
@@ -213,7 +197,7 @@ const CleaningChecklistPage = () => {
   const handleEditQClick = (qItem) => {
     setQEditId(qItem.id);
     setQForm({
-      question: qItem.question,
+      question_text: qItem.question_text,
       section_id: qItem.section_id ? String(qItem.section_id) : '',
       status: qItem.status || 'Active',
     });
@@ -231,13 +215,13 @@ const CleaningChecklistPage = () => {
     setQConfirmSaving(true);
     const nextStatus = qConfirmRecord.status === 'Active' ? 'Inactive' : 'Active';
     try {
-      await axios.put(`/api/cleaning-checklist-questions/${qConfirmRecord.id}`, {
-        question: qConfirmRecord.question,
+      await axios.put(`/api/health-declaration-questions/${qConfirmRecord.id}`, {
+        question_text: qConfirmRecord.question_text,
         section_id: qConfirmRecord.section_id,
         status: nextStatus,
       });
       setQConfirmModalOpen(false);
-      setSuccess(`Question "${qConfirmRecord.question}" is now ${nextStatus}.`);
+      setSuccess(`Question "${qConfirmRecord.question_text}" is now ${nextStatus}.`);
       fetchData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -253,7 +237,7 @@ const CleaningChecklistPage = () => {
   const openAddQModal = () => {
     setQEditId(null);
     const defaultSectionId = activeSections.length > 0 ? String(activeSections[0].id) : '';
-    setQForm({ question: '', section_id: defaultSectionId, status: 'Active' });
+    setQForm({ question_text: '', section_id: defaultSectionId, status: 'Active' });
     setQFormError('');
     setQModalOpen(true);
   };
@@ -261,21 +245,18 @@ const CleaningChecklistPage = () => {
   // Filtered lists
   const query = searchQuery.toLowerCase();
   const filteredSections = sections.filter(s => {
-    const titleMatch = s.title.toLowerCase().includes(query);
-    const descMatch = (s.description || '').toLowerCase().includes(query);
-    const freqMatch = (s.frequency || '').toLowerCase().includes(query);
-    return titleMatch || descMatch || freqMatch;
+    return s.title.toLowerCase().includes(query);
   });
 
   const filteredQuestions = questions.filter(qItem => {
-    const qMatch = qItem.question.toLowerCase().includes(query);
+    const qMatch = qItem.question_text.toLowerCase().includes(query);
     const secMatch = (qItem.section?.title || '').toLowerCase().includes(query);
     return qMatch || secMatch;
   });
 
   return (
     <PageLayout>
-      <Head title="Cleaning Checklist Master" />
+      <Head title="Health Declaration Master" />
 
       <div>
         {/* Back Link */}
@@ -291,11 +272,11 @@ const CleaningChecklistPage = () => {
         <div style={styles.headerRow}>
           <div>
             <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ClipboardCheck size={28} color="var(--color-primary)" />
-              Cleaning Checklist Master
+              <HeartPulse size={28} color="var(--color-primary)" />
+              Health Declaration Setup
             </h1>
             <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-              Manage cleaning checklist sections and questions.
+              Manage health declaration sections and staff screening questions.
             </p>
           </div>
 
@@ -332,7 +313,7 @@ const CleaningChecklistPage = () => {
             }}
             onClick={() => switchTab('sections')}
           >
-            Checklist Sections ({sections.length})
+            Declaration Sections ({sections.length})
           </button>
           <button
             style={{
@@ -341,7 +322,7 @@ const CleaningChecklistPage = () => {
             }}
             onClick={() => switchTab('questions')}
           >
-            Checklist Questions ({questions.length})
+            Declaration Questions ({questions.length})
           </button>
         </div>
 
@@ -352,8 +333,8 @@ const CleaningChecklistPage = () => {
             type="text"
             placeholder={
               activeTab === 'sections'
-                ? "Search sections by title, description, or frequency..."
-                : "Search questions by question text, section, or frequency..."
+                ? "Search sections by title..."
+                : "Search questions by question text or section..."
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -366,16 +347,16 @@ const CleaningChecklistPage = () => {
           )}
         </div>
 
-        {/* TAB 1: CHECKLIST SECTIONS */}
+        {/* TAB 1: DECLARATION SECTIONS */}
         {activeTab === 'sections' && (
           <Card padding="0">
             {sectionsLoading ? (
-              <div style={styles.loadingState}>Loading checklist sections...</div>
+              <div style={styles.loadingState}>Loading declaration sections...</div>
             ) : filteredSections.length === 0 ? (
               <div style={styles.emptyState}>
                 {searchQuery 
-                  ? 'No checklist sections match your search.' 
-                  : 'No checklist sections created yet. Click "Add Section" to create one.'}
+                  ? 'No declaration sections match your search.' 
+                  : 'No declaration sections created yet. Click "Add Section" to create one.'}
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
@@ -383,8 +364,6 @@ const CleaningChecklistPage = () => {
                   <thead>
                     <tr>
                       <th style={styles.th}>Section Title</th>
-                      <th style={styles.th}>Description</th>
-                      <th style={styles.th}>Frequency</th>
                       <th style={styles.th}>Status</th>
                       <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
                     </tr>
@@ -395,12 +374,6 @@ const CleaningChecklistPage = () => {
                       return (
                         <tr key={sec.id} style={styles.tr}>
                           <td style={styles.tdBold}>{sec.title}</td>
-                          <td style={styles.td}>{sec.description || '-'}</td>
-                          <td style={styles.td}>
-                            <span style={styles.freqBadge}>
-                              {sec.frequency}
-                            </span>
-                          </td>
                           <td style={styles.td}>
                             <span style={{
                               ...styles.statusBadge,
@@ -436,25 +409,25 @@ const CleaningChecklistPage = () => {
           </Card>
         )}
 
-        {/* TAB 2: CHECKLIST QUESTIONS */}
+        {/* TAB 2: DECLARATION QUESTIONS */}
         {activeTab === 'questions' && (
           <Card padding="0">
             {questionsLoading ? (
-              <div style={styles.loadingState}>Loading checklist questions...</div>
+              <div style={styles.loadingState}>Loading declaration questions...</div>
             ) : filteredQuestions.length === 0 ? (
               <div style={styles.emptyState}>
                 {searchQuery 
-                  ? 'No checklist questions match your search.' 
+                  ? 'No declaration questions match your search.' 
                   : sections.length === 0 
-                    ? 'No checklist questions created yet. Create a section first, then add questions.'
-                    : 'No checklist questions created yet. Click "Add Question" to create one.'}
+                    ? 'No declaration questions created yet. Create a section first, then add questions.'
+                    : 'No declaration questions created yet. Click "Add Question" to create one.'}
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
-                      <th style={styles.th}>Question / Task</th>
+                      <th style={styles.th}>Question Text</th>
                       <th style={styles.th}>Section</th>
                       <th style={styles.th}>Status</th>
                       <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
@@ -467,7 +440,7 @@ const CleaningChecklistPage = () => {
 
                       return (
                         <tr key={qItem.id} style={styles.tr}>
-                          <td style={styles.tdBold}>{qItem.question}</td>
+                          <td style={styles.tdBold}>{qItem.question_text}</td>
                           <td style={styles.td}>
                             <span style={styles.secBadge}>
                               {sectionTitle}
@@ -529,7 +502,7 @@ const CleaningChecklistPage = () => {
               <label style={styles.label}>Section Title *</label>
               <input
                 type="text"
-                placeholder="e.g. Food Room & Equipment Hygiene, Food Storage, Waste Control"
+                placeholder="e.g. Declaration, Symptoms, Illness History, Return to Work"
                 value={secForm.title}
                 onChange={(e) => setSecForm({ ...secForm, title: e.target.value })}
                 style={styles.input}
@@ -537,40 +510,11 @@ const CleaningChecklistPage = () => {
               />
             </div>
 
-            {/* Description */}
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Description</label>
-              <textarea
-                placeholder="Optional description of this section"
-                value={secForm.description}
-                onChange={(e) => setSecForm({ ...secForm, description: e.target.value })}
-                style={styles.textarea}
-                rows={3}
-              />
-            </div>
-
-            {/* Frequency Dropdown */}
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Frequency *</label>
-              <select
-                value={secForm.frequency}
-                onChange={(e) => setSecForm({ ...secForm, frequency: e.target.value })}
-                style={styles.select}
-                required
-              >
-                {SECTION_FREQUENCY_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Active Toggle */}
             <div style={styles.toggleRow}>
               <div>
                 <div style={styles.toggleLabel}>Active Status</div>
-                <div style={styles.toggleDesc}>Inactive sections will be hidden from cleaning checklists.</div>
+                <div style={styles.toggleDesc}>Inactive sections will be hidden from fitness-to-work declarations.</div>
               </div>
               <Toggle
                 checked={secForm.status === 'Active'}
@@ -605,13 +549,13 @@ const CleaningChecklistPage = () => {
               </div>
             )}
 
-            {/* Question / Task */}
+            {/* Question Text */}
             <div style={styles.formGroup}>
-              <label style={styles.label}>Question / Task *</label>
+              <label style={styles.label}>Question Text *</label>
               <textarea
-                placeholder="e.g. Are work surfaces cleaned and sanitised before food preparation?"
-                value={qForm.question}
-                onChange={(e) => setQForm({ ...qForm, question: e.target.value })}
+                placeholder="e.g. Have you had vomiting or diarrhoea in the last 24 hours?"
+                value={qForm.question_text}
+                onChange={(e) => setQForm({ ...qForm, question_text: e.target.value })}
                 style={styles.textarea}
                 rows={3}
                 required
@@ -627,7 +571,7 @@ const CleaningChecklistPage = () => {
                 style={styles.select}
                 required
               >
-                <option value="">Select Checklist Section...</option>
+                <option value="">Select Declaration Section...</option>
                 {activeSections.map((sec) => (
                   <option key={sec.id} value={sec.id}>
                     {sec.title}
@@ -645,7 +589,7 @@ const CleaningChecklistPage = () => {
             <div style={styles.toggleRow}>
               <div>
                 <div style={styles.toggleLabel}>Active Status</div>
-                <div style={styles.toggleDesc}>Inactive questions will not appear in active checklists.</div>
+                <div style={styles.toggleDesc}>Inactive questions will not appear in active health declarations.</div>
               </div>
               <Toggle
                 checked={qForm.status === 'Active'}
@@ -832,15 +776,6 @@ const styles = {
     color: 'var(--color-text-primary)',
     verticalAlign: 'middle',
   },
-  freqBadge: {
-    display: 'inline-block',
-    padding: '4px 10px',
-    borderRadius: '6px',
-    backgroundColor: 'var(--color-primary-pale)',
-    color: 'var(--color-primary)',
-    fontSize: '12px',
-    fontWeight: 600,
-  },
   secBadge: {
     display: 'inline-block',
     padding: '4px 10px',
@@ -1009,4 +944,4 @@ const styles = {
   },
 };
 
-export default CleaningChecklistPage;
+export default HealthDeclarationPage;

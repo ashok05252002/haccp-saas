@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ArrowLeft, Plus, Pencil, Check, Search, X, Sparkles, ShieldAlert
+  ArrowLeft, Plus, Pencil, Check, Search, X, Refrigerator, ShieldAlert
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
@@ -17,14 +17,14 @@ const Toggle = ({ checked, onChange }) => (
   </label>
 );
 
-const FREQUENCY_OPTIONS = [
-  'Daily',
-  'Weekly',
-  'Monthly',
+const STORAGE_ZONE_TYPES = [
+  'Fridge',
+  'Freezer',
+  'Hot Cabinet',
 ];
 
-const CleaningAreasPage = () => {
-  const [cleaningAreas, setCleaningAreas] = useState([]);
+const StorageZonesPage = () => {
+  const [storageZones, setStorageZones] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [success, setSuccess] = useState('');
@@ -35,94 +35,91 @@ const CleaningAreasPage = () => {
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({
     name: '',
-    frequency: 'Daily',
-    description: '',
+    type: 'Fridge',
     status: 'Active',
   });
   const [formError, setFormError] = useState('');
 
-  // Status Toggle Confirmation modal
+  // Status Toggle confirmation modal state
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmRecord, setConfirmRecord] = useState(null);
   const [confirmSaving, setConfirmSaving] = useState(false);
 
-  const fetchData = async () => {
+  // Fetch storage zones
+  const fetchStorageZones = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/api/cleaning-areas');
-      setCleaningAreas(res.data);
+      const response = await axios.get('/api/storage-zones');
+      setStorageZones(response.data);
     } catch (err) {
       console.error(err);
-      setError('Failed to fetch cleaning areas.');
+      setError('Failed to fetch storage zones.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchStorageZones();
   }, []);
 
   const openAddModal = () => {
     setEditId(null);
     setForm({
       name: '',
-      frequency: 'Daily',
-      description: '',
+      type: 'Fridge',
       status: 'Active',
     });
     setFormError('');
     setModalOpen(true);
   };
 
-  const handleEditClick = (area) => {
-    setEditId(area.id);
+  const handleEditClick = (item) => {
+    setEditId(item.id);
     setForm({
-      name: area.name,
-      frequency: area.frequency || 'Daily',
-      description: area.description || '',
-      status: area.status || 'Active',
+      name: item.name,
+      type: item.type || 'Fridge',
+      status: item.status || 'Active',
     });
     setFormError('');
     setModalOpen(true);
   };
 
-  const handleSaveCleaningArea = async (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     setFormError('');
 
     if (!form.name.trim()) {
-      setFormError('Area Name is required.');
+      setFormError('Storage Zone Name is required.');
       return;
     }
-    if (!form.frequency) {
-      setFormError('Cleaning Frequency is required.');
+    if (!form.type) {
+      setFormError('Storage Zone Type is required.');
       return;
     }
 
     try {
       if (editId) {
-        await axios.put(`/api/cleaning-areas/${editId}`, form);
-        setSuccess('Cleaning area updated successfully!');
+        await axios.put(`/api/storage-zones/${editId}`, form);
+        setSuccess('Storage zone updated successfully!');
       } else {
-        await axios.post('/api/cleaning-areas', form);
-        setSuccess('Cleaning area added successfully!');
+        await axios.post('/api/storage-zones', form);
+        setSuccess('Storage zone added successfully!');
       }
+
       setModalOpen(false);
-      setEditId(null);
-      setForm({ name: '', frequency: 'Daily', description: '', status: 'Active' });
-      fetchData();
+      fetchStorageZones();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       const errMsg = err.response?.data?.errors?.name?.[0] || 
-                     err.response?.data?.errors?.frequency?.[0] || 
-                     'An error occurred while saving.';
+                     err.response?.data?.errors?.type?.[0] || 
+                     'An error occurred while saving storage zone.';
       setFormError(errMsg);
     }
   };
 
-  const handleToggleStatus = (area) => {
-    setConfirmRecord(area);
+  const handleToggleStatus = (item) => {
+    setConfirmRecord(item);
     setConfirmModalOpen(true);
   };
 
@@ -130,20 +127,21 @@ const CleaningAreasPage = () => {
     if (!confirmRecord) return;
     setConfirmSaving(true);
     const nextStatus = confirmRecord.status === 'Active' ? 'Inactive' : 'Active';
+
     try {
-      await axios.put(`/api/cleaning-areas/${confirmRecord.id}`, {
+      await axios.put(`/api/storage-zones/${confirmRecord.id}`, {
         name: confirmRecord.name,
-        frequency: confirmRecord.frequency,
-        description: confirmRecord.description,
+        type: confirmRecord.type,
         status: nextStatus,
       });
+
       setConfirmModalOpen(false);
-      setSuccess(`Cleaning area "${confirmRecord.name}" is now ${nextStatus}.`);
-      fetchData();
+      setSuccess(`Storage zone "${confirmRecord.name}" status updated to ${nextStatus}.`);
+      fetchStorageZones();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error(err);
-      setError('Failed to toggle status.');
+      setError('Failed to update storage zone status.');
       setTimeout(() => setError(''), 3000);
     } finally {
       setConfirmSaving(false);
@@ -151,17 +149,17 @@ const CleaningAreasPage = () => {
     }
   };
 
-  const q = searchQuery.toLowerCase();
-  const filteredAreas = cleaningAreas.filter(area => {
-    const nameMatch = area.name.toLowerCase().includes(q);
-    const freqMatch = (area.frequency || '').toLowerCase().includes(q);
-    const descMatch = (area.description || '').toLowerCase().includes(q);
-    return nameMatch || freqMatch || descMatch;
+  const filteredList = storageZones.filter(item => {
+    const query = searchQuery.toLowerCase();
+    const nameMatch = item.name.toLowerCase().includes(query);
+    const typeMatch = (item.type || '').toLowerCase().includes(query);
+    const ruleMatch = (item.rule_text || '').toLowerCase().includes(query);
+    return nameMatch || typeMatch || ruleMatch;
   });
 
   return (
     <PageLayout>
-      <Head title="Cleaning Areas Master" />
+      <Head title="Storage Zones Master" />
 
       <div>
         {/* Back Link */}
@@ -177,11 +175,11 @@ const CleaningAreasPage = () => {
         <div style={styles.headerRow}>
           <div>
             <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Sparkles size={28} color="var(--color-primary)" />
-              Cleaning Areas Master
+              <Refrigerator size={28} color="var(--color-primary)" />
+              Storage Zones Master
             </h1>
             <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-              Manage cleaning locations, frequencies, and cleaning instructions.
+              Manage fridges, freezers, and hot cabinets used for temperature checks.
             </p>
           </div>
 
@@ -191,11 +189,11 @@ const CleaningAreasPage = () => {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Plus size={16} />
-            <span>Add Cleaning Area</span>
+            <span>Add Storage Zone</span>
           </Button>
         </div>
 
-        {/* Toast Notifications */}
+        {/* Toast Alerts */}
         {success && (
           <div style={styles.successToast}>
             <Check size={18} />
@@ -214,7 +212,7 @@ const CleaningAreasPage = () => {
           <Search size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
           <input
             type="text"
-            placeholder="Search cleaning areas by name, frequency, or instructions..."
+            placeholder="Search storage zones by name, type, or rule..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={styles.searchInput}
@@ -226,60 +224,66 @@ const CleaningAreasPage = () => {
           )}
         </div>
 
-        {/* Cleaning Areas List / Table */}
+        {/* Storage Zones Table */}
         <Card padding="0">
           {loading ? (
-            <div style={styles.loadingState}>Loading cleaning areas...</div>
-          ) : filteredAreas.length === 0 ? (
+            <div style={styles.loadingState}>Loading storage zones...</div>
+          ) : filteredList.length === 0 ? (
             <div style={styles.emptyState}>
-              {searchQuery ? 'No cleaning areas match your search.' : 'No cleaning areas added yet. Click "+ Add Cleaning Area" to get started.'}
+              {searchQuery 
+                ? 'No storage zones match your search.' 
+                : 'No storage zones added yet. Click "Add Storage Zone" to create one.'}
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={styles.table}>
                 <thead>
                   <tr>
-                    <th style={styles.th}>Area Name</th>
-                    <th style={styles.th}>Cleaning Frequency</th>
-                    <th style={styles.th}>Description / Instructions</th>
+                    <th style={styles.th}>Storage Zone Name</th>
+                    <th style={styles.th}>Storage Zone Type</th>
+                    <th style={styles.th}>Temperature Rule</th>
                     <th style={styles.th}>Status</th>
                     <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAreas.map((area) => {
-                    const isActive = area.status === 'Active';
+                  {filteredList.map((item) => {
+                    const isActive = item.status === 'Active';
                     return (
-                      <tr key={area.id} style={styles.tr}>
-                        <td style={styles.tdBold}>{area.name}</td>
+                      <tr key={item.id} style={styles.tr}>
+                        <td style={styles.tdBold}>{item.name}</td>
                         <td style={styles.td}>
-                          <span style={styles.freqBadge}>
-                            {area.frequency}
+                          <span style={styles.typeBadge}>
+                            {item.type}
                           </span>
                         </td>
-                        <td style={styles.td}>{area.description || '-'}</td>
+                        <td style={styles.td}>
+                          <span style={styles.ruleBadge}>
+                            {item.rule_text || '-'}
+                          </span>
+                        </td>
                         <td style={styles.td}>
                           <span style={{
                             ...styles.statusBadge,
                             backgroundColor: isActive ? '#E6F4EA' : '#F3F4F6',
                             color: isActive ? '#137333' : '#5F6368',
                           }}>
-                            {area.status || 'Active'}
+                            {item.status || 'Active'}
                           </span>
                         </td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>
                           <div style={styles.actionCell}>
                             <button 
-                              onClick={() => handleEditClick(area)} 
+                              onClick={() => handleEditClick(item)} 
                               style={styles.actionBtn}
-                              title="Edit Cleaning Area"
+                              title="Edit Storage Zone"
                             >
                               <Pencil size={15} color="var(--color-primary)" />
                             </button>
 
                             <Toggle 
                               checked={isActive}
-                              onChange={() => handleToggleStatus(area)}
+                              onChange={() => handleToggleStatus(item)}
                             />
                           </div>
                         </td>
@@ -293,14 +297,14 @@ const CleaningAreasPage = () => {
         </Card>
 
         {/* ========================================================================= */}
-        {/* ADD / EDIT CLEANING AREA MODAL */}
+        {/* ADD / EDIT MODAL */}
         {/* ========================================================================= */}
         <Modal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
-          title={editId ? "Edit Cleaning Area" : "Add New Cleaning Area"}
+          title={editId ? "Edit Storage Zone" : "New Storage Zone"}
         >
-          <form onSubmit={handleSaveCleaningArea} style={styles.form}>
+          <form onSubmit={handleSave} style={styles.form}>
             {formError && (
               <div style={styles.formErrorMsg}>
                 <ShieldAlert size={16} />
@@ -308,12 +312,12 @@ const CleaningAreasPage = () => {
               </div>
             )}
 
-            {/* Area Name */}
+            {/* Storage Zone Name */}
             <div style={styles.formGroup}>
-              <label style={styles.label}>Area Name *</label>
+              <label style={styles.label}>Storage Zone Name *</label>
               <input
                 type="text"
-                placeholder="e.g. Prep Area 1, Grill Station, Coffee Table, Restroom 1"
+                placeholder="e.g. Walk in fridge, Meat fridge, Main freezer, Hot cabinet 1"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 style={styles.input}
@@ -321,40 +325,40 @@ const CleaningAreasPage = () => {
               />
             </div>
 
-            {/* Cleaning Frequency Dropdown */}
+            {/* Storage Zone Type */}
             <div style={styles.formGroup}>
-              <label style={styles.label}>Cleaning Frequency *</label>
+              <label style={styles.label}>Storage Zone Type *</label>
               <select
-                value={form.frequency}
-                onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value })}
                 style={styles.select}
                 required
               >
-                {FREQUENCY_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
+                {STORAGE_ZONE_TYPES.map((typeOpt) => (
+                  <option key={typeOpt} value={typeOpt}>
+                    {typeOpt}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Description / Instructions */}
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Description / Instructions</label>
-              <textarea
-                placeholder="What needs cleaning in this area, e.g. sanitize all surfaces, degrease behind fryer"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                style={styles.textarea}
-                rows={3}
-              />
+            {/* Temperature Rule Preview */}
+            <div style={styles.rulePreviewBox}>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                HACCP Temperature Rule:
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--color-primary)', fontWeight: 700, marginTop: '2px' }}>
+                {form.type === 'Fridge' && '0°C to 5°C'}
+                {form.type === 'Freezer' && '-18°C or below'}
+                {form.type === 'Hot Cabinet' && '63°C or above'}
+              </div>
             </div>
 
             {/* Active Toggle */}
             <div style={styles.toggleRow}>
               <div>
                 <div style={styles.toggleLabel}>Active Status</div>
-                <div style={styles.toggleDesc}>Inactive cleaning areas are hidden from daily sanitation checklists.</div>
+                <div style={styles.toggleDesc}>Inactive storage zones will be hidden from daily temperature logs.</div>
               </div>
               <Toggle
                 checked={form.status === 'Active'}
@@ -367,7 +371,7 @@ const CleaningAreasPage = () => {
                 Cancel
               </Button>
               <Button type="submit" variant="primary">
-                {editId ? 'Update Cleaning Area' : 'Save Cleaning Area'}
+                {editId ? 'Update Storage Zone' : 'Save Storage Zone'}
               </Button>
             </div>
           </form>
@@ -379,12 +383,12 @@ const CleaningAreasPage = () => {
         <Modal
           isOpen={confirmModalOpen}
           onClose={() => setConfirmModalOpen(false)}
-          title="Change Cleaning Area Status"
+          title="Change Storage Zone Status"
         >
           {confirmRecord && (
             <div>
               <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', marginBottom: '20px', lineHeight: '1.5' }}>
-                Are you sure you want to change the status of <strong>"{confirmRecord.name}"</strong> to{' '}
+                Are you sure you want to change the status of storage zone <strong>"{confirmRecord.name}"</strong> to{' '}
                 <strong style={{ color: confirmRecord.status === 'Active' ? '#D97706' : 'var(--color-primary)' }}>
                   {confirmRecord.status === 'Active' ? 'Inactive' : 'Active'}
                 </strong>?
@@ -487,12 +491,21 @@ const styles = {
     color: 'var(--color-text-primary)',
     verticalAlign: 'middle',
   },
-  freqBadge: {
+  typeBadge: {
     display: 'inline-block',
     padding: '4px 10px',
     borderRadius: '6px',
-    backgroundColor: 'var(--color-primary-pale)',
-    color: 'var(--color-primary)',
+    backgroundColor: '#E0F2FE',
+    color: '#0369A1',
+    fontSize: '12px',
+    fontWeight: 600,
+  },
+  ruleBadge: {
+    display: 'inline-block',
+    padding: '4px 10px',
+    borderRadius: '6px',
+    backgroundColor: '#FEF3C7',
+    color: '#92400E',
     fontSize: '12px',
     fontWeight: 600,
   },
@@ -609,14 +622,11 @@ const styles = {
     backgroundColor: '#fff',
     fontFamily: 'inherit',
   },
-  textarea: {
+  rulePreviewBox: {
     padding: '10px 12px',
+    backgroundColor: '#F9FAFB',
     borderRadius: '8px',
     border: '1px solid var(--color-border-light)',
-    fontSize: '14px',
-    outline: 'none',
-    fontFamily: 'inherit',
-    resize: 'vertical',
   },
   toggleRow: {
     display: 'flex',
@@ -655,4 +665,4 @@ const styles = {
   },
 };
 
-export default CleaningAreasPage;
+export default StorageZonesPage;
