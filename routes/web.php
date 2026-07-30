@@ -20,7 +20,7 @@ use Inertia\Inertia;
 Route::domain(config('app.admin_domain'))->group(function () {
     Route::middleware('guest')->group(function () {
         Route::get('/', function () {
-            return redirect()->route('super-admin.login');
+            return Inertia::render('AdminWelcomePage');
         });
         Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('super-admin.login');
         Route::post('/login', [AuthenticatedSessionController::class, 'store']);
