@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // 1. Super Admin Subdomain (admin.localhost)
-Route::domain('admin.' . parse_url(config('app.url'), PHP_URL_HOST))->group(function () {
+Route::domain(config('app.admin_domain'))->group(function () {
     Route::middleware('guest')->group(function () {
         Route::get('/', function () {
             return redirect()->route('super-admin.login');
