@@ -12,6 +12,7 @@ use App\Http\Controllers\FoodItemController;
 use App\Http\Controllers\CleaningAreaController;
 use App\Http\Controllers\CleaningChecklistSectionController;
 use App\Http\Controllers\CleaningChecklistQuestionController;
+use App\Http\Controllers\ThermometerController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -148,6 +149,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('CleaningChecklistPage');
     })->name('manager.hub.cleaning-checklist');
 
+    // Thermometers / Probes Master Page Route
+    Route::get('/manager-hub/thermometers', function () {
+        return Inertia::render('ThermometersPage');
+    })->name('manager.hub.thermometers');
+
     // Ingredients API Routes
     Route::get('/api/ingredients', [IngredientController::class, 'index']);
     Route::post('/api/ingredients', [IngredientController::class, 'store']);
@@ -208,6 +214,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/cleaning-checklist-questions', [CleaningChecklistQuestionController::class, 'index']);
     Route::post('/api/cleaning-checklist-questions', [CleaningChecklistQuestionController::class, 'store']);
     Route::put('/api/cleaning-checklist-questions/{id}', [CleaningChecklistQuestionController::class, 'update']);
+
+    // Thermometers API Routes
+    Route::get('/api/thermometers', [ThermometerController::class, 'index']);
+    Route::post('/api/thermometers', [ThermometerController::class, 'store']);
+    Route::put('/api/thermometers/{id}', [ThermometerController::class, 'update']);
 });
 
 require __DIR__.'/settings.php';

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -56,6 +56,14 @@ const ManagerHubPage = () => {
       icon: ClipboardCheck, 
       active: true,
       route: '/manager-hub/cleaning-checklist'
+    },
+    { 
+      key: 'thermometers', 
+      label: 'Thermometers / Probes', 
+      desc: 'Manage digital probes, infrared thermometers, serial numbers, and active status.',
+      icon: Thermometer, 
+      active: true,
+      route: '/manager-hub/thermometers'
     },
   ];
 
