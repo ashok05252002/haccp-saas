@@ -23,7 +23,7 @@ import Modal from '../components/common/Modal';
 import StatusBadge from '../components/common/StatusBadge';
 import EmptyState from '../components/common/EmptyState';
 import Loader from '../components/common/Loader';
-import { getTenants, createTenant, updateTenant, deleteTenant, toggleTenantStatus } from '../services/TenantService';
+import { getTenants, createTenant, updateTenant, deleteTenant, toggleTenantStatus } from '../services/tenantService';
 
 const SuperAdminTenantsPage = () => {
   const { user, logout } = useAuth();
