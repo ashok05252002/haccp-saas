@@ -15,6 +15,8 @@ use App\Http\Controllers\CleaningChecklistQuestionController;
 use App\Http\Controllers\ThermometerController;
 use App\Http\Controllers\HealthDeclarationSectionController;
 use App\Http\Controllers\HealthDeclarationQuestionController;
+use App\Http\Controllers\TemperatureEquipmentController;
+use App\Http\Controllers\StorageZoneController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -161,6 +163,16 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('HealthDeclarationPage');
     })->name('manager.hub.health-declaration');
 
+    // Storage Zones Master Page Route
+    Route::get('/manager-hub/storage-zones', function () {
+        return Inertia::render('StorageZonesPage');
+    })->name('manager.hub.storage-zones');
+
+    // Legacy redirect for temperature-equipment
+    Route::get('/manager-hub/temperature-equipment', function () {
+        return redirect()->route('manager.hub.storage-zones');
+    });
+
     // Ingredients API Routes
     Route::get('/api/ingredients', [IngredientController::class, 'index']);
     Route::post('/api/ingredients', [IngredientController::class, 'store']);
@@ -236,6 +248,16 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/health-declaration-questions', [HealthDeclarationQuestionController::class, 'index']);
     Route::post('/api/health-declaration-questions', [HealthDeclarationQuestionController::class, 'store']);
     Route::put('/api/health-declaration-questions/{id}', [HealthDeclarationQuestionController::class, 'update']);
+
+    // Storage Zones API Routes
+    Route::get('/api/storage-zones', [StorageZoneController::class, 'index']);
+    Route::post('/api/storage-zones', [StorageZoneController::class, 'store']);
+    Route::put('/api/storage-zones/{id}', [StorageZoneController::class, 'update']);
+
+    // Legacy temperature-equipments alias for backwards compatibility
+    Route::get('/api/temperature-equipments', [StorageZoneController::class, 'index']);
+    Route::post('/api/temperature-equipments', [StorageZoneController::class, 'store']);
+    Route::put('/api/temperature-equipments/{id}', [StorageZoneController::class, 'update']);
 });
 
 require __DIR__.'/settings.php';

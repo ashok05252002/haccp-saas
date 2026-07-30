@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -56,6 +56,14 @@ const ManagerHubPage = () => {
       icon: ClipboardCheck, 
       active: true,
       route: '/manager-hub/cleaning-checklist'
+    },
+    { 
+      key: 'storage-zones', 
+      label: 'Storage Zones', 
+      desc: 'Manage fridges, freezers, and hot cabinets used for temperature checks.',
+      icon: Refrigerator, 
+      active: true,
+      route: '/manager-hub/storage-zones'
     },
     { 
       key: 'thermometers', 
