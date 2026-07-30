@@ -208,17 +208,17 @@ const StorageZonesPage = () => {
         )}
 
         {/* Search Bar */}
-        <div style={styles.searchBarWrapper}>
+        <div className="search-bar-wrapper">
           <Search size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Search storage zones by name, type, or rule..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
+            className="search-bar-input"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={styles.searchClearBtn}>
+            <button onClick={() => setSearchQuery('')} className="search-clear-btn">
               <X size={14} />
             </button>
           )}
@@ -236,14 +236,14 @@ const StorageZonesPage = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={styles.table}>
+              <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={styles.th}>Storage Zone Name</th>
-                    <th style={styles.th}>Storage Zone Type</th>
-                    <th style={styles.th}>Temperature Rule</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                    <th >Storage Zone Name</th>
+                    <th >Storage Zone Type</th>
+                    <th >Temperature Rule</th>
+                    <th >Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -252,17 +252,17 @@ const StorageZonesPage = () => {
                     return (
                       <tr key={item.id} style={styles.tr}>
                         <td style={styles.tdBold}>{item.name}</td>
-                        <td style={styles.td}>
+                        <td >
                           <span style={styles.typeBadge}>
                             {item.type}
                           </span>
                         </td>
-                        <td style={styles.td}>
+                        <td >
                           <span style={styles.ruleBadge}>
                             {item.rule_text || '-'}
                           </span>
                         </td>
-                        <td style={styles.td}>
+                        <td >
                           <span style={{
                             ...styles.statusBadge,
                             backgroundColor: isActive ? '#E6F4EA' : '#F3F4F6',
@@ -271,7 +271,7 @@ const StorageZonesPage = () => {
                             {item.status || 'Active'}
                           </span>
                         </td>
-                        <td style={{ ...styles.td, textAlign: 'right' }}>
+                        <td style={{ textAlign: 'right' }}>
                           <div style={styles.actionCell}>
                             <button 
                               onClick={() => handleEditClick(item)} 

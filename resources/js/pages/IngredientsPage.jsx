@@ -264,25 +264,25 @@ const IngredientsPage = () => {
 
       {/* Global Banners */}
       {success && (
-        <div style={styles.alertSuccess}>
+        <div className="alert-success">
           <Check size={16} />
           <span>{success}</span>
         </div>
       )}
       {error && (
-        <div style={styles.alertError}>
+        <div className="alert-error">
           <ShieldAlert size={16} />
           <span>{error}</span>
         </div>
       )}
 
       <div>
-        <button onClick={() => router.visit('/manager-hub')} style={styles.backBtn}>
+        <button onClick={() => router.visit('/manager-hub')} className="back-btn">
           <ArrowLeft size={16} />
           <span>Back to Manager Hub</span>
         </button>
 
-        <div style={styles.panelHeaderRow}>
+        <div className="panel-header-row">
           <div>
             <h1 className="page-title">Ingredients Master</h1>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', marginTop: '2px' }}>
@@ -338,10 +338,10 @@ const IngredientsPage = () => {
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
+            className="search-bar-input"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={styles.searchClearBtn}>
+            <button onClick={() => setSearchQuery('')} className="search-clear-btn">
               <X size={14} />
             </button>
           )}
@@ -363,30 +363,30 @@ const IngredientsPage = () => {
                 {searchQuery ? `No ingredients found matching "${searchQuery}".` : 'No ingredients registered yet.'}
               </div>
             ) : (
-              <table style={styles.table}>
+              <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={styles.th}>Ingredient Name</th>
-                    <th style={styles.th}>Category</th>
-                    <th style={styles.th}>Default UOM</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                    <th >Ingredient Name</th>
+                    <th >Category</th>
+                    <th >Default UOM</th>
+                    <th >Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredIngredients.map((ing) => (
                     <tr key={ing.id}>
-                      <td style={styles.td}>
+                      <td >
                         <strong style={{ color: 'var(--color-text-primary)' }}>{ing.name}</strong>
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         {ing.category ? (
                           <span style={styles.categoryBadge}>{ing.category.name}</span>
                         ) : (
                           <span style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic' }}>Unassigned</span>
                         )}
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         {ing.uom ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <code style={styles.codeBadge}>{ing.uom.unit_code}</code>
@@ -396,7 +396,7 @@ const IngredientsPage = () => {
                           <span style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic' }}>—</span>
                         )}
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <Toggle
                             checked={ing.status === 'Active'}
@@ -407,11 +407,11 @@ const IngredientsPage = () => {
                           </span>
                         </div>
                       </td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                           <button
                             onClick={() => handleEditIngClick(ing)}
-                            style={styles.actionIconBtn}
+                            className="action-icon-btn"
                             title="Edit Ingredient"
                           >
                             <Pencil size={15} />
@@ -442,27 +442,27 @@ const IngredientsPage = () => {
                 {searchQuery ? `No categories found matching "${searchQuery}".` : 'No categories registered yet.'}
               </div>
             ) : (
-              <table style={styles.table}>
+              <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={styles.th}>Category Name</th>
-                    <th style={styles.th}>Assigned Active Ingredients</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                    <th >Category Name</th>
+                    <th >Assigned Active Ingredients</th>
+                    <th >Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredCategories.map((cat) => (
                     <tr key={cat.id}>
-                      <td style={styles.td}>
+                      <td >
                         <strong style={{ color: 'var(--color-text-primary)' }}>{cat.name}</strong>
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         <span style={styles.countBadge}>
                           {cat.ingredients_count ?? 0} Item(s)
                         </span>
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <Toggle
                             checked={cat.status === 'Active'}
@@ -473,11 +473,11 @@ const IngredientsPage = () => {
                           </span>
                         </div>
                       </td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                           <button
                             onClick={() => handleEditCatClick(cat)}
-                            style={styles.actionIconBtn}
+                            className="action-icon-btn"
                             title="Edit Category"
                           >
                             <Pencil size={15} />
@@ -513,7 +513,7 @@ const IngredientsPage = () => {
       >
         <form onSubmit={handleSaveIngredient} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {ingFormError && (
-            <div style={styles.alertError}>
+            <div className="alert-error">
               <ShieldAlert size={16} />
               <span>{ingFormError}</span>
             </div>
@@ -609,7 +609,7 @@ const IngredientsPage = () => {
             <strong>{ingConfirmRecord?.status === 'Active' ? 'Inactive' : 'Active'}</strong>?
           </p>
           {ingConfirmRecord?.status === 'Active' && (
-            <div style={{ ...styles.alertError, margin: 0 }}>
+            <div className="alert-error" style={{ margin: 0 }}>
               <ShieldAlert size={16} />
               <span>Warning: Deactivating this ingredient may affect recipes or logs referencing it.</span>
             </div>
@@ -637,7 +637,7 @@ const IngredientsPage = () => {
       >
         <form onSubmit={handleSaveCategory} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {catFormError && (
-            <div style={styles.alertError}>
+            <div className="alert-error">
               <ShieldAlert size={16} />
               <span>{catFormError}</span>
             </div>
@@ -693,7 +693,7 @@ const IngredientsPage = () => {
             <strong>{catConfirmRecord?.status === 'Active' ? 'Inactive' : 'Active'}</strong>?
           </p>
           {catConfirmRecord?.status === 'Active' && (
-            <div style={{ ...styles.alertError, margin: 0 }}>
+            <div className="alert-error" style={{ margin: 0 }}>
               <ShieldAlert size={16} />
               <span>Warning: Deactivating this category will disallow selecting it for new ingredients.</span>
             </div>

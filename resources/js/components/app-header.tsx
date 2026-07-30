@@ -2,7 +2,7 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Icon } from '@/components/icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList, navigationMenuTriggerStyle } from '@/components/ui/navigation-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -11,7 +11,8 @@ import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Menu, Search, Store, ChevronDown, Check } from 'lucide-react';
+import axios from 'axios';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
 
@@ -152,6 +153,39 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 ))}
                             </div>
                         </div>
+
+                        {auth.user?.role !== 'super_admin' && auth.available_branches?.length > 1 && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" className="hidden md:flex h-9 items-center gap-2 mx-2">
+                                        <Store className="h-4 w-4" />
+                                        <span className="truncate max-w-[150px]">
+                                            {auth.available_branches.find((b: any) => b.id === auth.active_branch_id)?.name || 'Select Branch'}
+                                        </span>
+                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-[200px]">
+                                    {auth.available_branches.map((branch: any) => (
+                                        <DropdownMenuItem 
+                                            key={branch.id}
+                                            onClick={() => {
+                                                if (branch.id !== auth.active_branch_id) {
+                                                    axios.post('/api/switch-branch', { branch_id: branch.id }).then(() => {
+                                                        window.location.reload();
+                                                    });
+                                                }
+                                            }}
+                                            className="flex items-center justify-between cursor-pointer"
+                                        >
+                                            <span className="truncate">{branch.name}</span>
+                                            {branch.id === auth.active_branch_id && <Check className="h-4 w-4" />}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="size-10 rounded-full p-1">

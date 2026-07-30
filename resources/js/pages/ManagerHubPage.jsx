@@ -101,17 +101,17 @@ const ManagerHubPage = () => {
         </div>
 
         {/* Master Grid Search */}
-        <div style={styles.searchBarWrapper}>
+        <div className="search-bar-wrapper">
           <Search size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Search master panels..."
             value={masterSearchQuery}
             onChange={(e) => setMasterSearchQuery(e.target.value)}
-            style={styles.searchInput}
+            className="search-bar-input"
           />
           {masterSearchQuery && (
-            <button onClick={() => setMasterSearchQuery('')} style={styles.searchClearBtn}>
+            <button onClick={() => setMasterSearchQuery('')} className="search-clear-btn">
               <X size={14} />
             </button>
           )}

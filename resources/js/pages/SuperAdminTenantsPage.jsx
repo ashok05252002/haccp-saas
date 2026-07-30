@@ -225,34 +225,34 @@ const SuperAdminTenantsPage = () => {
         ) : (
           <Card style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
-              <table style={styles.table}>
+              <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={styles.th}>ID</th>
-                    <th style={styles.th}>Tenant Name</th>
-                    <th style={styles.th}>Business</th>
-                    <th style={styles.th}>Email</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Rest. Limit</th>
-                    <th style={styles.th}>Phone</th>
-                    <th style={styles.th}>Created</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                    <th >ID</th>
+                    <th >Tenant Name</th>
+                    <th >Business</th>
+                    <th >Email</th>
+                    <th >Status</th>
+                    <th >Rest. Limit</th>
+                    <th >Phone</th>
+                    <th >Created</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((Tenant) => (
                     <tr key={Tenant.id}>
-                      <td style={styles.td}><code style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{Tenant.id}</code></td>
-                      <td style={{ ...styles.td, fontWeight: 600 }}>{Tenant.TenantName}</td>
-                      <td style={styles.td}>{Tenant.businessName || '—'}</td>
-                      <td style={styles.td}>{Tenant.email}</td>
-                      <td style={styles.td}>
+                      <td ><code style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{Tenant.id}</code></td>
+                      <td style={{ fontWeight: 600 }}>{Tenant.TenantName}</td>
+                      <td >{Tenant.businessName || '—'}</td>
+                      <td >{Tenant.email}</td>
+                      <td >
                         <StatusBadge label={Tenant.status} type={Tenant.status === 'Active' ? 'success' : 'warning'} />
                       </td>
-                      <td style={styles.td}>{Tenant.restaurantsCreated || 0} / {Tenant.restaurantLimit}</td>
-                      <td style={styles.td}>{Tenant.phone || '—'}</td>
-                      <td style={styles.td}>{Tenant.createdAt}</td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <td >{Tenant.restaurantsCreated || 0} / {Tenant.restaurantLimit}</td>
+                      <td >{Tenant.phone || '—'}</td>
+                      <td >{Tenant.createdAt}</td>
+                      <td style={{ textAlign: 'right' }}>
                         <div style={styles.actions}>
                           <button onClick={() => router.visit(`/tenants/${Tenant.real_id}`)} style={styles.actionBtn} title="View"><Eye size={14} /></button>
                           <button onClick={() => handleOpenEdit(Tenant)} style={styles.actionBtn} title="Edit"><Pencil size={14} /></button>

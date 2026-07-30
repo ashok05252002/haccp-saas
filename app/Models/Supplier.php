@@ -3,16 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\BelongsToBranch;
 
 class Supplier extends Model
 {
+    use BelongsToBranch;
+
     protected $fillable = [
+        'branch_id',
         'tenant_id',
         'name',
-        'contact_person',
         'phone',
         'email',
-        'order_day',
         'address',
         'status',
     ];

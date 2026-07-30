@@ -39,7 +39,7 @@ const SuperAdminTenantViewPage = ({ tenant }) => {
 
       <main style={styles.main}>
         {/* Back navigation */}
-        <button onClick={() => router.visit('/tenants')} style={styles.backBtn}>
+        <button onClick={() => router.visit('/tenants')} className="back-btn">
           <ArrowLeft size={16} />
           <span>Back to Tenants</span>
         </button>

@@ -346,7 +346,7 @@ const CleaningChecklistPage = () => {
         </div>
 
         {/* Search Bar */}
-        <div style={styles.searchBarWrapper}>
+        <div className="search-bar-wrapper">
           <Search size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
           <input
             type="text"
@@ -357,10 +357,10 @@ const CleaningChecklistPage = () => {
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
+            className="search-bar-input"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={styles.searchClearBtn}>
+            <button onClick={() => setSearchQuery('')} className="search-clear-btn">
               <X size={14} />
             </button>
           )}
@@ -379,14 +379,14 @@ const CleaningChecklistPage = () => {
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={styles.table}>
+                <table className="data-table">
                   <thead>
                     <tr>
-                      <th style={styles.th}>Section Title</th>
-                      <th style={styles.th}>Description</th>
-                      <th style={styles.th}>Frequency</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                      <th >Section Title</th>
+                      <th >Description</th>
+                      <th >Frequency</th>
+                      <th >Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -395,13 +395,13 @@ const CleaningChecklistPage = () => {
                       return (
                         <tr key={sec.id} style={styles.tr}>
                           <td style={styles.tdBold}>{sec.title}</td>
-                          <td style={styles.td}>{sec.description || '-'}</td>
-                          <td style={styles.td}>
+                          <td >{sec.description || '-'}</td>
+                          <td >
                             <span style={styles.freqBadge}>
                               {sec.frequency}
                             </span>
                           </td>
-                          <td style={styles.td}>
+                          <td >
                             <span style={{
                               ...styles.statusBadge,
                               backgroundColor: isActive ? '#E6F4EA' : '#F3F4F6',
@@ -410,7 +410,7 @@ const CleaningChecklistPage = () => {
                               {sec.status || 'Active'}
                             </span>
                           </td>
-                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                          <td style={{ textAlign: 'right' }}>
                             <div style={styles.actionCell}>
                               <button 
                                 onClick={() => handleEditSecClick(sec)} 
@@ -451,13 +451,13 @@ const CleaningChecklistPage = () => {
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={styles.table}>
+                <table className="data-table">
                   <thead>
                     <tr>
-                      <th style={styles.th}>Question / Task</th>
-                      <th style={styles.th}>Section</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                      <th >Question / Task</th>
+                      <th >Section</th>
+                      <th >Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -468,12 +468,12 @@ const CleaningChecklistPage = () => {
                       return (
                         <tr key={qItem.id} style={styles.tr}>
                           <td style={styles.tdBold}>{qItem.question}</td>
-                          <td style={styles.td}>
+                          <td >
                             <span style={styles.secBadge}>
                               {sectionTitle}
                             </span>
                           </td>
-                          <td style={styles.td}>
+                          <td >
                             <span style={{
                               ...styles.statusBadge,
                               backgroundColor: isActive ? '#E6F4EA' : '#F3F4F6',
@@ -482,7 +482,7 @@ const CleaningChecklistPage = () => {
                               {qItem.status || 'Active'}
                             </span>
                           </td>
-                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                          <td style={{ textAlign: 'right' }}>
                             <div style={styles.actionCell}>
                               <button 
                                 onClick={() => handleEditQClick(qItem)} 

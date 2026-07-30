@@ -33,10 +33,8 @@ class SupplierController extends Controller
     {
         $request->validate([
             'name'           => 'required|string|max:255',
-            'contact_person' => 'nullable|string|max:255',
             'phone'          => 'nullable|string|max:255',
             'email'          => 'nullable|email|max:255',
-            'order_day'      => 'nullable|string|max:255',
             'address'        => 'nullable|string',
             'status'         => 'required|string|in:Active,Inactive',
             'category_ids'   => 'nullable|array',
@@ -61,10 +59,8 @@ class SupplierController extends Controller
         $supplier = Supplier::create([
             'tenant_id'      => $tenantId,
             'name'           => $request->name,
-            'contact_person' => $request->contact_person,
             'phone'          => $request->phone,
             'email'          => $request->email,
-            'order_day'      => $request->order_day,
             'address'        => $request->address,
             'status'         => $request->status,
         ]);
@@ -103,10 +99,8 @@ class SupplierController extends Controller
 
         $request->validate([
             'name'           => 'required|string|max:255',
-            'contact_person' => 'nullable|string|max:255',
             'phone'          => 'nullable|string|max:255',
             'email'          => 'nullable|email|max:255',
-            'order_day'      => 'nullable|string|max:255',
             'address'        => 'nullable|string',
             'status'         => 'required|string|in:Active,Inactive',
             'category_ids'   => 'nullable|array',
@@ -126,10 +120,8 @@ class SupplierController extends Controller
 
         $supplier->update([
             'name'           => $request->name,
-            'contact_person' => $request->contact_person,
             'phone'          => $request->phone,
             'email'          => $request->email,
-            'order_day'      => $request->order_day,
             'address'        => $request->address,
             'status'         => $request->status,
         ]);

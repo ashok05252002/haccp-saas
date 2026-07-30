@@ -17,8 +17,10 @@ use App\Http\Controllers\HealthDeclarationSectionController;
 use App\Http\Controllers\HealthDeclarationQuestionController;
 use App\Http\Controllers\TemperatureEquipmentController;
 use App\Http\Controllers\StorageZoneController;
+use App\Http\Controllers\BranchContextController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 // 1. Super Admin Subdomain (admin.localhost)
 Route::domain(config('app.admin_domain'))->group(function () {
@@ -105,6 +107,8 @@ Route::middleware(['auth', 'role:client'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
+    Route::post('/api/switch-branch', [BranchContextController::class, 'switchBranch']);
+
     Route::get('/dashboard', function () {
         return Inertia::render('DashboardPage');
     })->name('dashboard');

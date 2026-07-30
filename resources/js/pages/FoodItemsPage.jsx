@@ -380,7 +380,7 @@ const FoodItemsPage = () => {
         </div>
 
         {/* Search Bar */}
-        <div style={styles.searchBarWrapper}>
+        <div className="search-bar-wrapper">
           <Search size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
           <input
             type="text"
@@ -391,10 +391,10 @@ const FoodItemsPage = () => {
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
+            className="search-bar-input"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={styles.searchClearBtn}>
+            <button onClick={() => setSearchQuery('')} className="search-clear-btn">
               <X size={14} />
             </button>
           )}
@@ -411,14 +411,14 @@ const FoodItemsPage = () => {
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={styles.table}>
+                <table className="data-table">
                   <thead>
                     <tr>
-                      <th style={styles.th}>Food Item Name</th>
-                      <th style={styles.th}>Default UOM</th>
-                      <th style={styles.th}>Storage Type</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                      <th >Food Item Name</th>
+                      <th >Default UOM</th>
+                      <th >Storage Type</th>
+                      <th >Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -432,13 +432,13 @@ const FoodItemsPage = () => {
                       return (
                         <tr key={item.id} style={styles.tr}>
                           <td style={styles.tdBold}>{item.name}</td>
-                          <td style={styles.td}>{uomText}</td>
-                          <td style={styles.td}>
+                          <td >{uomText}</td>
+                          <td >
                             <span style={styles.storageTypeBadge}>
                               {storageTypeText}
                             </span>
                           </td>
-                          <td style={styles.td}>
+                          <td >
                             <span style={{
                               ...styles.statusBadge,
                               backgroundColor: isActive ? '#E6F4EA' : '#F3F4F6',
@@ -447,7 +447,7 @@ const FoodItemsPage = () => {
                               {item.status || 'Active'}
                             </span>
                           </td>
-                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                          <td style={{ textAlign: 'right' }}>
                             <div style={styles.actionCell}>
                               <button 
                                 onClick={() => handleEditItemClick(item)} 
@@ -484,16 +484,16 @@ const FoodItemsPage = () => {
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={styles.table}>
+                <table className="data-table">
                   <thead>
                     <tr>
-                      <th style={styles.th}>Storage Type Name</th>
-                      <th style={styles.th}>Temp Check Required</th>
-                      <th style={styles.th}>Min Temp (°C)</th>
-                      <th style={styles.th}>Max Temp (°C)</th>
-                      <th style={styles.th}>Temperature Rule Text</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                      <th >Storage Type Name</th>
+                      <th >Temp Check Required</th>
+                      <th >Min Temp (°C)</th>
+                      <th >Max Temp (°C)</th>
+                      <th >Temperature Rule Text</th>
+                      <th >Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -504,7 +504,7 @@ const FoodItemsPage = () => {
                       return (
                         <tr key={st.id} style={styles.tr}>
                           <td style={styles.tdBold}>{st.name}</td>
-                          <td style={styles.td}>
+                          <td >
                             <span style={{
                               ...styles.statusBadge,
                               backgroundColor: isTempReq ? '#FEF3C7' : '#F3F4F6',
@@ -513,10 +513,10 @@ const FoodItemsPage = () => {
                               {isTempReq ? 'Yes' : 'No'}
                             </span>
                           </td>
-                          <td style={styles.td}>{st.min_temp !== null && st.min_temp !== undefined ? `${st.min_temp}°C` : '-'}</td>
-                          <td style={styles.td}>{st.max_temp !== null && st.max_temp !== undefined ? `${st.max_temp}°C` : '-'}</td>
-                          <td style={styles.td}>{st.rule_text || '-'}</td>
-                          <td style={styles.td}>
+                          <td >{st.min_temp !== null && st.min_temp !== undefined ? `${st.min_temp}°C` : '-'}</td>
+                          <td >{st.max_temp !== null && st.max_temp !== undefined ? `${st.max_temp}°C` : '-'}</td>
+                          <td >{st.rule_text || '-'}</td>
+                          <td >
                             <span style={{
                               ...styles.statusBadge,
                               backgroundColor: isActive ? '#E6F4EA' : '#F3F4F6',
@@ -525,7 +525,7 @@ const FoodItemsPage = () => {
                               {st.status || 'Active'}
                             </span>
                           </td>
-                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                          <td style={{ textAlign: 'right' }}>
                             <div style={styles.actionCell}>
                               <button 
                                 onClick={() => handleEditTypeClick(st)} 

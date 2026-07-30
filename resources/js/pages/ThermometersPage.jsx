@@ -195,17 +195,17 @@ const ThermometersPage = () => {
         )}
 
         {/* Search Bar */}
-        <div style={styles.searchBarWrapper}>
+        <div className="search-bar-wrapper">
           <Search size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Search thermometers by name/ID or serial number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
+            className="search-bar-input"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={styles.searchClearBtn}>
+            <button onClick={() => setSearchQuery('')} className="search-clear-btn">
               <X size={14} />
             </button>
           )}
@@ -223,13 +223,13 @@ const ThermometersPage = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={styles.table}>
+              <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={styles.th}>Thermometer Name / ID</th>
-                    <th style={styles.th}>Serial Number</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                    <th >Thermometer Name / ID</th>
+                    <th >Serial Number</th>
+                    <th >Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -238,14 +238,14 @@ const ThermometersPage = () => {
                     return (
                       <tr key={item.id} style={styles.tr}>
                         <td style={styles.tdBold}>{item.name}</td>
-                        <td style={styles.td}>
+                        <td >
                           {item.serial_number ? (
                             <span style={styles.snText}>{item.serial_number}</span>
                           ) : (
                             <span style={styles.notProvidedText}>Not provided</span>
                           )}
                         </td>
-                        <td style={styles.td}>
+                        <td >
                           <span style={{
                             ...styles.statusBadge,
                             backgroundColor: isActive ? '#E6F4EA' : '#F3F4F6',
@@ -254,7 +254,7 @@ const ThermometersPage = () => {
                             {item.status || 'Active'}
                           </span>
                         </td>
-                        <td style={{ ...styles.td, textAlign: 'right' }}>
+                        <td style={{ textAlign: 'right' }}>
                           <div style={styles.actionCell}>
                             <button 
                               onClick={() => handleEditClick(item)} 

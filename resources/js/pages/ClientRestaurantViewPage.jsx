@@ -76,20 +76,20 @@ const ClientRestaurantViewPage = ({ restaurant: initialRestaurant }) => {
 
       <main style={styles.main}>
         {/* Back Link */}
-        <button onClick={() => router.visit('/client/restaurants')} style={styles.backBtn}>
+        <button onClick={() => router.visit('/client/restaurants')} className="back-btn">
           <ArrowLeft size={16} />
           <span>Back to Restaurants</span>
         </button>
 
         {/* Global Notifications */}
         {success && (
-          <div style={styles.alertSuccess}>
+          <div className="alert-success">
             <Check size={16} />
             <span>{success}</span>
           </div>
         )}
         {error && (
-          <div style={styles.alertError}>
+          <div className="alert-error">
             <ShieldAlert size={16} />
             <span>{error}</span>
           </div>
@@ -109,9 +109,9 @@ const ClientRestaurantViewPage = ({ restaurant: initialRestaurant }) => {
           {/* Left Column: Details Card */}
           <div style={styles.leftCol}>
             <Card style={{ padding: '28px', marginBottom: '24px' }}>
-              <div style={styles.sectionHeader}>
+              <div className="panel-header-row" style={{ borderBottom: "1px solid var(--color-border-light)", paddingBottom: "14px", marginBottom: "20px" }}>
                 <Store size={18} color="var(--color-primary)" />
-                <h3 style={styles.sectionTitle}>Location Information</h3>
+                <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0 }}>Location Information</h3>
               </div>
 
               <div style={styles.detailsList}>
@@ -161,9 +161,9 @@ const ClientRestaurantViewPage = ({ restaurant: initialRestaurant }) => {
             </Card>
 
             <Card style={{ padding: '28px' }}>
-              <div style={styles.sectionHeader}>
+              <div className="panel-header-row" style={{ borderBottom: "1px solid var(--color-border-light)", paddingBottom: "14px", marginBottom: "20px" }}>
                 <User size={18} color="var(--color-primary)" />
-                <h3 style={styles.sectionTitle}>Contact & Manager Details</h3>
+                <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0 }}>Contact & Manager Details</h3>
               </div>
 
               <div style={styles.detailsList}>
@@ -274,14 +274,14 @@ const ClientRestaurantViewPage = ({ restaurant: initialRestaurant }) => {
             <strong>{restaurant.haccpStatus === 'Active' ? 'Inactive' : 'Active'}</strong>?
           </p>
           {restaurant.haccpStatus === 'Active' ? (
-            <div style={styles.alertError}>
+            <div className="alert-error">
               <ShieldAlert size={16} style={{ flexShrink: 0 }} />
               <span>
                 Warning: Deactivating this location will block manager login credentials immediately and pause notifications.
               </span>
             </div>
           ) : (
-            <div style={styles.alertSuccess}>
+            <div className="alert-success">
               <Info size={16} style={{ flexShrink: 0 }} />
               <span>This will restore login capabilities for the manager user immediately.</span>
             </div>

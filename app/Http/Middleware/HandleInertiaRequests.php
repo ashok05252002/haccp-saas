@@ -48,6 +48,10 @@ class HandleInertiaRequests extends Middleware
                         ? $request->user()->load(['tenant', 'tenant.branches'])
                         : $request->user()->load(['tenant', 'branch'])
                 ) : null,
+                'active_branch_id' => \Illuminate\Support\Facades\Session::get('active_branch_id'),
+                'available_branches' => $request->user() && $request->user()->role !== 'super_admin' 
+                    ? \App\Models\Branch::where('tenant_id', $request->user()->tenant_id)->get() 
+                    : [],
             ],
         ]);
     }

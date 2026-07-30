@@ -158,12 +158,12 @@ const SupplierFormPage = ({ supplierId }) => {
       <Head title={isEdit ? 'Edit Supplier' : 'Add Supplier'} />
 
       <div>
-        <button onClick={() => router.visit('/manager-hub/suppliers')} style={styles.backBtn}>
+        <button onClick={() => router.visit('/manager-hub/suppliers')} className="back-btn">
           <ArrowLeft size={16} />
           <span>Back to Suppliers List</span>
         </button>
 
-        <div style={styles.panelHeaderRow}>
+        <div className="panel-header-row">
           <div>
             <h1 className="page-title">{isEdit ? 'Edit Supplier' : 'Add New Supplier'}</h1>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', marginTop: '2px' }}>
@@ -173,7 +173,7 @@ const SupplierFormPage = ({ supplierId }) => {
         </div>
 
         {error && (
-          <div style={styles.alertError}>
+          <div className="alert-error">
             <ShieldAlert size={16} />
             <span>{error}</span>
           </div>
@@ -187,9 +187,9 @@ const SupplierFormPage = ({ supplierId }) => {
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* SECTION 1: GENERAL INFORMATION */}
             <Card style={{ padding: '28px' }}>
-              <div style={styles.sectionHeader}>
+              <div className="panel-header-row" style={{ borderBottom: "1px solid var(--color-border-light)", paddingBottom: "14px", marginBottom: "20px" }}>
                 <Truck size={20} color="var(--color-primary)" />
-                <h2 style={styles.sectionTitle}>General Supplier Information</h2>
+                <h2 style={{ fontSize: "16px", fontWeight: 700, margin: 0 }}>General Supplier Information</h2>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -286,9 +286,9 @@ const SupplierFormPage = ({ supplierId }) => {
 
             {/* SECTION 2: MULTI-SELECT CATEGORIES */}
             <Card style={{ padding: '28px' }}>
-              <div style={styles.sectionHeader}>
+              <div className="panel-header-row" style={{ borderBottom: "1px solid var(--color-border-light)", paddingBottom: "14px", marginBottom: "20px" }}>
                 <Layers size={20} color="var(--color-primary)" />
-                <h2 style={styles.sectionTitle}>Supplied Ingredient Categories (Multi-select)</h2>
+                <h2 style={{ fontSize: "16px", fontWeight: 700, margin: 0 }}>Supplied Ingredient Categories (Multi-select)</h2>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
                 Select all categories of ingredients provided by this supplier. Multiple categories can be selected.
@@ -330,23 +330,23 @@ const SupplierFormPage = ({ supplierId }) => {
 
             {/* SECTION 3: CATEGORY & SEARCH-FILTERED INGREDIENTS ASSIGNMENT */}
             <Card style={{ padding: '28px' }}>
-              <div style={styles.sectionHeaderRow}>
+              <div className="panel-header-row" style={{ borderBottom: "1px solid var(--color-border-light)", paddingBottom: "14px", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <ChefHat size={20} color="var(--color-primary)" />
-                  <h2 style={styles.sectionTitle}>Supplied Ingredients Selection</h2>
+                  <h2 style={{ fontSize: "16px", fontWeight: 700, margin: 0 }}>Supplied Ingredients Selection</h2>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     type="button"
                     onClick={handleSelectAllShown}
-                    style={styles.quickActionBtn}
+                    className="btn btn-sm btn-outline"
                   >
                     <CheckSquare size={13} /> Select All Shown ({searchedIngredients.length})
                   </button>
                   <button
                     type="button"
                     onClick={handleDeselectAllShown}
-                    style={styles.quickActionBtn}
+                    className="btn btn-sm btn-outline"
                   >
                     <Square size={13} /> Deselect All Shown
                   </button>
@@ -372,7 +372,7 @@ const SupplierFormPage = ({ supplierId }) => {
                   <button 
                     type="button" 
                     onClick={() => setIngredientSearchQuery('')} 
-                    style={styles.searchClearBtn}
+                    className="search-clear-btn"
                   >
                     <X size={14} />
                   </button>

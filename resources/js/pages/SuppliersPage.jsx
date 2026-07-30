@@ -86,25 +86,25 @@ const SuppliersPage = () => {
 
       {/* Banners */}
       {success && (
-        <div style={styles.alertSuccess}>
+        <div className="alert-success">
           <Check size={16} />
           <span>{success}</span>
         </div>
       )}
       {error && (
-        <div style={styles.alertError}>
+        <div className="alert-error">
           <ShieldAlert size={16} />
           <span>{error}</span>
         </div>
       )}
 
       <div>
-        <button onClick={() => router.visit('/manager-hub')} style={styles.backBtn}>
+        <button onClick={() => router.visit('/manager-hub')} className="back-btn">
           <ArrowLeft size={16} />
           <span>Back to Manager Hub</span>
         </button>
 
-        <div style={styles.panelHeaderRow}>
+        <div className="panel-header-row">
           <div>
             <h1 className="page-title">Suppliers Master</h1>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', marginTop: '2px' }}>
@@ -121,17 +121,17 @@ const SuppliersPage = () => {
         </div>
 
         {/* Search Bar */}
-        <div style={styles.searchBarWrapper}>
+        <div className="search-bar-wrapper">
           <Search size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Search suppliers by name, contact, email, or category..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
+            className="search-bar-input"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={styles.searchClearBtn}>
+            <button onClick={() => setSearchQuery('')} className="search-clear-btn">
               <X size={14} />
             </button>
           )}
@@ -151,25 +151,25 @@ const SuppliersPage = () => {
               {searchQuery ? `No suppliers match "${searchQuery}".` : 'No suppliers registered.'}
             </div>
           ) : (
-            <table style={styles.table}>
+            <table className="data-table">
               <thead>
                 <tr>
-                  <th style={styles.th}>Supplier Name</th>
-                  <th style={styles.th}>Contact Person</th>
-                  <th style={styles.th}>Phone & Email</th>
-                  <th style={styles.th}>Order Schedule</th>
-                  <th style={styles.th}>Supplied Categories</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                  <th >Supplier Name</th>
+                  <th >Contact Person</th>
+                  <th >Phone & Email</th>
+                  <th >Order Schedule</th>
+                  <th >Supplied Categories</th>
+                  <th >Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredSuppliers.map((s) => (
                   <tr key={s.id}>
-                    <td style={styles.td}>
+                    <td >
                       <strong style={{ color: 'var(--color-text-primary)', fontSize: '15px' }}>{s.name}</strong>
                     </td>
-                    <td style={styles.td}>
+                    <td >
                       {s.contact_person ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <User size={14} color="var(--color-text-muted)" />
@@ -179,7 +179,7 @@ const SuppliersPage = () => {
                         <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>—</span>
                       )}
                     </td>
-                    <td style={styles.td}>
+                    <td >
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '12px' }}>
                         {s.phone && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-text-secondary)' }}>
@@ -194,7 +194,7 @@ const SuppliersPage = () => {
                         {!s.phone && !s.email && <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>—</span>}
                       </div>
                     </td>
-                    <td style={styles.td}>
+                    <td >
                       {s.order_day ? (
                         <span style={styles.dayBadge}>
                           <Calendar size={12} style={{ marginRight: '4px' }} />
@@ -204,7 +204,7 @@ const SuppliersPage = () => {
                         <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>Any day</span>
                       )}
                     </td>
-                    <td style={styles.td}>
+                    <td >
                       {s.categories && s.categories.length > 0 ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                           {s.categories.map(c => (
@@ -217,7 +217,7 @@ const SuppliersPage = () => {
                         <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>Unassigned</span>
                       )}
                     </td>
-                    <td style={styles.td}>
+                    <td >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <Toggle
                           checked={s.status === 'Active'}
@@ -228,11 +228,11 @@ const SuppliersPage = () => {
                         </span>
                       </div>
                     </td>
-                    <td style={{ ...styles.td, textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                         <button
                           onClick={() => router.visit(`/manager-hub/suppliers/${s.id}/edit`)}
-                          style={styles.actionIconBtn}
+                          className="action-icon-btn"
                           title="Edit Supplier"
                         >
                           <Pencil size={15} />
@@ -269,7 +269,7 @@ const SuppliersPage = () => {
             <strong>{confirmRecord?.status === 'Active' ? 'Inactive' : 'Active'}</strong>?
           </p>
           {confirmRecord?.status === 'Active' && (
-            <div style={{ ...styles.alertError, margin: 0 }}>
+            <div className="alert-error" style={{ margin: 0 }}>
               <ShieldAlert size={16} />
               <span>Deactivating a supplier will remove them from active order selections.</span>
             </div>

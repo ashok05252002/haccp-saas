@@ -210,17 +210,17 @@ const CleaningAreasPage = () => {
         )}
 
         {/* Search Bar */}
-        <div style={styles.searchBarWrapper}>
+        <div className="search-bar-wrapper">
           <Search size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Search cleaning areas by name, frequency, or instructions..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
+            className="search-bar-input"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={styles.searchClearBtn}>
+            <button onClick={() => setSearchQuery('')} className="search-clear-btn">
               <X size={14} />
             </button>
           )}
@@ -236,14 +236,14 @@ const CleaningAreasPage = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={styles.table}>
+              <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={styles.th}>Area Name</th>
-                    <th style={styles.th}>Cleaning Frequency</th>
-                    <th style={styles.th}>Description / Instructions</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                    <th >Area Name</th>
+                    <th >Cleaning Frequency</th>
+                    <th >Description / Instructions</th>
+                    <th >Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -252,13 +252,13 @@ const CleaningAreasPage = () => {
                     return (
                       <tr key={area.id} style={styles.tr}>
                         <td style={styles.tdBold}>{area.name}</td>
-                        <td style={styles.td}>
+                        <td >
                           <span style={styles.freqBadge}>
                             {area.frequency}
                           </span>
                         </td>
-                        <td style={styles.td}>{area.description || '-'}</td>
-                        <td style={styles.td}>
+                        <td >{area.description || '-'}</td>
+                        <td >
                           <span style={{
                             ...styles.statusBadge,
                             backgroundColor: isActive ? '#E6F4EA' : '#F3F4F6',
@@ -267,7 +267,7 @@ const CleaningAreasPage = () => {
                             {area.status || 'Active'}
                           </span>
                         </td>
-                        <td style={{ ...styles.td, textAlign: 'right' }}>
+                        <td style={{ textAlign: 'right' }}>
                           <div style={styles.actionCell}>
                             <button 
                               onClick={() => handleEditClick(area)} 

@@ -90,7 +90,7 @@ const ClientCreateRestaurantPage = () => {
         {/* Back Link */}
         <button
           onClick={() => router.visit('/client/restaurants')}
-          style={styles.backBtn}
+          className="back-btn"
         >
           <ArrowLeft size={16} />
           <span>Back to Restaurants</span>

@@ -367,25 +367,25 @@ const UomMasterPage = () => {
 
       {/* Global Success / Error Banners */}
       {success && (
-        <div style={styles.alertSuccess}>
+        <div className="alert-success">
           <Check size={16} />
           <span>{success}</span>
         </div>
       )}
       {error && (
-        <div style={styles.alertError}>
+        <div className="alert-error">
           <ShieldAlert size={16} />
           <span>{error}</span>
         </div>
       )}
 
       <div>
-        <button onClick={() => router.visit('/manager-hub')} style={styles.backBtn}>
+        <button onClick={() => router.visit('/manager-hub')} className="back-btn">
           <ArrowLeft size={16} />
           <span>Back to Manager Hub</span>
         </button>
 
-        <div style={styles.panelHeaderRow}>
+        <div className="panel-header-row">
           <div>
             <h1 className="page-title">Unit of Measurement (UOM) Master</h1>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', marginTop: '2px' }}>
@@ -458,10 +458,10 @@ const UomMasterPage = () => {
             }
             value={uomSearchQuery}
             onChange={(e) => setUomSearchQuery(e.target.value)}
-            style={styles.searchInput}
+            className="search-bar-input"
           />
           {uomSearchQuery && (
-            <button onClick={() => setUomSearchQuery('')} style={styles.searchClearBtn}>
+            <button onClick={() => setUomSearchQuery('')} className="search-clear-btn">
               <X size={14} />
             </button>
           )}
@@ -479,21 +479,21 @@ const UomMasterPage = () => {
                 {uomSearchQuery ? `No category types match "${uomSearchQuery}".` : 'No category types registered. Click "Add Category Type" to create one.'}
               </div>
             ) : (
-              <table style={styles.table}>
+              <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={styles.th}>Category Name</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                    <th >Category Name</th>
+                    <th >Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUnitTypes.map((type) => (
                     <tr key={type.id}>
-                      <td style={styles.td}>
+                      <td >
                         <strong style={{ color: 'var(--color-text-primary)' }}>{type.name}</strong>
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <Toggle
                             checked={type.status === 'Active'}
@@ -504,11 +504,11 @@ const UomMasterPage = () => {
                           </span>
                         </div>
                       </td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                           <button
                             onClick={() => handleEditTypeClick(type)}
-                            style={styles.actionIconBtn}
+                            className="action-icon-btn"
                             title="Edit"
                           >
                             <Pencil size={15} />
@@ -527,27 +527,27 @@ const UomMasterPage = () => {
                 {uomSearchQuery ? `No base units match "${uomSearchQuery}".` : 'No base units registered. Click "Add Base Unit" to create one.'}
               </div>
             ) : (
-              <table style={styles.table}>
+              <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={styles.th}>Base Unit Name</th>
-                    <th style={styles.th}>Unit Code</th>
-                    <th style={styles.th}>Category Type</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                    <th >Base Unit Name</th>
+                    <th >Unit Code</th>
+                    <th >Category Type</th>
+                    <th >Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredBaseUnitsList.map((base) => (
                     <tr key={base.id}>
-                      <td style={styles.td}>
+                      <td >
                         <strong style={{ color: 'var(--color-text-primary)' }}>{base.name}</strong>
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         <code style={styles.codeBadge}>{base.code}</code>
                       </td>
-                      <td style={styles.td}>{base.unit_type?.name}</td>
-                      <td style={styles.td}>
+                      <td >{base.unit_type?.name}</td>
+                      <td >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <Toggle
                             checked={base.status === 'Active'}
@@ -558,11 +558,11 @@ const UomMasterPage = () => {
                           </span>
                         </div>
                       </td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                           <button
                             onClick={() => handleEditBaseClick(base)}
-                            style={styles.actionIconBtn}
+                            className="action-icon-btn"
                             title="Edit"
                           >
                             <Pencil size={15} />
@@ -581,47 +581,47 @@ const UomMasterPage = () => {
                 {uomSearchQuery ? `No UOM units match "${uomSearchQuery}".` : 'No selectable UOMs registered. Click "Add Selectable UOM" to create one.'}
               </div>
             ) : (
-              <table style={styles.table}>
+              <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={styles.th}>Unit Name</th>
-                    <th style={styles.th}>Code</th>
-                    <th style={styles.th}>Category</th>
-                    <th style={styles.th}>Base Unit</th>
-                    <th style={styles.th}>Conversion Factor</th>
-                    <th style={styles.th}>Decimals</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                    <th >Unit Name</th>
+                    <th >Code</th>
+                    <th >Category</th>
+                    <th >Base Unit</th>
+                    <th >Conversion Factor</th>
+                    <th >Decimals</th>
+                    <th >Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUoms.map((u) => (
                     <tr key={u.id}>
-                      <td style={styles.td}>
+                      <td >
                         <strong style={{ color: 'var(--color-text-primary)' }}>{u.unit_name}</strong>
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         <code style={styles.codeBadge}>{u.unit_code}</code>
                       </td>
-                      <td style={styles.td}>{u.unit_type?.name}</td>
-                      <td style={styles.td}>
+                      <td >{u.unit_type?.name}</td>
+                      <td >
                         {u.base_unit ? (
                           <span style={styles.uomLink}>{u.base_unit.name} ({u.base_unit.code})</span>
                         ) : (
                           <span style={styles.baseLabel}>Base Unit</span>
                         )}
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         {u.base_unit ? (
                           <span>{parseFloat(u.conversion_factor)} {u.base_unit.code}</span>
                         ) : (
                           <span>1.0</span>
                         )}
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         {u.decimal_allowed ? 'Yes' : 'No'}
                       </td>
-                      <td style={styles.td}>
+                      <td >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <Toggle
                             checked={u.status === 'Active'}
@@ -632,11 +632,11 @@ const UomMasterPage = () => {
                           </span>
                         </div>
                       </td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                           <button
                             onClick={() => handleEditUomClick(u)}
-                            style={styles.actionIconBtn}
+                            className="action-icon-btn"
                             title="Edit UOM"
                           >
                             <Pencil size={15} />
@@ -672,7 +672,7 @@ const UomMasterPage = () => {
       >
         <form onSubmit={handleSaveType} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {typeFormError && (
-            <div style={styles.alertError}>
+            <div className="alert-error">
               <ShieldAlert size={16} />
               <span>{typeFormError}</span>
             </div>
@@ -992,7 +992,7 @@ const UomMasterPage = () => {
             to <strong>{uomStatusConfirmRecord?.status === 'Active' ? 'Inactive' : 'Active'}</strong>?
           </p>
           {uomStatusConfirmRecord?.status === 'Active' && (
-            <div style={{ ...styles.alertError, margin: 0 }}>
+            <div className="alert-error" style={{ margin: 0 }}>
               <ShieldAlert size={16} />
               <span>
                 {uomStatusConfirmType === 'type' && 'Warning: Deactivating this category will disable all base units and UOMs mapped under it.'}
