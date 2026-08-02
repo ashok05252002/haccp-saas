@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import {
   LayoutDashboard,
@@ -15,18 +15,37 @@ import {
   X,
   ArrowLeftRight,
   Store,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/hooks/AuthContext';
 
 const menuItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/manager-hub', label: 'Manager Hub', icon: Settings },
+  { path: '/haccp-logs', label: 'HACCP Logs', icon: ClipboardCheck },
 ];
 
 const Sidebar = () => {
   const { user, logout, selectedRestaurant, switchRestaurant } = useAuth();
   const { url } = usePage();
   const [mobileOpen, setMobileOpen] = useState(false);
+  
+  const [isMinimized, setIsMinimized] = useState(() => {
+    return localStorage.getItem('sidebar_minimized') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sidebar_minimized', isMinimized);
+    if (isMinimized) {
+      document.body.classList.add('sidebar-minimized');
+    } else {
+      document.body.classList.remove('sidebar-minimized');
+    }
+    return () => {
+      document.body.classList.remove('sidebar-minimized');
+    }
+  }, [isMinimized]);
 
   const handleLogout = async () => {
     await logout();
@@ -45,20 +64,39 @@ const Sidebar = () => {
     : '';
 
   const sidebarContent = (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Logo */}
-      <div style={styles.logoSection}>
-        <div style={styles.logoIcon}>
-          <ChefHat size={22} color="#fff" />
+      <div style={{
+        ...styles.logoSection, 
+        justifyContent: isMinimized ? 'center' : 'space-between', 
+        padding: isMinimized ? '24px 0 16px' : '24px 20px 16px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center' }}>
+          <div style={{...styles.logoIcon, margin: isMinimized ? '0 auto' : '0'}}>
+            <ChefHat size={22} color="#fff" />
+          </div>
+          {!isMinimized && (
+            <div>
+              <div style={styles.logoText}>Chef2Comply</div>
+              <div style={styles.logoSubtext}>HACCP & Planning</div>
+            </div>
+          )}
         </div>
-        <div>
-          <div style={styles.logoText}>Chef2Comply</div>
-          <div style={styles.logoSubtext}>HACCP & Planning</div>
-        </div>
+        {!isMinimized && (
+          <button onClick={() => setIsMinimized(true)} style={styles.toggleBtn} title="Minimize Sidebar">
+            <ChevronLeft size={18} />
+          </button>
+        )}
       </div>
 
+      {isMinimized && (
+        <button onClick={() => setIsMinimized(false)} style={{...styles.toggleBtn, alignSelf: 'center', margin: '0 0 16px 0'}} title="Expand Sidebar">
+          <ChevronRight size={18} />
+        </button>
+      )}
+
       {/* Selected restaurant context */}
-      {restaurantLabel && (
+      {restaurantLabel && !isMinimized && (
         <div style={styles.restaurantBar}>
           <Store size={14} color="rgba(255,255,255,0.7)" />
           <span style={styles.restaurantName}>{restaurantLabel}</span>
@@ -66,7 +104,7 @@ const Sidebar = () => {
       )}
 
       {/* Navigation */}
-      <nav style={styles.nav}>
+      <nav style={{...styles.nav, padding: isMinimized ? '8px' : '8px 12px'}}>
         {menuItems.map((item) => {
           const isActive = url === item.path || url.startsWith(item.path + '/');
           return (
@@ -77,41 +115,61 @@ const Sidebar = () => {
               style={{
                 ...styles.navItem,
                 ...(isActive ? styles.navItemActive : {}),
+                justifyContent: isMinimized ? 'center' : 'flex-start',
+                padding: isMinimized ? '10px 0' : '10px 14px'
               }}
+              title={isMinimized ? item.label : undefined}
             >
-              <item.icon size={18} style={{ opacity: isActive ? 1 : 0.8 }} />
-              <span>{item.label}</span>
+              <item.icon size={18} style={{ opacity: isActive ? 1 : 0.8, flexShrink: 0 }} />
+              {!isMinimized && <span>{item.label}</span>}
             </Link>
           );
         })}
 
         {/* Switch Restaurant */}
         {user?.role === 'client' && (
-          <button onClick={handleSwitchRestaurant} style={styles.switchBtn}>
-            <ArrowLeftRight size={18} style={{ opacity: 0.8 }} />
-            <span>Switch Restaurant</span>
+          <button 
+            onClick={handleSwitchRestaurant} 
+            style={{
+              ...styles.switchBtn, 
+              justifyContent: isMinimized ? 'center' : 'flex-start', 
+              padding: isMinimized ? '14px 0 0' : '14px 14px 0',
+              textAlign: isMinimized ? 'center' : 'left'
+            }}
+            title={isMinimized ? "Switch Restaurant" : undefined}
+          >
+            <ArrowLeftRight size={18} style={{ opacity: 0.8, flexShrink: 0 }} />
+            {!isMinimized && <span>Switch Restaurant</span>}
           </button>
         )}
       </nav>
 
       {/* User footer */}
-      <div style={styles.userSection}>
-        <div style={styles.userInfo}>
-          <div style={styles.userAvatar}>
+      <div style={{
+        ...styles.userSection, 
+        flexDirection: isMinimized ? 'column' : 'row', 
+        gap: isMinimized ? '12px' : '0', 
+        padding: isMinimized ? '16px 0' : '16px 20px',
+        alignItems: 'center'
+      }}>
+        <div style={{...styles.userInfo, justifyContent: isMinimized ? 'center' : 'flex-start', width: isMinimized ? '100%' : 'auto'}}>
+          <div style={styles.userAvatar} title={isMinimized ? user?.name : undefined}>
             <User size={18} color="rgba(255,255,255,0.8)" />
           </div>
-          <div>
-            <div style={styles.userName}>{user?.name || 'User'}</div>
-            <div style={styles.userRole}>
-              {user?.role === 'super_admin' ? 'Super Admin' : (user?.role === 'client' ? 'Client Admin' : 'Branch Manager')}
+          {!isMinimized && (
+            <div>
+              <div style={styles.userName}>{user?.name || 'User'}</div>
+              <div style={styles.userRole}>
+                {user?.role === 'super_admin' ? 'Super Admin' : (user?.role === 'client' ? 'Client Admin' : 'Branch Manager')}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         <button onClick={handleLogout} style={styles.logoutBtn} title="Logout">
           <LogOut size={18} />
         </button>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -134,7 +192,7 @@ const Sidebar = () => {
       )}
 
       {/* Desktop sidebar */}
-      <aside style={styles.sidebar} className="sidebar-desktop">
+      <aside style={{...styles.sidebar, width: isMinimized ? '72px' : 'var(--sidebar-width)'}} className="sidebar-desktop">
         {sidebarContent}
       </aside>
     </>
@@ -143,7 +201,6 @@ const Sidebar = () => {
 
 const styles = {
   sidebar: {
-    width: 'var(--sidebar-width)',
     minWidth: 'var(--sidebar-width)',
     height: '100vh',
     position: 'fixed',
@@ -154,6 +211,7 @@ const styles = {
     flexDirection: 'column',
     zIndex: 100,
     overflowY: 'auto',
+    transition: 'width 200ms ease',
   },
   logoSection: {
     display: 'flex',
@@ -175,11 +233,27 @@ const styles = {
     fontSize: '16px',
     fontWeight: 700,
     color: '#fff',
+    whiteSpace: 'nowrap',
   },
   logoSubtext: {
     fontSize: '12px',
     color: 'rgba(255,255,255,0.6)',
     marginTop: '1px',
+    whiteSpace: 'nowrap',
+  },
+  toggleBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '28px',
+    height: '28px',
+    borderRadius: '6px',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    color: 'rgba(255,255,255,0.8)',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'all 150ms ease',
+    flexShrink: 0,
   },
   restaurantBar: {
     display: 'flex',
@@ -215,6 +289,7 @@ const styles = {
     fontWeight: 500,
     textDecoration: 'none',
     transition: 'all 150ms ease',
+    whiteSpace: 'nowrap',
   },
   navItemActive: {
     backgroundColor: '#14573F',
@@ -238,6 +313,7 @@ const styles = {
     paddingTop: '14px',
     textAlign: 'left',
     width: '100%',
+    whiteSpace: 'nowrap',
   },
   userSection: {
     display: 'flex',
@@ -259,15 +335,18 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   userName: {
     fontSize: '13px',
     fontWeight: 600,
     color: '#fff',
+    whiteSpace: 'nowrap',
   },
   userRole: {
     fontSize: '11px',
     color: 'rgba(255,255,255,0.55)',
+    whiteSpace: 'nowrap',
   },
   logoutBtn: {
     width: 32,
@@ -281,6 +360,7 @@ const styles = {
     border: 'none',
     backgroundColor: 'transparent',
     transition: 'all 150ms',
+    flexShrink: 0,
   },
   hamburger: {
     position: 'fixed',

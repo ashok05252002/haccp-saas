@@ -15,10 +15,8 @@ const SupplierFormPage = ({ supplierId }) => {
 
   const [form, setForm] = useState({
     name: '',
-    contact_person: '',
     phone: '',
     email: '',
-    order_day: '',
     address: '',
     status: 'Active',
   });
@@ -51,10 +49,8 @@ const SupplierFormPage = ({ supplierId }) => {
           const sup = supRes.data;
           setForm({
             name: sup.name || '',
-            contact_person: sup.contact_person || '',
             phone: sup.phone || '',
             email: sup.email || '',
-            order_day: sup.order_day || '',
             address: sup.address || '',
             status: sup.status || 'Active',
           });
@@ -207,17 +203,7 @@ const SupplierFormPage = ({ supplierId }) => {
                   {formErrors.name && <span style={styles.fieldError}>{formErrors.name}</span>}
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Contact Person</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={form.contact_person}
-                    onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
-                    placeholder="e.g. John Smith"
-                    style={{ width: '100%', boxSizing: 'border-box' }}
-                  />
-                </div>
+
 
                 <div className="form-group">
                   <label className="form-label">Phone Number</label>
@@ -243,20 +229,7 @@ const SupplierFormPage = ({ supplierId }) => {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Regular Order Day</label>
-                  <select
-                    className="form-select"
-                    value={form.order_day}
-                    onChange={(e) => setForm({ ...form, order_day: e.target.value })}
-                    style={{ width: '100%', boxSizing: 'border-box' }}
-                  >
-                    <option value="">-- Any / Flexible Day --</option>
-                    {DAYS.map(day => (
-                      <option key={day} value={day}>{day}</option>
-                    ))}
-                  </select>
-                </div>
+
 
                 <div className="form-group">
                   <label className="form-label">Status</label>

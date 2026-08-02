@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-const Modal = ({ isOpen, onClose, title, children, footer }) => {
+const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
   if (!isOpen) return null;
 
   const handleOverlayClick = (e) => {
@@ -10,7 +10,7 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
 
   return (
     <div className="overlay" onClick={handleOverlayClick}>
-      <div className="modal">
+      <div className={`modal ${size === 'lg' ? 'modal-lg' : ''}`}>
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>
           <button className="modal-close" onClick={onClose}>

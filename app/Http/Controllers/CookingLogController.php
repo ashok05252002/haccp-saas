@@ -1,0 +1,111 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\CookingLog;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class CookingLogController extends Controller
+{
+    public function index(Request $request)
+    {
+        $tenantId = Auth::user()->tenant_id;
+        if (!$tenantId) {
+            return response()->json([], 200);
+        }
+
+        $logs = CookingLog::where('tenant_id', $tenantId)
+            ->orderBy('log_date', 'desc')
+            ->orderBy('log_time', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return response()->json($logs);
+    }
+
+    public function show($id)
+    {
+        $tenantId = Auth::user()->tenant_id;
+        if (!$tenantId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $log = CookingLog::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        return response()->json($log);
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'log_date' => 'required|date',
+            'log_time' => 'required|string',
+            'food_item' => 'required|string|max:255',
+            'staff_name' => 'nullable|string|max:255',
+            'batch_code' => 'nullable|string|max:255',
+            'probe_id' => 'nullable|string|max:255',
+            'cooking_temp' => 'nullable|numeric',
+            'cooking_target' => 'nullable|string',
+            'cooking_method' => 'nullable|string',
+            'cooking_passed' => 'nullable|boolean',
+            'chilling_method' => 'nullable|string',
+            'chilling_start_temp' => 'nullable|numeric',
+            'chilling_end_temp' => 'nullable|numeric',
+            'chilling_duration_minutes' => 'nullable|integer',
+            'chilling_passed' => 'nullable|boolean',
+            'chiller_location' => 'nullable|string',
+            'chiller_temp' => 'nullable|numeric',
+            'chiller_passed' => 'nullable|boolean',
+            'reheating_temp' => 'nullable|numeric',
+            'reheating_method' => 'nullable|string',
+            'reheating_passed' => 'nullable|boolean',
+            'hot_holding_location' => 'nullable|string',
+            'hot_holding_temp' => 'nullable|numeric',
+            'hot_holding_passed' => 'nullable|boolean',
+            'corrective_action' => 'nullable|string',
+            'notes' => 'nullable|string',
+            'signature' => 'nullable|string',
+        ]);
+
+        $tenantId = Auth::user()->tenant_id;
+        if (!$tenantId) {
+            return response()->json(['message' => 'Unauthorized tenant context.'], 403);
+        }
+
+        $log = CookingLog::create([
+            'tenant_id' => $tenantId,
+            'log_date' => $request->log_date,
+            'log_time' => $request->log_time,
+            'staff_name' => $request->staff_name,
+            'food_item' => $request->food_item,
+            'batch_code' => $request->batch_code,
+            'probe_id' => $request->probe_id,
+            'cooking_temp' => $request->cooking_temp,
+            'cooking_target' => $request->cooking_target ?? '≥ 75°C',
+            'cooking_method' => $request->cooking_method,
+            'cooking_passed' => $request->cooking_passed ?? true,
+            'chilling_method' => $request->chilling_method,
+            'chilling_start_temp' => $request->chilling_start_temp,
+            'chilling_end_temp' => $request->chilling_end_temp,
+            'chilling_duration_minutes' => $request->chilling_duration_minutes,
+            'chilling_passed' => $request->chilling_passed ?? true,
+            'chiller_location' => $request->chiller_location,
+            'chiller_temp' => $request->chiller_temp,
+            'chiller_passed' => $request->chiller_passed ?? true,
+            'reheating_temp' => $request->reheating_temp,
+            'reheating_method' => $request->reheating_method,
+            'reheating_passed' => $request->reheating_passed ?? true,
+            'hot_holding_location' => $request->hot_holding_location,
+            'hot_holding_temp' => $request->hot_holding_temp,
+            'hot_holding_passed' => $request->hot_holding_passed ?? true,
+            'corrective_action' => $request->corrective_action,
+            'notes' => $request->notes,
+            'signature' => $request->signature,
+        ]);
+
+        return response()->json(['message' => 'Cooking log saved successfully', 'log' => $log], 201);
+    }
+}

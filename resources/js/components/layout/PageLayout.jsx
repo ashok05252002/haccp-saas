@@ -22,6 +22,7 @@ const styles = {
     marginLeft: 'var(--sidebar-width)',
     backgroundColor: 'var(--color-page-bg)',
     minHeight: '100vh',
+    transition: 'margin-left 200ms ease',
   },
   content: {
     maxWidth: 'var(--content-max-width)',

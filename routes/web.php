@@ -113,6 +113,18 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('DashboardPage');
     })->name('dashboard');
 
+    Route::get('/haccp-logs', function () {
+        return Inertia::render('HaccpLogsSidebarPage');
+    })->name('haccp-logs');
+
+    Route::get('/haccp-logs/temperature', function () {
+        return Inertia::render('TemperatureMonitoringPage');
+    })->name('haccp-logs.temperature');
+
+    Route::get('/haccp-logs/temperature/add', function () {
+        return Inertia::render('TemperatureFormPage');
+    })->name('haccp-logs.temperature.add');
+
     Route::get('/manager-hub', function () {
         return Inertia::render('ManagerHubPage');
     })->name('manager.hub');
@@ -262,6 +274,77 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/temperature-equipments', [StorageZoneController::class, 'index']);
     Route::post('/api/temperature-equipments', [StorageZoneController::class, 'store']);
     Route::put('/api/temperature-equipments/{id}', [StorageZoneController::class, 'update']);
+
+    // Temperature Logs API Routes
+    Route::get('/api/temperature-logs', [\App\Http\Controllers\TemperatureLogController::class, 'index']);
+    Route::post('/api/temperature-logs', [\App\Http\Controllers\TemperatureLogController::class, 'store']);
+
+    // Delivery Intake Routes (Frontend)
+    Route::get('/haccp-logs/delivery-intake', function () {
+        return Inertia::render('DeliveryIntakeMonitoringPage');
+    })->name('haccp-logs.delivery-intake');
+
+    Route::get('/haccp-logs/delivery-intake/add', function () {
+        return Inertia::render('DeliveryIntakeFormPage');
+    })->name('haccp-logs.delivery-intake.add');
+
+    // Delivery Intake API Routes
+    Route::get('/api/delivery-intake', [\App\Http\Controllers\DeliveryIntakeController::class, 'index']);
+    Route::post('/api/delivery-intake', [\App\Http\Controllers\DeliveryIntakeController::class, 'store']);
+
+    // Cleaning & Sanitation Logs (Frontend)
+    Route::get('/haccp-logs/cleaning', function () {
+        return Inertia::render('CleaningMonitoringPage');
+    })->name('haccp-logs.cleaning');
+
+    Route::get('/haccp-logs/cleaning/add', function () {
+        return Inertia::render('CleaningFormPage');
+    })->name('haccp-logs.cleaning.add');
+
+    Route::get('/haccp-logs/cleaning/view/{id}', function ($id) {
+        return Inertia::render('CleaningViewPage', ['logId' => $id]);
+    })->name('haccp-logs.cleaning.view');
+
+    // Cleaning & Sanitation Logs (API)
+    Route::get('/api/cleaning-logs/dependencies', [\App\Http\Controllers\CleaningLogController::class, 'formDependencies']);
+    Route::get('/api/cleaning-logs', [\App\Http\Controllers\CleaningLogController::class, 'index']);
+    Route::get('/api/cleaning-logs/{id}', [\App\Http\Controllers\CleaningLogController::class, 'show']);
+    Route::post('/api/cleaning-logs', [\App\Http\Controllers\CleaningLogController::class, 'store']);
+
+    // Cooking Temperature Logs (Frontend)
+    Route::get('/haccp-logs/cooking-temperature', function () {
+        return Inertia::render('CookingTemperatureMonitoringPage');
+    })->name('haccp-logs.cooking-temperature');
+
+    Route::get('/haccp-logs/cooking-temperature/add', function () {
+        return Inertia::render('CookingTemperatureFormPage');
+    })->name('haccp-logs.cooking-temperature.add');
+
+    Route::get('/haccp-logs/cooking-temperature/view/{id}', function ($id) {
+        return Inertia::render('CookingTemperatureViewPage', ['logId' => $id]);
+    })->name('haccp-logs.cooking-temperature.view');
+
+    // Cooking Temperature Logs (API)
+    Route::get('/api/cooking-logs', [\App\Http\Controllers\CookingLogController::class, 'index']);
+    Route::get('/api/cooking-logs/{id}', [\App\Http\Controllers\CookingLogController::class, 'show']);
+    Route::post('/api/cooking-logs', [\App\Http\Controllers\CookingLogController::class, 'store']);
+
+    // User & Role Management (Frontend)
+    Route::get('/manager-hub/users-roles', function () {
+        return Inertia::render('UserRoleManagementPage');
+    })->name('manager-hub.users-roles');
+
+    // Roles API
+    Route::get('/api/roles', [\App\Http\Controllers\RoleController::class, 'index']);
+    Route::post('/api/roles', [\App\Http\Controllers\RoleController::class, 'store']);
+    Route::put('/api/roles/{id}', [\App\Http\Controllers\RoleController::class, 'update']);
+    Route::delete('/api/roles/{id}', [\App\Http\Controllers\RoleController::class, 'destroy']);
+
+    // Users API
+    Route::get('/api/tenant-users', [\App\Http\Controllers\UserManagementController::class, 'index']);
+    Route::post('/api/tenant-users', [\App\Http\Controllers\UserManagementController::class, 'store']);
+    Route::put('/api/tenant-users/{id}', [\App\Http\Controllers\UserManagementController::class, 'update']);
+    Route::delete('/api/tenant-users/{id}', [\App\Http\Controllers\UserManagementController::class, 'destroy']);
 });
 
 require __DIR__.'/settings.php';

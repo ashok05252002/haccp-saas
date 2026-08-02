@@ -73,10 +73,8 @@ const SuppliersPage = () => {
   const q = searchQuery.toLowerCase();
   const filteredSuppliers = suppliers.filter(s =>
     s.name.toLowerCase().includes(q) ||
-    (s.contact_person || '').toLowerCase().includes(q) ||
     (s.phone || '').toLowerCase().includes(q) ||
     (s.email || '').toLowerCase().includes(q) ||
-    (s.order_day || '').toLowerCase().includes(q) ||
     (s.categories || []).some(c => c.name.toLowerCase().includes(q))
   );
 
@@ -155,9 +153,7 @@ const SuppliersPage = () => {
               <thead>
                 <tr>
                   <th >Supplier Name</th>
-                  <th >Contact Person</th>
                   <th >Phone & Email</th>
-                  <th >Order Schedule</th>
                   <th >Supplied Categories</th>
                   <th >Status</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
@@ -168,16 +164,6 @@ const SuppliersPage = () => {
                   <tr key={s.id}>
                     <td >
                       <strong style={{ color: 'var(--color-text-primary)', fontSize: '15px' }}>{s.name}</strong>
-                    </td>
-                    <td >
-                      {s.contact_person ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <User size={14} color="var(--color-text-muted)" />
-                          <span>{s.contact_person}</span>
-                        </div>
-                      ) : (
-                        <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>—</span>
-                      )}
                     </td>
                     <td >
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '12px' }}>
@@ -193,16 +179,6 @@ const SuppliersPage = () => {
                         )}
                         {!s.phone && !s.email && <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>—</span>}
                       </div>
-                    </td>
-                    <td >
-                      {s.order_day ? (
-                        <span style={styles.dayBadge}>
-                          <Calendar size={12} style={{ marginRight: '4px' }} />
-                          {s.order_day}
-                        </span>
-                      ) : (
-                        <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>Any day</span>
-                      )}
                     </td>
                     <td >
                       {s.categories && s.categories.length > 0 ? (

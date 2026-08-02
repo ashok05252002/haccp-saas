@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -81,6 +81,14 @@ const ManagerHubPage = () => {
       active: true,
       route: '/manager-hub/health-declaration'
     },
+    { 
+      key: 'users-roles', 
+      label: 'User & Role Management', 
+      desc: 'Manage staff accounts, user profiles, and assign custom operational roles.',
+      icon: Users, 
+      active: true,
+      route: '/manager-hub/users-roles'
+    }
   ];
 
   const filteredMasterModules = masterModules.filter(m =>
