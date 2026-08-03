@@ -22,6 +22,9 @@ import { useAuth } from '../../features/auth/hooks/AuthContext';
 
 const menuItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/recipes', label: 'Recipes', icon: ChefHat },
+  { path: '/calculator', label: 'Recipe Calculator', icon: Calculator },
+  { path: '/bulk-planning', label: 'Bulk Planning', icon: CalendarDays },
   { path: '/manager-hub', label: 'Manager Hub', icon: Settings },
   { path: '/haccp-logs', label: 'HACCP Logs', icon: ClipboardCheck },
 ];

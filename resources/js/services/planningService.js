@@ -1,57 +1,26 @@
-/**
- * Planning Service
- * Currently returns mock data. Replace with api calls for Laravel.
- */
-import { savedPlansMockData } from '../data/bulkPlanningMockData';
-
-let localPlans = [...savedPlansMockData];
+import axios from 'axios';
 
 export const getSavedPlans = async () => {
-  // Future: return api.get('/plans');
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([...localPlans]);
-    }, 400);
-  });
+  const response = await axios.get('/api/bulk-plans');
+  return response.data || [];
+};
+
+export const getPlanById = async (id) => {
+  const response = await axios.get(`/api/bulk-plans/${id}`);
+  return response.data || null;
 };
 
 export const savePlan = async (planData) => {
-  // Future: return api.post('/plans', planData);
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const newPlan = {
-        id: Date.now(),
-        ...planData,
-        status: 'draft',
-      };
-      localPlans.unshift(newPlan);
-      resolve(newPlan);
-    }, 300);
-  });
+  if (planData.id) {
+    const response = await axios.put(`/api/bulk-plans/${planData.id}`, planData);
+    return response.data.plan;
+  } else {
+    const response = await axios.post('/api/bulk-plans', planData);
+    return response.data.plan;
+  }
 };
 
-export const generateOrderList = async (recipes) => {
-  // Future: return api.post('/plans/generate-order', { recipes });
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Aggregate ingredients across all recipes
-      const ingredientMap = {};
-      recipes.forEach(({ recipe, servings, buffer }) => {
-        const multiplier = buffer ? servings * 1.2 : servings;
-        recipe.ingredients.forEach((ing) => {
-          const key = `${ing.name}-${ing.unit}`;
-          if (ingredientMap[key]) {
-            ingredientMap[key].quantity += ing.quantity * multiplier;
-          } else {
-            ingredientMap[key] = {
-              name: ing.name,
-              quantity: ing.quantity * multiplier,
-              unit: ing.unit,
-            };
-          }
-        });
-      });
-      resolve(Object.values(ingredientMap));
-    }, 500);
-  });
+export const deletePlan = async (id) => {
+  await axios.delete(`/api/bulk-plans/${id}`);
+  return true;
 };

@@ -345,6 +345,68 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::post('/api/tenant-users', [\App\Http\Controllers\UserManagementController::class, 'store']);
     Route::put('/api/tenant-users/{id}', [\App\Http\Controllers\UserManagementController::class, 'update']);
     Route::delete('/api/tenant-users/{id}', [\App\Http\Controllers\UserManagementController::class, 'destroy']);
+
+    // Recipes Frontend & API
+    Route::get('/recipes', function () {
+        return Inertia::render('RecipesPage');
+    })->name('recipes.index');
+
+    Route::get('/recipes/create', function () {
+        return Inertia::render('RecipeFormPage', [
+            'recipeId' => null,
+        ]);
+    })->name('recipes.create');
+
+    Route::get('/recipes/{id}/edit', function ($id) {
+        return Inertia::render('RecipeFormPage', [
+            'recipeId' => (int) $id,
+        ]);
+    })->name('recipes.edit');
+
+    Route::get('/recipes/{id}', function ($id) {
+        return Inertia::render('RecipeViewPage', [
+            'recipeId' => (int) $id,
+        ]);
+    })->name('recipes.show');
+
+    Route::get('/calculator', function () {
+        return Inertia::render('RecipeCalculatorPage');
+    })->name('calculator');
+
+    // Bulk Production Planning Frontend Routes
+    Route::get('/bulk-planning', function () {
+        return Inertia::render('BulkPlanningPage');
+    })->name('bulk-planning.index');
+
+    Route::get('/bulk-planning/create', function () {
+        return Inertia::render('BulkPlanningFormPage', [
+            'planId' => null,
+        ]);
+    })->name('bulk-planning.create');
+
+    Route::get('/bulk-planning/{id}/edit', function ($id) {
+        return Inertia::render('BulkPlanningFormPage', [
+            'planId' => (int) $id,
+        ]);
+    })->name('bulk-planning.edit');
+
+    Route::get('/bulk-planning/{id}', function ($id) {
+        return Inertia::render('BulkPlanningViewPage', [
+            'planId' => (int) $id,
+        ]);
+    })->name('bulk-planning.show');
+
+    Route::get('/api/recipes', [\App\Http\Controllers\RecipeController::class, 'index']);
+    Route::get('/api/recipes/{id}', [\App\Http\Controllers\RecipeController::class, 'show']);
+    Route::post('/api/recipes', [\App\Http\Controllers\RecipeController::class, 'store']);
+    Route::put('/api/recipes/{id}', [\App\Http\Controllers\RecipeController::class, 'update']);
+    Route::delete('/api/recipes/{id}', [\App\Http\Controllers\RecipeController::class, 'destroy']);
+
+    Route::get('/api/bulk-plans', [\App\Http\Controllers\BulkPlanController::class, 'index']);
+    Route::get('/api/bulk-plans/{id}', [\App\Http\Controllers\BulkPlanController::class, 'show']);
+    Route::post('/api/bulk-plans', [\App\Http\Controllers\BulkPlanController::class, 'store']);
+    Route::put('/api/bulk-plans/{id}', [\App\Http\Controllers\BulkPlanController::class, 'update']);
+    Route::delete('/api/bulk-plans/{id}', [\App\Http\Controllers\BulkPlanController::class, 'destroy']);
 });
 
 require __DIR__.'/settings.php';
