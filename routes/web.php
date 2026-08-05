@@ -20,6 +20,9 @@ use App\Http\Controllers\StorageZoneController;
 use App\Http\Controllers\HoldingStationController;
 use App\Http\Controllers\TrainingTaskController;
 use App\Http\Controllers\DefrostingMethodController;
+use App\Http\Controllers\FryerStationController;
+use App\Http\Controllers\OilQualityOptionController;
+use App\Http\Controllers\OilActionController;
 use App\Http\Controllers\BranchContextController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -202,6 +205,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('DefrostingMethodsPage');
     })->name('manager.hub.defrosting-methods');
 
+    // Fryer Oil Setup Master Page Route
+    Route::get('/manager-hub/fryer-oil-setup', function () {
+        return Inertia::render('FryerOilSetupPage');
+    })->name('manager.hub.fryer-oil-setup');
+
     // Legacy redirect for temperature-equipment
     Route::get('/manager-hub/temperature-equipment', function () {
         return redirect()->route('manager.hub.storage-zones');
@@ -307,6 +315,21 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/defrosting-methods', [DefrostingMethodController::class, 'index']);
     Route::post('/api/defrosting-methods', [DefrostingMethodController::class, 'store']);
     Route::put('/api/defrosting-methods/{id}', [DefrostingMethodController::class, 'update']);
+
+    // Fryer Stations API Routes
+    Route::get('/api/fryer-stations', [FryerStationController::class, 'index']);
+    Route::post('/api/fryer-stations', [FryerStationController::class, 'store']);
+    Route::put('/api/fryer-stations/{id}', [FryerStationController::class, 'update']);
+
+    // Oil Quality Options API Routes
+    Route::get('/api/oil-quality-options', [OilQualityOptionController::class, 'index']);
+    Route::post('/api/oil-quality-options', [OilQualityOptionController::class, 'store']);
+    Route::put('/api/oil-quality-options/{id}', [OilQualityOptionController::class, 'update']);
+
+    // Oil Actions API Routes
+    Route::get('/api/oil-actions', [OilActionController::class, 'index']);
+    Route::post('/api/oil-actions', [OilActionController::class, 'store']);
+    Route::put('/api/oil-actions/{id}', [OilActionController::class, 'update']);
 
     // Temperature Logs API Routes
     Route::get('/api/temperature-logs', [\App\Http\Controllers\TemperatureLogController::class, 'index']);

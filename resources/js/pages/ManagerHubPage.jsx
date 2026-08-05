@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -80,6 +80,14 @@ const ManagerHubPage = () => {
       icon: Snowflake, 
       active: true,
       route: '/manager-hub/defrosting-methods'
+    },
+    { 
+      key: 'fryer-oil-setup', 
+      label: 'Fryer Oil Setup', 
+      desc: 'Manage cooking stations, oil quality options, and oil actions for fryer checks.',
+      icon: Droplets, 
+      active: true,
+      route: '/manager-hub/fryer-oil-setup'
     },
     { 
       key: 'training-tasks', 
