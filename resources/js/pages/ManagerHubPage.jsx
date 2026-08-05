@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -72,6 +72,14 @@ const ManagerHubPage = () => {
       icon: Flame, 
       active: true,
       route: '/manager-hub/holding-stations'
+    },
+    { 
+      key: 'defrosting-methods', 
+      label: 'Defrosting Methods', 
+      desc: 'Manage thawing and defrosting methods used in food safety checks.',
+      icon: Snowflake, 
+      active: true,
+      route: '/manager-hub/defrosting-methods'
     },
     { 
       key: 'training-tasks', 

@@ -19,6 +19,7 @@ use App\Http\Controllers\TemperatureEquipmentController;
 use App\Http\Controllers\StorageZoneController;
 use App\Http\Controllers\HoldingStationController;
 use App\Http\Controllers\TrainingTaskController;
+use App\Http\Controllers\DefrostingMethodController;
 use App\Http\Controllers\BranchContextController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -196,6 +197,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('TrainingTasksPage');
     })->name('manager.hub.training-tasks');
 
+    // Defrosting Methods Master Page Route
+    Route::get('/manager-hub/defrosting-methods', function () {
+        return Inertia::render('DefrostingMethodsPage');
+    })->name('manager.hub.defrosting-methods');
+
     // Legacy redirect for temperature-equipment
     Route::get('/manager-hub/temperature-equipment', function () {
         return redirect()->route('manager.hub.storage-zones');
@@ -296,6 +302,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/training-tasks', [TrainingTaskController::class, 'index']);
     Route::post('/api/training-tasks', [TrainingTaskController::class, 'store']);
     Route::put('/api/training-tasks/{id}', [TrainingTaskController::class, 'update']);
+
+    // Defrosting Methods API Routes
+    Route::get('/api/defrosting-methods', [DefrostingMethodController::class, 'index']);
+    Route::post('/api/defrosting-methods', [DefrostingMethodController::class, 'store']);
+    Route::put('/api/defrosting-methods/{id}', [DefrostingMethodController::class, 'update']);
 
     // Temperature Logs API Routes
     Route::get('/api/temperature-logs', [\App\Http\Controllers\TemperatureLogController::class, 'index']);
