@@ -15,6 +15,11 @@ class Role extends Model
         'name',
         'description',
         'status',
+        'permissions',
+    ];
+
+    protected $casts = [
+        'permissions' => 'array',
     ];
 
     public function users()

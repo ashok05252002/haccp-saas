@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { ArrowLeft, Plus, Users, Shield, Edit2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Users, Shield, Edit2, Trash2, CheckSquare, Square, CheckCircle, Eye, EyeOff, KeyRound, Lock, Check } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -8,6 +8,37 @@ import SearchBar from '../components/common/SearchBar';
 import Modal from '../components/common/Modal';
 import StatusBadge from '../components/common/StatusBadge';
 import axios from 'axios';
+
+// Master Permission Lists
+const HACCP_MODULE_PERMISSIONS = [
+  { key: 'haccp.temperature', label: 'Temperature Monitoring' },
+  { key: 'haccp.delivery-intake', label: 'Delivery Intake' },
+  { key: 'haccp.cleaning', label: 'Cleaning & Sanitation' },
+  { key: 'haccp.cooking-temperature', label: 'Cooking Temperature' },
+  { key: 'haccp.blast-chilling', label: 'Blast Chilling' },
+  { key: 'haccp.cooling-process', label: 'Cooling Process' },
+  { key: 'haccp.probe-calibration', label: 'Probe Accuracy Check' },
+  { key: 'haccp.food-dispatch', label: 'Food Dispatch & Transfer' },
+  { key: 'haccp.health-declaration', label: 'Staff Health Declaration' },
+];
+
+const MANAGER_PANEL_PERMISSIONS = [
+  { key: 'manager.ingredients', label: 'Ingredients Master' },
+  { key: 'manager.food-items', label: 'Food Items Master' },
+  { key: 'manager.uom', label: 'Unit of Measurement (UOM)' },
+  { key: 'manager.suppliers', label: 'Suppliers Master' },
+  { key: 'manager.cleaning-areas', label: 'Cleaning Areas' },
+  { key: 'manager.cleaning-checklist', label: 'Cleaning Checklist' },
+  { key: 'manager.storage-zones', label: 'Storage Zones' },
+  { key: 'manager.thermometers', label: 'Thermometers / Probes' },
+  { key: 'manager.health-declaration', label: 'Health Declaration Setup' },
+  { key: 'manager.users-roles', label: 'User & Role Management' },
+];
+
+const ALL_PERMISSION_KEYS = [
+  ...HACCP_MODULE_PERMISSIONS.map(p => p.key),
+  ...MANAGER_PANEL_PERMISSIONS.map(p => p.key)
+];
 
 const UserRoleManagementPage = () => {
   const [activeTab, setActiveTab] = useState('roles'); // 'roles' | 'users'
@@ -18,7 +49,12 @@ const UserRoleManagementPage = () => {
   const [roleSearch, setRoleSearch] = useState('');
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
-  const [roleForm, setRoleForm] = useState({ name: '', description: '', status: 'Active' });
+  const [roleForm, setRoleForm] = useState({
+    name: '',
+    description: '',
+    status: 'Active',
+    permissions: ALL_PERMISSION_KEYS
+  });
   const [roleSubmitting, setRoleSubmitting] = useState(false);
   const [roleError, setRoleError] = useState(null);
 
@@ -28,9 +64,18 @@ const UserRoleManagementPage = () => {
   const [userSearch, setUserSearch] = useState('');
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [userForm, setUserForm] = useState({ name: '', email: '', phone: '', pin_code: '', role_id: '', status: 'Active' });
+  const [userForm, setUserForm] = useState({ name: '', email: '', phone: '', pin_code: '', password: '', role_id: '', status: 'Active' });
+  const [showPassword, setShowPassword] = useState(false);
   const [userSubmitting, setUserSubmitting] = useState(false);
   const [userError, setUserError] = useState(null);
+
+  // Enable Web Login Modal State (for existing users)
+  const [enableLoginModalOpen, setEnableLoginModalOpen] = useState(false);
+  const [enableLoginUser, setEnableLoginUser] = useState(null);
+  const [enableLoginForm, setEnableLoginForm] = useState({ email: '', password: '' });
+  const [showEnablePassword, setShowEnablePassword] = useState(false);
+  const [enableLoginSubmitting, setEnableLoginSubmitting] = useState(false);
+  const [enableLoginError, setEnableLoginError] = useState(null);
 
   // Fetch Roles
   const fetchRoles = useCallback(async () => {
@@ -86,16 +131,51 @@ const UserRoleManagementPage = () => {
   // --- Role Handlers ---
   const handleOpenAddRole = () => {
     setEditingRole(null);
-    setRoleForm({ name: '', description: '', status: 'Active' });
+    setRoleForm({
+      name: '',
+      description: '',
+      status: 'Active',
+      permissions: ALL_PERMISSION_KEYS
+    });
     setRoleError(null);
     setRoleModalOpen(true);
   };
 
   const handleOpenEditRole = (role) => {
     setEditingRole(role);
-    setRoleForm({ name: role.name, description: role.description || '', status: role.status || 'Active' });
+    setRoleForm({
+      name: role.name,
+      description: role.description || '',
+      status: role.status || 'Active',
+      permissions: Array.isArray(role.permissions) ? role.permissions : ALL_PERMISSION_KEYS
+    });
     setRoleError(null);
     setRoleModalOpen(true);
+  };
+
+  const handleTogglePermission = (key) => {
+    setRoleForm(prev => {
+      const current = prev.permissions || [];
+      if (current.includes(key)) {
+        return { ...prev, permissions: current.filter(k => k !== key) };
+      } else {
+        return { ...prev, permissions: [...current, key] };
+      }
+    });
+  };
+
+  const handleToggleGroup = (groupList) => {
+    const groupKeys = groupList.map(g => g.key);
+    setRoleForm(prev => {
+      const current = prev.permissions || [];
+      const allSelected = groupKeys.every(k => current.includes(k));
+      if (allSelected) {
+        return { ...prev, permissions: current.filter(k => !groupKeys.includes(k)) };
+      } else {
+        const merged = Array.from(new Set([...current, ...groupKeys]));
+        return { ...prev, permissions: merged };
+      }
+    });
   };
 
   const handleSaveRole = async (e) => {
@@ -132,7 +212,8 @@ const UserRoleManagementPage = () => {
   // --- User Handlers ---
   const handleOpenAddUser = () => {
     setEditingUser(null);
-    setUserForm({ name: '', email: '', phone: '', pin_code: '', role_id: '', status: 'Active' });
+    setUserForm({ name: '', email: '', phone: '', pin_code: '', password: '', role_id: '', status: 'Active' });
+    setShowPassword(false);
     setUserError(null);
     setUserModalOpen(true);
   };
@@ -144,11 +225,43 @@ const UserRoleManagementPage = () => {
       email: user.email || '',
       phone: user.phone || '',
       pin_code: user.pin_code || '',
+      password: '',
       role_id: user.role_id || '',
       status: user.status || 'Active',
     });
+    setShowPassword(false);
     setUserError(null);
     setUserModalOpen(true);
+  };
+
+  const handleOpenEnableLoginModal = (user) => {
+    setEnableLoginUser(user);
+    setEnableLoginForm({
+      email: user.email || `${user.name.toLowerCase().replace(/\s+/g, '.')}@kitchen.local`,
+      password: ''
+    });
+    setShowEnablePassword(false);
+    setEnableLoginError(null);
+    setEnableLoginModalOpen(true);
+  };
+
+  const handleSaveEnableLogin = async (e) => {
+    e.preventDefault();
+    if (!enableLoginUser) return;
+
+    setEnableLoginSubmitting(true);
+    setEnableLoginError(null);
+
+    try {
+      await axios.post(`/api/tenant-users/${enableLoginUser.id}/enable-login`, enableLoginForm);
+      setEnableLoginModalOpen(false);
+      fetchUsers();
+    } catch (err) {
+      console.error('Failed to enable web login', err);
+      setEnableLoginError(err.response?.data?.message || 'Failed to enable web login.');
+    } finally {
+      setEnableLoginSubmitting(false);
+    }
   };
 
   const handleSaveUser = async (e) => {
@@ -196,7 +309,7 @@ const UserRoleManagementPage = () => {
           <div>
             <h1 className="page-title">User & Role Management</h1>
             <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-              Manage restaurant staff team members and assign custom operational roles.
+              Manage restaurant staff team members and assign custom operational roles & module permissions.
             </p>
           </div>
         </div>
@@ -270,34 +383,51 @@ const UserRoleManagementPage = () => {
                   <tr>
                     <th>Role Name</th>
                     <th>Description</th>
+                    <th>Module Permissions</th>
                     <th>Assigned Staff</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRoles.map(role => (
-                    <tr key={role.id}>
-                      <td>
-                        <strong style={{ color: 'var(--color-text-primary)', fontSize: '15px' }}>{role.name}</strong>
-                      </td>
-                      <td>{role.description || '-'}</td>
-                      <td>
-                        <span style={{ backgroundColor: '#F3F4F6', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '12px' }}>
-                          {role.users_count || 0} Staff
-                        </span>
-                      </td>
-                      <td>
-                        <StatusBadge status={role.status} />
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                          <Button variant="secondary" size="sm" icon={Edit2} onClick={() => handleOpenEditRole(role)} />
-                          <Button variant="secondary" size="sm" icon={Trash2} onClick={() => handleDeleteRole(role.id)} style={{ color: '#EF4444' }} />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredRoles.map(role => {
+                    const perms = Array.isArray(role.permissions) ? role.permissions : ALL_PERMISSION_KEYS;
+                    const haccpCount = perms.filter(p => p.startsWith('haccp.')).length;
+                    const managerCount = perms.filter(p => p.startsWith('manager.')).length;
+
+                    return (
+                      <tr key={role.id}>
+                        <td>
+                          <strong style={{ color: 'var(--color-text-primary)', fontSize: '15px' }}>{role.name}</strong>
+                        </td>
+                        <td>{role.description || '-'}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ backgroundColor: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', padding: '3px 8px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 600 }}>
+                              {haccpCount} HACCP Logs
+                            </span>
+                            <span style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '3px 8px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 600 }}>
+                              {managerCount} Manager Panels
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{ backgroundColor: '#F3F4F6', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '12px' }}>
+                            {role.users_count || 0} Staff
+                          </span>
+                        </td>
+                        <td>
+                          <StatusBadge status={role.status} />
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            <Button variant="secondary" size="sm" icon={Edit2} onClick={() => handleOpenEditRole(role)} />
+                            <Button variant="secondary" size="sm" icon={Trash2} onClick={() => handleDeleteRole(role.id)} style={{ color: '#EF4444' }} />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -328,8 +458,8 @@ const UserRoleManagementPage = () => {
                   <tr>
                     <th>Staff Name</th>
                     <th>Email</th>
-                    <th>Phone</th>
                     <th>Assigned Role</th>
+                    <th>Web Login</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
@@ -342,7 +472,6 @@ const UserRoleManagementPage = () => {
                         {u.pin_code && <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>PIN: {u.pin_code}</div>}
                       </td>
                       <td>{u.email || '-'}</td>
-                      <td>{u.phone || '-'}</td>
                       <td>
                         {u.assigned_role ? (
                           <span style={{ backgroundColor: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '12px' }}>
@@ -350,6 +479,33 @@ const UserRoleManagementPage = () => {
                           </span>
                         ) : (
                           <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '13px' }}>Unassigned</span>
+                        )}
+                      </td>
+                      <td>
+                        {u.has_web_account ? (
+                          <span style={{ backgroundColor: '#ECFDF5', color: '#047857', padding: '3px 8px', borderRadius: '6px', fontWeight: 600, fontSize: '11.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Check size={13} /> Active Login
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEnableLoginModal(u)}
+                            style={{
+                              backgroundColor: '#FEF3C7',
+                              color: '#92400E',
+                              border: '1px solid #FCD34D',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontWeight: 700,
+                              fontSize: '11.5px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <KeyRound size={13} /> Enable Login
+                          </button>
                         )}
                       </td>
                       <td>
@@ -369,42 +525,160 @@ const UserRoleManagementPage = () => {
           </Card>
         )}
 
-        {/* ROLE MODAL */}
+        {/* ROLE MODAL WITH PERMISSIONS SELECTION */}
         <Modal
           isOpen={roleModalOpen}
           onClose={() => setRoleModalOpen(false)}
-          title={editingRole ? 'Edit Role' : 'Add New Role'}
+          title={editingRole ? 'Edit Role & Permissions' : 'Add New Role'}
+          size="lg"
           footer={
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', width: '100%' }}>
               <Button variant="secondary" onClick={() => setRoleModalOpen(false)} disabled={roleSubmitting}>
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleSaveRole} disabled={roleSubmitting}>
-                {roleSubmitting ? 'Saving...' : editingRole ? 'Update Role' : 'Create Role'}
+                {roleSubmitting ? 'Saving...' : editingRole ? 'Update Role & Permissions' : 'Create Role'}
               </Button>
             </div>
           }
         >
-          <form onSubmit={handleSaveRole} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <form onSubmit={handleSaveRole} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {roleError && (
               <div style={{ padding: '12px', backgroundColor: '#FEE2E2', color: '#B91C1C', borderRadius: '8px', fontSize: '14px' }}>
                 {roleError}
               </div>
             )}
-            <div className="form-group">
-              <label className="form-label">Role Name *</label>
-              <input type="text" className="form-input" placeholder="e.g. Head Chef" value={roleForm.name} onChange={e => setRoleForm({ ...roleForm, name: e.target.value })} required />
+
+            <div className="grid-2">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Role Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Head Chef / Line Cook"
+                  value={roleForm.name}
+                  onChange={e => setRoleForm({ ...roleForm, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Status</label>
+                <select className="form-select" value={roleForm.status} onChange={e => setRoleForm({ ...roleForm, status: e.target.value })}>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
             </div>
+
             <div className="form-group">
               <label className="form-label">Description</label>
-              <input type="text" className="form-input" placeholder="e.g. Responsible for main kitchen operations & log verification" value={roleForm.description} onChange={e => setRoleForm({ ...roleForm, description: e.target.value })} />
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Responsible for daily hot cook logs & fridge temperature checks"
+                value={roleForm.description}
+                onChange={e => setRoleForm({ ...roleForm, description: e.target.value })}
+              />
             </div>
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select className="form-input" value={roleForm.status} onChange={e => setRoleForm({ ...roleForm, status: e.target.value })}>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+
+            {/* PERMISSION SELECTION GROUP 1: HACCP LOGS MODULES */}
+            <div style={{ border: '1px solid var(--color-border-light)', borderRadius: '10px', padding: '16px', backgroundColor: '#FAFAFA' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>
+                    HACCP Logs Module Access
+                  </h4>
+                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                    Select which HACCP logging workflows staff with this role can access.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleGroup(HACCP_MODULE_PERMISSIONS)}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {HACCP_MODULE_PERMISSIONS.every(p => roleForm.permissions.includes(p.key)) ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
+                {HACCP_MODULE_PERMISSIONS.map(mod => {
+                  const isChecked = roleForm.permissions.includes(mod.key);
+                  return (
+                    <label
+                      key={mod.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: '#ffffff',
+                        border: `1px solid ${isChecked ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: isChecked ? 600 : 400,
+                        color: isChecked ? 'var(--color-primary-dark)' : 'var(--color-text-primary)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onClick={() => handleTogglePermission(mod.key)}
+                    >
+                      {isChecked ? <CheckSquare size={16} color="var(--color-primary)" /> : <Square size={16} color="#9CA3AF" />}
+                      <span>{mod.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* PERMISSION SELECTION GROUP 2: MANAGER HUB MASTER PANELS */}
+            <div style={{ border: '1px solid var(--color-border-light)', borderRadius: '10px', padding: '16px', backgroundColor: '#FAFAFA' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>
+                    Manager Hub Master Panel Access
+                  </h4>
+                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                    Select which management settings and master data configurations this role can manage.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleGroup(MANAGER_PANEL_PERMISSIONS)}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {MANAGER_PANEL_PERMISSIONS.every(p => roleForm.permissions.includes(p.key)) ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
+                {MANAGER_PANEL_PERMISSIONS.map(panel => {
+                  const isChecked = roleForm.permissions.includes(panel.key);
+                  return (
+                    <label
+                      key={panel.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: '#ffffff',
+                        border: `1px solid ${isChecked ? '#3B82F6' : 'var(--color-border-light)'}`,
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: isChecked ? 600 : 400,
+                        color: isChecked ? '#1E40AF' : 'var(--color-text-primary)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onClick={() => handleTogglePermission(panel.key)}
+                    >
+                      {isChecked ? <CheckSquare size={16} color="#3B82F6" /> : <Square size={16} color="#9CA3AF" />}
+                      <span>{panel.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </form>
         </Modal>
@@ -437,7 +711,7 @@ const UserRoleManagementPage = () => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
-                <label className="form-label">Email Address</label>
+                <label className="form-label">Email Address (For /login)</label>
                 <input type="email" className="form-input" placeholder="e.g. alex@kitchen.com" value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} />
               </div>
               <div className="form-group">
@@ -448,7 +722,7 @@ const UserRoleManagementPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
                 <label className="form-label">Assign Role</label>
-                <select className="form-input" value={userForm.role_id} onChange={e => setUserForm({ ...userForm, role_id: e.target.value })}>
+                <select className="form-select" value={userForm.role_id} onChange={e => setUserForm({ ...userForm, role_id: e.target.value })}>
                   <option value="">-- Select Role --</option>
                   {roles.map(r => (
                     <option key={r.id} value={r.id}>{r.name}</option>
@@ -460,12 +734,124 @@ const UserRoleManagementPage = () => {
                 <input type="text" className="form-input" placeholder="e.g. 1234" value={userForm.pin_code} onChange={e => setUserForm({ ...userForm, pin_code: e.target.value })} />
               </div>
             </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-group">
+                <label className="form-label">
+                  {editingUser ? 'New Password (Optional)' : 'Password (For /login)'}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="form-input"
+                    placeholder={editingUser ? 'Leave blank to keep existing' : 'Min 6 characters'}
+                    value={userForm.password}
+                    onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                    style={{ paddingRight: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--color-text-muted)',
+                      cursor: 'pointer',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select className="form-select" value={userForm.status} onChange={e => setUserForm({ ...userForm, status: e.target.value })}>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </Modal>
+
+        {/* ENABLE WEB LOGIN MODAL (FOR EXISTING USERS) */}
+        <Modal
+          isOpen={enableLoginModalOpen}
+          onClose={() => setEnableLoginModalOpen(false)}
+          title={`Enable Web Login for ${enableLoginUser?.name || ''}`}
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', width: '100%' }}>
+              <Button variant="secondary" onClick={() => setEnableLoginModalOpen(false)} disabled={enableLoginSubmitting}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleSaveEnableLogin} disabled={enableLoginSubmitting}>
+                {enableLoginSubmitting ? 'Enabling Login...' : 'Enable Login & Sync Account'}
+              </Button>
+            </div>
+          }
+        >
+          <form onSubmit={handleSaveEnableLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {enableLoginError && (
+              <div style={{ padding: '12px', backgroundColor: '#FEE2E2', color: '#B91C1C', borderRadius: '8px', fontSize: '14px' }}>
+                {enableLoginError}
+              </div>
+            )}
+
+            <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '14px', borderRadius: '8px', color: '#1E40AF', fontSize: '13px' }}>
+              Enabling web login will create a login account for <strong>{enableLoginUser?.name}</strong> in the main user database so they can log in via the main <code>/login</code> page.
+            </div>
+
             <div className="form-group">
-              <label className="form-label">Status</label>
-              <select className="form-input" value={userForm.status} onChange={e => setUserForm({ ...userForm, status: e.target.value })}>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+              <label className="form-label">Login Email Address *</label>
+              <input
+                type="email"
+                className="form-input"
+                placeholder="e.g. staff@kitchen.com"
+                value={enableLoginForm.email}
+                onChange={e => setEnableLoginForm({ ...enableLoginForm, email: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Login Password *</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showEnablePassword ? 'text' : 'password'}
+                  className="form-input"
+                  placeholder="Min 6 characters"
+                  value={enableLoginForm.password}
+                  onChange={e => setEnableLoginForm({ ...enableLoginForm, password: e.target.value })}
+                  style={{ paddingRight: '40px' }}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowEnablePassword(!showEnablePassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  {showEnablePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
           </form>
         </Modal>

@@ -1,92 +1,90 @@
 import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Lock
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
 const ManagerHubPage = () => {
   const [masterSearchQuery, setMasterSearchQuery] = useState('');
+  const { auth } = usePage().props;
+  const userRole = auth?.user?.assigned_role || auth?.user?.role;
+  const userPermissions = userRole?.permissions || null; // null means Full Access / Admin
+
+  const hasPermission = (key) => {
+    if (!userPermissions) return true; // Full access for admins
+    return userPermissions.includes(key);
+  };
 
   const masterModules = [
     { 
-      key: 'ingredients', 
+      key: 'manager.ingredients', 
       label: 'Ingredients', 
       desc: 'Manage cooking raw materials, ingredient categories, and default UOMs.',
       icon: ChefHat, 
-      active: true,
       route: '/manager-hub/ingredients'
     },
     { 
-      key: 'food-items', 
+      key: 'manager.food-items', 
       label: 'Food Items', 
       desc: 'Manage food/menu items, default UOM, and storage type rules.',
       icon: Package, 
-      active: true,
       route: '/manager-hub/food-items'
     },
     { 
-      key: 'uom', 
+      key: 'manager.uom', 
       label: 'Unit of Measurement (UOM)', 
       desc: 'Set up unit categories, reference base units, and conversion factors.',
       icon: Scale, 
-      active: true,
       route: '/manager-hub/uom'
     },
     { 
-      key: 'suppliers', 
+      key: 'manager.suppliers', 
       label: 'Suppliers Master', 
       desc: 'Manage approved vendors, order schedules, categories, and supplied items.',
       icon: Truck, 
-      active: true,
       route: '/manager-hub/suppliers'
     },
     { 
-      key: 'cleaning', 
+      key: 'manager.cleaning-areas', 
       label: 'Cleaning Areas', 
       desc: 'Manage cleaning areas, cleaning frequency, instructions, and active status.',
       icon: Sparkles, 
-      active: true,
       route: '/manager-hub/cleaning-areas'
     },
     { 
-      key: 'cleaning-checklist', 
+      key: 'manager.cleaning-checklist', 
       label: 'Cleaning Checklist', 
       desc: 'Manage cleaning checklist sections, questions, frequencies, and active status.',
       icon: ClipboardCheck, 
-      active: true,
       route: '/manager-hub/cleaning-checklist'
     },
     { 
-      key: 'storage-zones', 
+      key: 'manager.storage-zones', 
       label: 'Storage Zones', 
       desc: 'Manage fridges, freezers, and hot cabinets used for temperature checks.',
       icon: Refrigerator, 
-      active: true,
       route: '/manager-hub/storage-zones'
     },
     { 
-      key: 'thermometers', 
+      key: 'manager.thermometers', 
       label: 'Thermometers / Probes', 
       desc: 'Manage digital probes, infrared thermometers, serial numbers, and active status.',
       icon: Thermometer, 
-      active: true,
       route: '/manager-hub/thermometers'
     },
     { 
-      key: 'health-declaration', 
+      key: 'manager.health-declaration', 
       label: 'Health Declaration Setup', 
       desc: 'Manage health declaration sections, staff questionnaire items, and active status.',
       icon: HeartPulse, 
-      active: true,
       route: '/manager-hub/health-declaration'
     },
     { 
-      key: 'users-roles', 
+      key: 'manager.users-roles', 
       label: 'User & Role Management', 
       desc: 'Manage staff accounts, user profiles, and assign custom operational roles.',
       icon: Users, 
-      active: true,
       route: '/manager-hub/users-roles'
     }
   ];
@@ -104,7 +102,7 @@ const ManagerHubPage = () => {
         <div className="page-header" style={{ marginBottom: '24px' }}>
           <h1 className="page-title">Manager Hub</h1>
           <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-            Select a master configuration panel to manage inventory items, ingredients, suppliers, and settings.
+            Select a master configuration panel based on your assigned operational role permissions.
           </p>
         </div>
 
@@ -133,18 +131,21 @@ const ManagerHubPage = () => {
           ) : (
             filteredMasterModules.map(m => {
               const Icon = m.icon;
-              if (!m.active) {
+              const isAllowed = hasPermission(m.key);
+
+              if (!isAllowed) {
                 return (
                   <div key={m.key} style={{ ...styles.masterCard, ...styles.disabledCard }}>
                     <div style={{ ...styles.iconContainer, backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>
-                      <Icon size={28} />
+                      <Lock size={26} />
                     </div>
                     <h3 style={{ ...styles.cardTitle, color: '#9CA3AF' }}>{m.label}</h3>
                     <p style={{ ...styles.cardDesc, color: '#9CA3AF' }}>{m.desc}</p>
-                    <span style={styles.plannedBadge}>Coming Soon</span>
+                    <span style={styles.lockedBadge}>Access Restricted</span>
                   </div>
                 );
               }
+
               return (
                 <div 
                   key={m.key} 
@@ -218,49 +219,15 @@ const styles = {
     marginTop: '6px',
     marginBottom: 0,
   },
-  plannedBadge: {
+  lockedBadge: {
     marginTop: '10px',
     fontSize: '11px',
     fontWeight: 600,
-    color: '#6B7280',
-    backgroundColor: '#E5E7EB',
+    color: '#9CA3AF',
+    backgroundColor: '#F3F4F6',
     padding: '2px 10px',
     borderRadius: '10px',
     textTransform: 'uppercase',
-  },
-  searchBarWrapper: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '10px 14px',
-    backgroundColor: '#fff',
-    border: '1px solid var(--color-border-light)',
-    borderRadius: '8px',
-    marginBottom: '24px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-  },
-  searchInput: {
-    flex: 1,
-    border: 'none',
-    outline: 'none',
-    fontSize: '14px',
-    color: 'var(--color-text-primary)',
-    backgroundColor: 'transparent',
-    fontFamily: 'inherit',
-  },
-  searchClearBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '22px',
-    height: '22px',
-    borderRadius: '50%',
-    border: 'none',
-    backgroundColor: '#E5E7EB',
-    color: '#6B7280',
-    cursor: 'pointer',
-    padding: 0,
-    flexShrink: 0,
   },
 };
 

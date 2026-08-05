@@ -1,9 +1,84 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
-import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind, Gauge } from 'lucide-react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind, Gauge, Lock } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
 const HaccpLogsSidebarPage = () => {
+  const { auth } = usePage().props;
+  const userRole = auth?.user?.assigned_role || auth?.user?.role;
+  const userPermissions = userRole?.permissions || null; // null means Full Access / Admin
+
+  const hasPermission = (key) => {
+    if (!userPermissions) return true; // Full access for admins or default legacy roles
+    return userPermissions.includes(key);
+  };
+
+  const haccpModules = [
+    {
+      key: 'haccp.temperature',
+      href: '/haccp-logs/temperature',
+      title: 'Temperature Monitoring',
+      desc: 'Log current temperatures for your fridges, freezers, and other temperature-controlled zones.',
+      icon: Thermometer,
+    },
+    {
+      key: 'haccp.delivery-intake',
+      href: '/haccp-logs/delivery-intake',
+      title: 'Delivery Intake',
+      desc: 'Record incoming deliveries, check temperatures, batch numbers, and supplier details.',
+      icon: Truck,
+    },
+    {
+      key: 'haccp.cleaning',
+      href: '/haccp-logs/cleaning',
+      title: 'Cleaning & Sanitation',
+      desc: 'Log completed cleaning tasks against your active cleaning areas and checklists.',
+      icon: null, // Custom SVG
+    },
+    {
+      key: 'haccp.cooking-temperature',
+      href: '/haccp-logs/cooking-temperature',
+      title: 'Cooking Temperature',
+      desc: 'Log the 6-step Cook, Cool, Reheat & Hot Holding process with CCP limit checks.',
+      icon: Flame,
+    },
+    {
+      key: 'haccp.blast-chilling',
+      href: '/haccp-logs/blast-chilling',
+      title: 'Blast Chilling',
+      desc: 'CCP-4 rapid cooling cycle monitoring (from ≥63°C to ≤3°C within 90 minutes).',
+      icon: Snowflake,
+    },
+    {
+      key: 'haccp.cooling-process',
+      href: '/haccp-logs/cooling-process',
+      title: 'Cooling Process',
+      desc: 'CCP-6 ambient cooling monitoring (cool to ≤8°C within 2 hours / 120 minutes).',
+      icon: Wind,
+    },
+    {
+      key: 'haccp.probe-calibration',
+      href: '/haccp-logs/probe-calibration',
+      title: 'Probe Accuracy Check',
+      desc: 'Equipment calibration verification (boiling 99–101°C & ice water −1 to 1°C checks).',
+      icon: Gauge,
+    },
+    {
+      key: 'haccp.food-dispatch',
+      href: '/haccp-logs/food-dispatch',
+      title: 'Food Dispatch & Transfer',
+      desc: 'Record food transport parameters, dispatch temperatures, and raw/RTE separation checks.',
+      icon: Truck,
+    },
+    {
+      key: 'haccp.health-declaration',
+      href: '/haccp-logs/health-declaration',
+      title: 'Staff Health Declaration',
+      desc: 'Daily pre-shift health screening, symptom declaration, and fit-for-duty certification.',
+      icon: HeartPulse,
+    },
+  ];
+
   return (
     <PageLayout>
       <Head title="HACCP Logs" />
@@ -12,103 +87,47 @@ const HaccpLogsSidebarPage = () => {
         <div className="page-header" style={{ marginBottom: '24px' }}>
           <h1 className="page-title">HACCP Logs</h1>
           <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-            Maintain daily and ad-hoc HACCP related notes and logs.
+            Maintain daily and ad-hoc HACCP related notes and logs based on your assigned operational role.
           </p>
         </div>
 
         <div style={styles.grid}>
-          {/* Temperature Monitoring Card */}
-          <Link href="/haccp-logs/temperature" style={styles.masterCard}>
-            <div style={styles.iconContainer}>
-              <Thermometer size={28} color="var(--color-primary)" />
-            </div>
-            <h3 style={styles.cardTitle}>Temperature Monitoring</h3>
-            <p style={styles.cardDesc}>Log current temperatures for your fridges, freezers, and other temperature-controlled zones.</p>
-          </Link>
+          {haccpModules.map((mod) => {
+            const isAllowed = hasPermission(mod.key);
+            const Icon = mod.icon;
 
-          {/* Delivery Intake Card */}
-          <Link href="/haccp-logs/delivery-intake" style={styles.masterCard}>
-            <div style={styles.iconContainer}>
-              <Truck size={28} color="var(--color-primary)" />
-            </div>
-            <h3 style={styles.cardTitle}>Delivery Intake</h3>
-            <p style={styles.cardDesc}>Record incoming deliveries, check temperatures, batch numbers, and supplier details.</p>
-          </Link>
+            if (!isAllowed) {
+              return (
+                <div key={mod.key} style={{ ...styles.masterCard, ...styles.disabledCard }}>
+                  <div style={{ ...styles.iconContainer, backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>
+                    <Lock size={26} />
+                  </div>
+                  <h3 style={{ ...styles.cardTitle, color: '#9CA3AF' }}>{mod.title}</h3>
+                  <p style={{ ...styles.cardDesc, color: '#9CA3AF' }}>{mod.desc}</p>
+                  <span style={styles.lockedBadge}>Access Restricted</span>
+                </div>
+              );
+            }
 
-          {/* Cleaning & Sanitation Card */}
-          <Link href="/haccp-logs/cleaning" style={styles.masterCard}>
-            <div style={styles.iconContainer}>
-              <div style={{width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a4 4 0 0 0-4 4v11a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4Z"/><path d="M7 16a5 5 0 0 0 10 0"/></svg>
-              </div>
-            </div>
-            <h3 style={styles.cardTitle}>Cleaning & Sanitation</h3>
-            <p style={styles.cardDesc}>Log completed cleaning tasks against your active cleaning areas and checklists.</p>
-          </Link>
-
-          {/* Cooking Temperature Card */}
-          <Link href="/haccp-logs/cooking-temperature" style={styles.masterCard}>
-            <div style={styles.iconContainer}>
-              <Flame size={28} color="var(--color-primary)" />
-            </div>
-            <h3 style={styles.cardTitle}>Cooking Temperature</h3>
-            <p style={styles.cardDesc}>Log the 6-step Cook, Cool, Reheat & Hot Holding process with CCP limit checks.</p>
-          </Link>
-
-          {/* Blast Chilling Card */}
-          <Link href="/haccp-logs/blast-chilling" style={styles.masterCard}>
-            <div style={styles.iconContainer}>
-              <Snowflake size={28} color="var(--color-primary)" />
-            </div>
-            <h3 style={styles.cardTitle}>Blast Chilling</h3>
-            <p style={styles.cardDesc}>CCP-4 rapid cooling cycle monitoring (from ≥63°C to ≤3°C within 90 minutes).</p>
-          </Link>
-
-          {/* Cooling Process Card */}
-          <Link href="/haccp-logs/cooling-process" style={styles.masterCard}>
-            <div style={styles.iconContainer}>
-              <Wind size={28} color="var(--color-primary)" />
-            </div>
-            <h3 style={styles.cardTitle}>Cooling Process</h3>
-            <p style={styles.cardDesc}>CCP-6 ambient cooling monitoring (cool to ≤8°C within 2 hours / 120 minutes).</p>
-          </Link>
-
-          {/* Probe Accuracy Check Card */}
-          <Link href="/haccp-logs/probe-calibration" style={styles.masterCard}>
-            <div style={styles.iconContainer}>
-              <Gauge size={28} color="var(--color-primary)" />
-            </div>
-            <h3 style={styles.cardTitle}>Probe Accuracy Check</h3>
-            <p style={styles.cardDesc}>Equipment calibration verification (boiling 99–101°C & ice water −1 to 1°C checks).</p>
-          </Link>
-
-          {/* Food Dispatch & Transfer Card */}
-          <Link href="/haccp-logs/food-dispatch" style={styles.masterCard}>
-            <div style={styles.iconContainer}>
-              <Truck size={28} color="var(--color-primary)" />
-            </div>
-            <h3 style={styles.cardTitle}>Food Dispatch & Transfer</h3>
-            <p style={styles.cardDesc}>Record food transport parameters, dispatch temperatures, and raw/RTE separation checks.</p>
-          </Link>
-
-          {/* Staff Health Declaration Card */}
-          <Link href="/haccp-logs/health-declaration" style={styles.masterCard}>
-            <div style={styles.iconContainer}>
-              <HeartPulse size={28} color="var(--color-primary)" />
-            </div>
-            <h3 style={styles.cardTitle}>Staff Health Declaration</h3>
-            <p style={styles.cardDesc}>Daily pre-shift health screening, symptom declaration, and fit-for-duty certification.</p>
-          </Link>
-
-          {/* Placeholders for future modules */}
-          <div style={{ ...styles.masterCard, ...styles.disabledCard }}>
-            <div style={{ ...styles.iconContainer, backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>
-              <div style={{width: 28, height: 28, backgroundColor: 'var(--color-grey-border)', borderRadius: 4}}></div>
-            </div>
-            <h3 style={{ ...styles.cardTitle, color: '#9CA3AF' }}>More Modules</h3>
-            <p style={{ ...styles.cardDesc, color: '#9CA3AF' }}>Additional HACCP modules coming soon...</p>
-            <span style={styles.plannedBadge}>Coming Soon</span>
-          </div>
+            return (
+              <Link key={mod.key} href={mod.href} style={styles.masterCard}>
+                <div style={styles.iconContainer}>
+                  {Icon ? (
+                    <Icon size={28} color="var(--color-primary)" />
+                  ) : (
+                    <div style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2a4 4 0 0 0-4 4v11a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4Z"/>
+                        <path d="M7 16a5 5 0 0 0 10 0"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <h3 style={styles.cardTitle}>{mod.title}</h3>
+                <p style={styles.cardDesc}>{mod.desc}</p>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </PageLayout>
@@ -168,12 +187,12 @@ const styles = {
     marginTop: '6px',
     marginBottom: 0,
   },
-  plannedBadge: {
+  lockedBadge: {
     marginTop: '10px',
     fontSize: '11px',
     fontWeight: 600,
-    color: '#6B7280',
-    backgroundColor: '#E5E7EB',
+    color: '#9CA3AF',
+    backgroundColor: '#F3F4F6',
     padding: '2px 10px',
     borderRadius: '10px',
     textTransform: 'uppercase',

@@ -46,7 +46,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user() ? (
                     $request->user()->role === 'client'
                         ? $request->user()->load(['tenant', 'tenant.branches'])
-                        : $request->user()->load(['tenant', 'branch'])
+                        : $request->user()->load(['tenant', 'branch', 'assignedRole'])
                 ) : null,
                 'active_branch_id' => \Illuminate\Support\Facades\Session::get('active_branch_id'),
                 'available_branches' => $request->user() && $request->user()->role !== 'super_admin' 

@@ -17,7 +17,12 @@ class RestaurantUser extends Model
         'email',
         'phone',
         'pin_code',
+        'password',
         'status',
+    ];
+
+    protected $hidden = [
+        'password',
     ];
 
     public function assignedRole()

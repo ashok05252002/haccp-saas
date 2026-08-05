@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\RestaurantUser;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class UserManagementController extends Controller
 {
@@ -20,6 +22,16 @@ class UserManagementController extends Controller
             ->where('tenant_id', $tenantId)
             ->orderBy('name')
             ->get();
+
+        // Check web login account status in User model for each staff user
+        $users->transform(function ($u) use ($tenantId) {
+            $webUser = null;
+            if ($u->email) {
+                $webUser = User::where('tenant_id', $tenantId)->where('email', $u->email)->first();
+            }
+            $u->has_web_account = (bool) $webUser;
+            return $u;
+        });
 
         return response()->json($users);
     }
@@ -38,11 +50,12 @@ class UserManagementController extends Controller
             'email' => 'nullable|email',
             'phone' => 'nullable|string|max:50',
             'pin_code' => 'nullable|string|max:10',
+            'password' => 'nullable|string|min:6',
             'role_id' => 'nullable|integer|exists:roles,id',
             'status' => 'required|in:Active,Inactive',
         ]);
 
-        $user = RestaurantUser::create([
+        $userData = [
             'tenant_id' => $tenantId,
             'branch_id' => $branchId,
             'name' => $request->name,
@@ -51,7 +64,29 @@ class UserManagementController extends Controller
             'pin_code' => $request->pin_code,
             'role_id' => $request->role_id,
             'status' => $request->status,
-        ]);
+        ];
+
+        if ($request->filled('password')) {
+            $userData['password'] = Hash::make($request->password);
+        }
+
+        $user = RestaurantUser::create($userData);
+
+        // Sync to main User table if email and password are provided
+        if ($request->filled('email') && $request->filled('password')) {
+            User::updateOrCreate(
+                ['email' => $request->email],
+                [
+                    'name' => $request->name,
+                    'password' => Hash::make($request->password),
+                    'tenant_id' => $tenantId,
+                    'branch_id' => $branchId,
+                    'role_id' => $request->role_id,
+                    'role' => 'restaurant',
+                    'status' => $request->status,
+                ]
+            );
+        }
 
         return response()->json(['message' => 'Restaurant user created successfully', 'user' => $user->load('assignedRole')], 201);
     }
@@ -59,6 +94,7 @@ class UserManagementController extends Controller
     public function update(Request $request, $id)
     {
         $tenantId = Auth::user()->tenant_id;
+        $branchId = Auth::user()->branch_id;
         $user = RestaurantUser::where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
 
         $request->validate([
@@ -66,26 +102,105 @@ class UserManagementController extends Controller
             'email' => 'nullable|email',
             'phone' => 'nullable|string|max:50',
             'pin_code' => 'nullable|string|max:10',
+            'password' => 'nullable|string|min:6',
             'role_id' => 'nullable|integer|exists:roles,id',
             'status' => 'required|in:Active,Inactive',
         ]);
 
-        $user->update([
+        $userData = [
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
             'pin_code' => $request->pin_code,
             'role_id' => $request->role_id,
             'status' => $request->status,
-        ]);
+        ];
+
+        if ($request->filled('password')) {
+            $userData['password'] = Hash::make($request->password);
+        }
+
+        $user->update($userData);
+
+        // Sync/update corresponding User model account if email exists
+        if ($request->filled('email')) {
+            $webUser = User::where('tenant_id', $tenantId)->where('email', $user->email)->first();
+            if (!$webUser) {
+                $webUser = User::where('tenant_id', $tenantId)->where('email', $request->email)->first();
+            }
+
+            if ($webUser || $request->filled('password')) {
+                $syncData = [
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'tenant_id' => $tenantId,
+                    'branch_id' => $branchId,
+                    'role_id' => $request->role_id,
+                    'role' => 'restaurant',
+                    'status' => $request->status,
+                ];
+
+                if ($request->filled('password')) {
+                    $syncData['password'] = Hash::make($request->password);
+                }
+
+                User::updateOrCreate(
+                    ['email' => $request->email],
+                    $syncData
+                );
+            }
+        }
 
         return response()->json(['message' => 'Restaurant user updated successfully', 'user' => $user->load('assignedRole')]);
+    }
+
+    public function enableLogin(Request $request, $id)
+    {
+        $tenantId = Auth::user()->tenant_id;
+        $branchId = Auth::user()->branch_id;
+
+        $user = RestaurantUser::where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
+
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string|min:6',
+        ]);
+
+        // Update RestaurantUser record
+        $user->update([
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
+
+        // Create/Sync in main users table
+        User::updateOrCreate(
+            ['email' => $request->email],
+            [
+                'name' => $user->name,
+                'password' => Hash::make($request->password),
+                'tenant_id' => $tenantId,
+                'branch_id' => $branchId,
+                'role_id' => $user->role_id,
+                'role' => 'restaurant',
+                'status' => $user->status || 'Active',
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Web login enabled successfully. User can now log in via /login route.',
+            'user' => $user->load('assignedRole')
+        ]);
     }
 
     public function destroy($id)
     {
         $tenantId = Auth::user()->tenant_id;
         $user = RestaurantUser::where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
+
+        // Also delete from main Users table if synced
+        if ($user->email) {
+            User::where('tenant_id', $tenantId)->where('email', $user->email)->delete();
+        }
 
         $user->delete();
 

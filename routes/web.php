@@ -439,6 +439,7 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     // Users API
     Route::get('/api/tenant-users', [\App\Http\Controllers\UserManagementController::class, 'index']);
     Route::post('/api/tenant-users', [\App\Http\Controllers\UserManagementController::class, 'store']);
+    Route::post('/api/tenant-users/{id}/enable-login', [\App\Http\Controllers\UserManagementController::class, 'enableLogin']);
     Route::put('/api/tenant-users/{id}', [\App\Http\Controllers\UserManagementController::class, 'update']);
     Route::delete('/api/tenant-users/{id}', [\App\Http\Controllers\UserManagementController::class, 'destroy']);
 

@@ -29,6 +29,7 @@ class RoleController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:255',
             'status' => 'required|in:Active,Inactive',
+            'permissions' => 'nullable|array',
         ]);
 
         $tenantId = Auth::user()->tenant_id;
@@ -41,6 +42,7 @@ class RoleController extends Controller
             'name' => $request->name,
             'description' => $request->description,
             'status' => $request->status,
+            'permissions' => $request->permissions ?? [],
         ]);
 
         return response()->json(['message' => 'Role created successfully', 'role' => $role], 201);
@@ -52,6 +54,7 @@ class RoleController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:255',
             'status' => 'required|in:Active,Inactive',
+            'permissions' => 'nullable|array',
         ]);
 
         $tenantId = Auth::user()->tenant_id;
@@ -61,6 +64,7 @@ class RoleController extends Controller
             'name' => $request->name,
             'description' => $request->description,
             'status' => $request->status,
+            'permissions' => $request->permissions ?? [],
         ]);
 
         return response()->json(['message' => 'Role updated successfully', 'role' => $role]);
