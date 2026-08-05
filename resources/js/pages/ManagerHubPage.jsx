@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Lock
+import {
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Lock, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets, Recycle
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -17,74 +17,114 @@ const ManagerHubPage = () => {
   };
 
   const masterModules = [
-    { 
-      key: 'manager.ingredients', 
-      label: 'Ingredients', 
+    {
+      key: 'manager.ingredients',
+      label: 'Ingredients',
       desc: 'Manage cooking raw materials, ingredient categories, and default UOMs.',
-      icon: ChefHat, 
+      icon: ChefHat,
       route: '/manager-hub/ingredients'
     },
-    { 
-      key: 'manager.food-items', 
-      label: 'Food Items', 
+    {
+      key: 'manager.food-items',
+      label: 'Food Items',
       desc: 'Manage food/menu items, default UOM, and storage type rules.',
-      icon: Package, 
+      icon: Package,
       route: '/manager-hub/food-items'
     },
-    { 
-      key: 'manager.uom', 
-      label: 'Unit of Measurement (UOM)', 
+    {
+      key: 'manager.uom',
+      label: 'Unit of Measurement (UOM)',
       desc: 'Set up unit categories, reference base units, and conversion factors.',
-      icon: Scale, 
+      icon: Scale,
       route: '/manager-hub/uom'
     },
-    { 
-      key: 'manager.suppliers', 
-      label: 'Suppliers Master', 
+    {
+      key: 'manager.suppliers',
+      label: 'Suppliers Master',
       desc: 'Manage approved vendors, order schedules, categories, and supplied items.',
-      icon: Truck, 
+      icon: Truck,
       route: '/manager-hub/suppliers'
     },
-    { 
-      key: 'manager.cleaning-areas', 
-      label: 'Cleaning Areas', 
+    {
+      key: 'manager.cleaning-areas',
+      label: 'Cleaning Areas',
       desc: 'Manage cleaning areas, cleaning frequency, instructions, and active status.',
-      icon: Sparkles, 
+      icon: Sparkles,
       route: '/manager-hub/cleaning-areas'
     },
-    { 
-      key: 'manager.cleaning-checklist', 
-      label: 'Cleaning Checklist', 
+    {
+      key: 'manager.cleaning-checklist',
+      label: 'Cleaning Checklist',
       desc: 'Manage cleaning checklist sections, questions, frequencies, and active status.',
-      icon: ClipboardCheck, 
+      icon: ClipboardCheck,
       route: '/manager-hub/cleaning-checklist'
     },
-    { 
-      key: 'manager.storage-zones', 
-      label: 'Storage Zones', 
+    {
+      key: 'manager.storage-zones',
+      label: 'Storage Zones',
       desc: 'Manage fridges, freezers, and hot cabinets used for temperature checks.',
-      icon: Refrigerator, 
+      icon: Refrigerator,
       route: '/manager-hub/storage-zones'
     },
-    { 
-      key: 'manager.thermometers', 
-      label: 'Thermometers / Probes', 
+    {
+      key: 'holding-stations',
+      label: 'Holding Stations',
+      desc: 'Manage hot holding units and stations used for food temperature checks.',
+      icon: Flame,
+      active: true,
+      route: '/manager-hub/holding-stations'
+    },
+    {
+      key: 'defrosting-methods',
+      label: 'Defrosting Methods',
+      desc: 'Manage thawing and defrosting methods used in food safety checks.',
+      icon: Snowflake,
+      active: true,
+      route: '/manager-hub/defrosting-methods'
+    },
+    {
+      key: 'fryer-oil-setup',
+      label: 'Fryer Oil Setup',
+      desc: 'Manage cooking stations, oil quality options, and oil actions for fryer checks.',
+      icon: Droplets,
+      active: true,
+      route: '/manager-hub/fryer-oil-setup'
+    },
+    {
+      key: 'grease-used-oil-setup',
+      label: 'Grease & Used Oil Setup',
+      desc: 'Manage disposal types, grease trap areas, disposal methods, and waste contractors.',
+      icon: Recycle,
+      active: true,
+      route: '/manager-hub/grease-used-oil-setup'
+    },
+    {
+      key: 'training-tasks',
+      label: 'Training Tasks',
+      desc: 'Manage staff training tasks, frequencies, and position or employee assignments.',
+      icon: GraduationCap,
+      active: true,
+      route: '/manager-hub/training-tasks'
+    },
+    {
+      key: 'thermometers',
+      label: 'Thermometers / Probes',
       desc: 'Manage digital probes, infrared thermometers, serial numbers, and active status.',
-      icon: Thermometer, 
+      icon: Thermometer,
       route: '/manager-hub/thermometers'
     },
-    { 
-      key: 'manager.health-declaration', 
-      label: 'Health Declaration Setup', 
+    {
+      key: 'manager.health-declaration',
+      label: 'Health Declaration Setup',
       desc: 'Manage health declaration sections, staff questionnaire items, and active status.',
-      icon: HeartPulse, 
+      icon: HeartPulse,
       route: '/manager-hub/health-declaration'
     },
-    { 
-      key: 'manager.users-roles', 
-      label: 'User & Role Management', 
+    {
+      key: 'manager.users-roles',
+      label: 'User & Role Management',
       desc: 'Manage staff accounts, user profiles, and assign custom operational roles.',
-      icon: Users, 
+      icon: Users,
       route: '/manager-hub/users-roles'
     }
   ];
@@ -147,9 +187,9 @@ const ManagerHubPage = () => {
               }
 
               return (
-                <div 
-                  key={m.key} 
-                  style={styles.masterCard} 
+                <div
+                  key={m.key}
+                  style={styles.masterCard}
                   onClick={() => router.visit(m.route)}
                 >
                   <div style={styles.iconContainer}>
