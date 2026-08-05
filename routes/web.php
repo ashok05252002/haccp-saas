@@ -17,6 +17,7 @@ use App\Http\Controllers\HealthDeclarationSectionController;
 use App\Http\Controllers\HealthDeclarationQuestionController;
 use App\Http\Controllers\TemperatureEquipmentController;
 use App\Http\Controllers\StorageZoneController;
+use App\Http\Controllers\HoldingStationController;
 use App\Http\Controllers\BranchContextController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -184,6 +185,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('StorageZonesPage');
     })->name('manager.hub.storage-zones');
 
+    // Holding Stations Master Page Route
+    Route::get('/manager-hub/holding-stations', function () {
+        return Inertia::render('HoldingStationsPage');
+    })->name('manager.hub.holding-stations');
+
     // Legacy redirect for temperature-equipment
     Route::get('/manager-hub/temperature-equipment', function () {
         return redirect()->route('manager.hub.storage-zones');
@@ -274,6 +280,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/temperature-equipments', [StorageZoneController::class, 'index']);
     Route::post('/api/temperature-equipments', [StorageZoneController::class, 'store']);
     Route::put('/api/temperature-equipments/{id}', [StorageZoneController::class, 'update']);
+
+    // Holding Stations API Routes
+    Route::get('/api/holding-stations', [HoldingStationController::class, 'index']);
+    Route::post('/api/holding-stations', [HoldingStationController::class, 'store']);
+    Route::put('/api/holding-stations/{id}', [HoldingStationController::class, 'update']);
 
     // Temperature Logs API Routes
     Route::get('/api/temperature-logs', [\App\Http\Controllers\TemperatureLogController::class, 'index']);

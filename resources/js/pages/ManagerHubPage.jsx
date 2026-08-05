@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -64,6 +64,14 @@ const ManagerHubPage = () => {
       icon: Refrigerator, 
       active: true,
       route: '/manager-hub/storage-zones'
+    },
+    { 
+      key: 'holding-stations', 
+      label: 'Holding Stations', 
+      desc: 'Manage hot holding units and stations used for food temperature checks.',
+      icon: Flame, 
+      active: true,
+      route: '/manager-hub/holding-stations'
     },
     { 
       key: 'thermometers', 
