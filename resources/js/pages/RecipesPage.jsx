@@ -107,7 +107,6 @@ const RecipesPage = () => {
               style={{
                 padding: '8px 16px',
                 borderRadius: '20px',
-                border: 'none',
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer',

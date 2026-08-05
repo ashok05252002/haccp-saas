@@ -131,7 +131,7 @@
   /* ---- Layout ---- */
   --sidebar-width: 250px;
   --sidebar-width-collapsed: 0px;
-  --content-max-width: 1100px;
+  --content-max-width: 100%;
   --header-height: 60px;
 
   /* ---- Transitions ---- */
@@ -665,13 +665,15 @@ body.sidebar-minimized {
 }
 .data-table th {
   text-align: left;
-  padding: 12px 20px;
+  padding: 14px 20px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-secondary);
   border-bottom: 2px solid var(--color-border-light);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  background-color: #F8FAFC;
+  white-space: nowrap;
 }
 .data-table td {
   padding: 16px 20px;
@@ -679,6 +681,13 @@ body.sidebar-minimized {
   color: var(--color-text-secondary);
   border-bottom: 1px solid var(--color-border-light);
   vertical-align: middle;
+  white-space: nowrap;
+}
+.data-table tbody tr {
+  transition: background-color 150ms ease;
+}
+.data-table tbody tr:hover {
+  background-color: #F1F5F9;
 }
 
 /* ---- Tooltip CSS ---- */

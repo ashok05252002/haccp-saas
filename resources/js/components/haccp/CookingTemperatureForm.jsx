@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
+import Modal from '../common/Modal';
 import SignatureCanvas from 'react-signature-canvas';
-import { AlertTriangle, Save, Flame, Snowflake, Snowflake as RefrigeratorIcon, RefreshCw, Soup, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, Save, Flame, Snowflake, Snowflake as RefrigeratorIcon, RefreshCw, Soup, CheckCircle, ArrowRight, ArrowLeft, Plus } from 'lucide-react';
 import axios from 'axios';
 
 const CookingTemperatureForm = ({ onSave, onCancel }) => {
@@ -26,23 +27,115 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
   const [managerThermometers, setManagerThermometers] = useState([]);
   const [managerStaff, setManagerStaff] = useState([]);
 
+  // Quick Add Food Item Modal State
+  const [foodModalOpen, setFoodModalOpen] = useState(false);
+  const [storageTypes, setStorageTypes] = useState([]);
+  const [uoms, setUoms] = useState([]);
+  const [foodModalLoading, setFoodModalLoading] = useState(false);
+  const [foodModalSaving, setFoodModalSaving] = useState(false);
+  const [foodModalError, setFoodModalError] = useState('');
+
+  const [newFoodItemForm, setNewFoodItemForm] = useState({
+    name: '',
+    storage_type_id: '',
+    uom_id: '',
+    status: 'Active'
+  });
+
   useEffect(() => {
     const fetchManagerData = async () => {
       try {
-        const [foodRes, thermoRes, staffRes] = await Promise.all([
+        const [foodRes, thermoRes, staffRes, zoneRes] = await Promise.all([
           axios.get('/api/food-items'),
           axios.get('/api/thermometers'),
-          axios.get('/api/tenant-users')
+          axios.get('/api/tenant-users'),
+          axios.get('/api/storage-zones')
         ]);
         setManagerFoodItems(foodRes.data || []);
         setManagerThermometers(thermoRes.data || []);
         setManagerStaff((staffRes.data || []).filter(s => s.status !== 'Inactive'));
+        setManagerStorageZones((zoneRes.data || []).filter(z => z.status !== 'Inactive'));
       } catch (err) {
         console.error('Failed to fetch master data from Manager Hub', err);
       }
     };
     fetchManagerData();
   }, []);
+
+  const handleOpenFoodModal = async () => {
+    setNewFoodItemForm({ name: '', storage_type_id: '', uom_id: '', status: 'Active' });
+    setFoodModalError('');
+    setFoodModalOpen(true);
+
+    if (storageTypes.length === 0 || uoms.length === 0) {
+      setFoodModalLoading(true);
+      try {
+        const [stRes, uomRes] = await Promise.all([
+          axios.get('/api/storage-types'),
+          axios.get('/api/uoms')
+        ]);
+        const stList = stRes.data || [];
+        const uomList = (uomRes.data || []).filter(u => u.status === 'Active');
+        setStorageTypes(stList);
+        setUoms(uomList);
+
+        setNewFoodItemForm(prev => ({
+          ...prev,
+          storage_type_id: stList.length > 0 ? stList[0].id : '',
+          uom_id: uomList.length > 0 ? uomList[0].id : ''
+        }));
+      } catch (err) {
+        console.error('Failed to load options for food item modal', err);
+        setFoodModalError('Failed to load master options.');
+      } finally {
+        setFoodModalLoading(false);
+      }
+    } else {
+      setNewFoodItemForm(prev => ({
+        ...prev,
+        storage_type_id: storageTypes.length > 0 ? storageTypes[0].id : '',
+        uom_id: uoms.length > 0 ? uoms[0].id : ''
+      }));
+    }
+  };
+
+  const handleSaveNewFoodItem = async (e) => {
+    e.preventDefault();
+    setFoodModalError('');
+
+    if (!newFoodItemForm.name.trim()) {
+      setFoodModalError('Food Item Name is required.');
+      return;
+    }
+    if (!newFoodItemForm.storage_type_id) {
+      setFoodModalError('Storage Type is required.');
+      return;
+    }
+    if (!newFoodItemForm.uom_id) {
+      setFoodModalError('Default UOM is required.');
+      return;
+    }
+
+    setFoodModalSaving(true);
+    try {
+      const res = await axios.post('/api/food-items', newFoodItemForm);
+      const createdItem = res.data;
+
+      setManagerFoodItems(prev => [...prev, createdItem]);
+      setFoodItem(createdItem.name);
+
+      setFoodModalOpen(false);
+    } catch (err) {
+      console.error('Failed to create new food item', err);
+      if (err.response && err.response.data && err.response.data.errors && err.response.data.errors.name) {
+        setFoodModalError(err.response.data.errors.name[0]);
+      } else {
+        setFoodModalError(err.response?.data?.message || 'Failed to create new food item.');
+      }
+    } finally {
+      setFoodModalSaving(false);
+    }
+  };
 
   // Stage N/A Checkboxes
   const [cookingNa, setCookingNa] = useState(false);
@@ -58,9 +151,13 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
 
   // Step 3: Blast Chilling (CCP-4)
   const [chillingMethod, setChillingMethod] = useState('Blast Chiller');
+  const [chillingStartTime, setChillingStartTime] = useState('');
+  const [chillingEndTime, setChillingEndTime] = useState('');
   const [chillingStartTemp, setChillingStartTemp] = useState('');
   const [chillingEndTemp, setChillingEndTemp] = useState('');
   const [chillingDurationMinutes, setChillingDurationMinutes] = useState('');
+  const [chillingCorrectiveAction, setChillingCorrectiveAction] = useState('');
+  const [managerStorageZones, setManagerStorageZones] = useState([]);
 
   // Step 4: Chiller Hold
   const [chillerLocation, setChillerLocation] = useState('Main Walk-in Fridge');
@@ -87,12 +184,29 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
     return temp >= 75.0; // Target >= 75°C
   };
 
+  // Auto calculate chilling duration in minutes when start and end time are entered
+  useEffect(() => {
+    if (chillingStartTime && chillingEndTime) {
+      const [sH, sM] = chillingStartTime.split(':').map(Number);
+      const [eH, eM] = chillingEndTime.split(':').map(Number);
+      if (!isNaN(sH) && !isNaN(sM) && !isNaN(eH) && !isNaN(eM)) {
+        let diff = (eH * 60 + eM) - (sH * 60 + sM);
+        if (diff < 0) diff += 24 * 60;
+        setChillingDurationMinutes(diff);
+      }
+    }
+  }, [chillingStartTime, chillingEndTime]);
+
   const validateChilling = () => {
     if (chillingNa) return true;
     if (!chillingEndTemp) return null;
     const end = parseFloat(chillingEndTemp);
     if (isNaN(end)) return false;
-    return end <= 3.0; // Target <= 3°C
+    const duration = parseInt(chillingDurationMinutes || 0, 10);
+    if (end <= 3.0 && (duration === 0 || duration <= 90)) {
+      return true;
+    }
+    return false;
   };
 
   const validateChiller = () => {
@@ -197,10 +311,13 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
       cooking_passed: validateCooking() ?? true,
 
       chilling_method: chillingNa ? 'N/A' : chillingMethod,
+      chilling_start_time: chillingStartTime || null,
+      chilling_end_time: chillingEndTime || null,
       chilling_start_temp: !chillingNa && chillingStartTemp !== '' ? parseFloat(chillingStartTemp) : null,
       chilling_end_temp: !chillingNa && chillingEndTemp !== '' ? parseFloat(chillingEndTemp) : null,
       chilling_duration_minutes: !chillingNa && chillingDurationMinutes !== '' ? parseInt(chillingDurationMinutes, 10) : null,
       chilling_passed: validateChilling() ?? true,
+      chilling_corrective_action: chillingCorrectiveAction || null,
 
       chiller_location: chillerNa ? 'N/A' : chillerLocation,
       chiller_temp: !chillerNa && chillerTemp !== '' ? parseFloat(chillerTemp) : null,
@@ -323,7 +440,29 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
                   <input type="time" className="form-input" value={logTime} onChange={e => setLogTime(e.target.value)} required />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Food Item / Product *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>
+                      Food Item / Product *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleOpenFoodModal}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-primary)',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: 0
+                      }}
+                    >
+                      <Plus size={13} /> Add to Master
+                    </button>
+                  </div>
                   <select 
                     className="form-input" 
                     value={foodItem} 
@@ -467,10 +606,18 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
               {!chillingNa ? (
                 <>
                   <div style={{ fontSize: '14px', color: '#0E7490', marginBottom: '20px', fontWeight: 500 }}>
-                    Target Requirement: Cool food from <strong>≥ 63°C to ≤ 3°C</strong> within 90 minutes.
+                    Target Requirement: Rapidly cool cooked food from <strong>≥ 63°C to ≤ 3°C</strong> within <strong>90 minutes max</strong>.
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ color: '#155E75' }}>Chilling Start Time</label>
+                      <input type="time" className="form-input" value={chillingStartTime} onChange={e => setChillingStartTime(e.target.value)} />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ color: '#155E75' }}>Chilling End Time</label>
+                      <input type="time" className="form-input" value={chillingEndTime} onChange={e => setChillingEndTime(e.target.value)} />
+                    </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" style={{ color: '#155E75' }}>Start Temp (°C)</label>
                       <input type="number" step="0.1" className="form-input" placeholder="e.g. 65.0" value={chillingStartTemp} onChange={e => setChillingStartTemp(e.target.value)} />
@@ -481,14 +628,35 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" style={{ color: '#155E75' }}>Duration (Minutes)</label>
-                      <input type="number" className="form-input" placeholder="e.g. 75" value={chillingDurationMinutes} onChange={e => setChillingDurationMinutes(e.target.value)} />
+                      <input type="number" className="form-input" placeholder="Auto-calculated" value={chillingDurationMinutes} onChange={e => setChillingDurationMinutes(e.target.value)} />
                     </div>
                   </div>
 
                   {chillingEndTemp !== '' && (
                     <div style={{ marginTop: '16px', padding: '12px 16px', borderRadius: '8px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: validateChilling() ? '#ECFDF5' : '#FEF2F2', color: validateChilling() ? '#047857' : '#B91C1C', border: validateChilling() ? '1px solid #A7F3D0' : '1px solid #FECACA' }}>
                       {validateChilling() ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-                      <span>{validateChilling() ? 'Chilling Limit Passed (≤ 3°C)' : 'FAILED: Chilling end temp exceeded 3°C!'}</span>
+                      <span>
+                        {validateChilling() 
+                          ? `CCP-4 Limit Passed (End Temp ${chillingEndTemp}°C ≤ 3°C, Duration ${chillingDurationMinutes ? chillingDurationMinutes + ' mins' : '< 90 mins'})` 
+                          : `FAILED: Blast chilling limit exceeded! (End Temp > 3°C or Duration > 90 mins)`}
+                      </span>
+                    </div>
+                  )}
+
+                  {validateChilling() === false && (
+                    <div style={{ marginTop: '16px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', padding: '16px', borderRadius: '8px' }}>
+                      <label className="form-label" style={{ color: '#991B1B', fontWeight: 700 }}>
+                        Mandatory Corrective Action Required *
+                      </label>
+                      <textarea
+                        className="form-input"
+                        rows="2"
+                        placeholder="Describe action taken (e.g. Returned to blast chiller for extra 15 mins, re-tested at 2.1°C)..."
+                        value={chillingCorrectiveAction}
+                        onChange={e => setChillingCorrectiveAction(e.target.value)}
+                        style={{ borderColor: '#FCA5A5' }}
+                        required
+                      />
                     </div>
                   )}
                 </>
@@ -526,8 +694,18 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label" style={{ color: '#1E40AF' }}>Chiller / Fridge Location</label>
-                      <input type="text" className="form-input" placeholder="e.g. Walk-in Fridge 1" value={chillerLocation} onChange={e => setChillerLocation(e.target.value)} />
+                      <label className="form-label" style={{ color: '#1E40AF' }}>Chiller / Storage Location</label>
+                      {managerStorageZones.length > 0 ? (
+                        <select className="form-input" value={chillerLocation} onChange={e => setChillerLocation(e.target.value)}>
+                          {managerStorageZones.map(zone => (
+                            <option key={zone.id} value={zone.name}>
+                              {zone.name} {zone.type ? `(${zone.type})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input type="text" className="form-input" placeholder="e.g. Walk-in Fridge 1" value={chillerLocation} onChange={e => setChillerLocation(e.target.value)} />
+                      )}
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" style={{ color: '#1E40AF' }}>Storage Temp (°C) *</label>
@@ -705,6 +883,99 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
           )}
         </div>
       </div>
+
+      {/* Quick Add Food Item Modal */}
+      <Modal
+        isOpen={foodModalOpen}
+        onClose={() => setFoodModalOpen(false)}
+        title="Add New Master Food Item"
+        size="md"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setFoodModalOpen(false)}
+              disabled={foodModalSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSaveNewFoodItem}
+              disabled={foodModalSaving || foodModalLoading}
+            >
+              {foodModalSaving ? 'Saving...' : 'Save Food Item'}
+            </Button>
+          </div>
+        }
+      >
+        {foodModalLoading ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+            Loading storage types & units...
+          </div>
+        ) : (
+          <form onSubmit={handleSaveNewFoodItem} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {foodModalError && (
+              <div style={{
+                padding: '10px 14px',
+                backgroundColor: '#FEE2E2',
+                color: '#B91C1C',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600
+              }}>
+                {foodModalError}
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Food Item Name *</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Fresh Chicken Breast"
+                value={newFoodItemForm.name}
+                onChange={e => setNewFoodItemForm({ ...newFoodItemForm, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Storage Type *</label>
+              <select
+                className="form-select"
+                value={newFoodItemForm.storage_type_id}
+                onChange={e => setNewFoodItemForm({ ...newFoodItemForm, storage_type_id: e.target.value })}
+                required
+              >
+                <option value="">-- Select Storage Type --</option>
+                {storageTypes.map(st => (
+                  <option key={st.id} value={st.id}>{st.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Default Unit of Measure (UOM) *</label>
+              <select
+                className="form-select"
+                value={newFoodItemForm.uom_id}
+                onChange={e => setNewFoodItemForm({ ...newFoodItemForm, uom_id: e.target.value })}
+                required
+              >
+                <option value="">-- Select UOM --</option>
+                {uoms.map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.unit_code} — {u.unit_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 };

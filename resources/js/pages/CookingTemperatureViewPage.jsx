@@ -135,10 +135,16 @@ const CookingTemperatureViewPage = ({ logId }) => {
                   <span>{log.chilling_passed ? 'PASSED' : 'FAILED'}</span>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', fontSize: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', fontSize: '14px' }}>
                 <div>
                   <span style={{ color: '#0E7490', fontWeight: 500 }}>Method:</span>
                   <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>{log.chilling_method || 'N/A'}</div>
+                </div>
+                <div>
+                  <span style={{ color: '#0E7490', fontWeight: 500 }}>Chilling Times:</span>
+                  <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>
+                    {log.chilling_start_time && log.chilling_end_time ? `${log.chilling_start_time} - ${log.chilling_end_time}` : log.chilling_start_time || 'N/A'}
+                  </div>
                 </div>
                 <div>
                   <span style={{ color: '#0E7490', fontWeight: 500 }}>Start Temp:</span>
@@ -153,6 +159,13 @@ const CookingTemperatureViewPage = ({ logId }) => {
                   <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>{log.chilling_duration_minutes ? `${log.chilling_duration_minutes} mins` : 'N/A'}</div>
                 </div>
               </div>
+
+              {log.chilling_corrective_action && (
+                <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed #A5F3FC', color: '#991B1B', fontSize: '13px' }}>
+                  <strong>Blast Chilling Corrective Action Taken:</strong>
+                  <p style={{ margin: '4px 0 0 0', fontWeight: 600 }}>{log.chilling_corrective_action}</p>
+                </div>
+              )}
             </div>
 
             {/* Stage 3: Chiller Hold */}

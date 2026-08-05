@@ -219,9 +219,13 @@ const BulkPlanningFormPage = ({ planId }) => {
         };
       }
 
+      const eligibleIds = new Set(eligibleSuppliers.map(s => String(s.id)));
+      const otherSuppliers = suppliers.filter(s => !eligibleIds.has(String(s.id)));
+
       grouped[groupKey].items.push({
         ...ing,
         eligibleSuppliers,
+        otherSuppliers,
         selectedSupplierId: selectedSup ? String(selectedSup.id) : 'unassigned'
       });
     });
@@ -585,25 +589,34 @@ const BulkPlanningFormPage = ({ planId }) => {
                                   </strong>
                                 </td>
 
-                                {/* Supplier Selector (If 2+ suppliers supply this item) */}
+                                {/* Supplier Selector (Allows assigning to any active supplier) */}
                                 <td>
-                                  {item.eligibleSuppliers && item.eligibleSuppliers.length > 1 ? (
-                                    <select
-                                      className="form-input"
-                                      style={{ fontSize: '12px', padding: '4px 8px', borderColor: 'var(--color-primary)' }}
-                                      value={item.selectedSupplierId}
-                                      onChange={e => handleSupplierOverrideChange(item.mapKey, e.target.value)}
-                                    >
-                                      {item.eligibleSuppliers.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name} (Supplier)</option>
+                                  <select
+                                    className="form-input"
+                                    style={{ fontSize: '12px', padding: '4px 8px', borderColor: 'var(--color-primary)', minWidth: '160px' }}
+                                    value={item.selectedSupplierId}
+                                    onChange={e => handleSupplierOverrideChange(item.mapKey, e.target.value)}
+                                  >
+                                    {item.eligibleSuppliers && item.eligibleSuppliers.length > 0 && (
+                                      <optgroup label="Assigned Supplier(s)">
+                                        {item.eligibleSuppliers.map(s => (
+                                          <option key={`assigned-${s.id}`} value={s.id}>
+                                            {s.name} (Assigned)
+                                          </option>
+                                        ))}
+                                      </optgroup>
+                                    )}
+
+                                    <optgroup label={item.eligibleSuppliers && item.eligibleSuppliers.length > 0 ? "Other Suppliers" : "All Suppliers"}>
+                                      {(item.otherSuppliers && item.otherSuppliers.length > 0 ? item.otherSuppliers : suppliers).map(s => (
+                                        <option key={`other-${s.id}`} value={s.id}>
+                                          {s.name}
+                                        </option>
                                       ))}
-                                      <option value="unassigned">Unassigned / General</option>
-                                    </select>
-                                  ) : (
-                                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
-                                      {group.supplierName}
-                                    </span>
-                                  )}
+                                    </optgroup>
+
+                                    <option value="unassigned">Unassigned / General</option>
+                                  </select>
                                 </td>
 
                                 <td style={{ backgroundColor: '#F0FDF4', color: '#15803D', fontWeight: 800, fontSize: '15px' }}>

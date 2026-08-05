@@ -1,0 +1,195 @@
+import React, { useState, useEffect } from 'react';
+import { Head, router } from '@inertiajs/react';
+import { ArrowLeft, Wind, CheckCircle, AlertTriangle } from 'lucide-react';
+import PageLayout from '../components/layout/PageLayout';
+import Button from '../components/common/Button';
+import axios from 'axios';
+
+const CoolingProcessViewPage = ({ logId }) => {
+  const [log, setLog] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLog = async () => {
+      try {
+        const res = await axios.get(`/api/cooling-process-logs/${logId}`);
+        setLog(res.data);
+      } catch (err) {
+        console.error('Failed to fetch cooling process log', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLog();
+  }, [logId]);
+
+  if (loading) {
+    return (
+      <PageLayout>
+        <Head title="View Cooling Process Log" />
+        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+          Loading log details...
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (!log) {
+    return (
+      <PageLayout>
+        <Head title="Log Not Found" />
+        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+          <p>Cooling process log not found.</p>
+          <Button variant="secondary" onClick={() => router.visit('/haccp-logs/cooling-process')} style={{ marginTop: '16px' }}>
+            Back to Cooling Process Logs
+          </Button>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  const isPassed = log.check_passed ?? true;
+
+  return (
+    <PageLayout>
+      <Head title={`Cooling Process Log - ${log.food_item}`} />
+
+      <div>
+        <button onClick={() => router.visit('/haccp-logs/cooling-process')} className="back-btn">
+          <ArrowLeft size={16} />
+          <span>Back to Cooling Process Logs</span>
+        </button>
+
+        <div className="panel-header-row" style={{ marginBottom: '24px' }}>
+          <div>
+            <h1 className="page-title">Cooling Process Audit Detail</h1>
+            <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+              Full CCP-6 compliance audit record for natural / ambient cooling.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Header Card */}
+          <div className="card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <span className="badge badge-ccp" style={{ backgroundColor: '#14B8A6', color: '#ffffff', marginBottom: '8px' }}>
+                  CCP-6
+                </span>
+                <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-text-primary)' }}>
+                  {log.food_item}
+                </div>
+              </div>
+              <div>
+                {isPassed ? (
+                  <span className="badge badge-success" style={{ fontSize: '14px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle size={16} /> CCP-6 Passed (≤8°C)
+                  </span>
+                ) : (
+                  <span className="badge badge-error" style={{ fontSize: '14px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertTriangle size={16} /> Limit Exceeded
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--color-border-light)' }}>
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Cooling Method</label>
+                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '2px' }}>{log.cooling_method || 'N/A'}</div>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Storage Location / Chiller</label>
+                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '2px' }}>{log.storage_location || 'N/A'}</div>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Staff Member</label>
+                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '2px' }}>{log.staff_name || 'N/A'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Execution Details Card */}
+          <div className="card" style={{ padding: '24px', backgroundColor: 'var(--color-teal-pale)', border: '1px solid var(--color-teal-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <Wind size={22} color="#0F766E" />
+              <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#0F766E' }}>
+                Cooling Cycle Audit Data
+              </h3>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+              <div style={{ backgroundColor: '#ffffff', padding: '14px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
+                <label style={{ fontSize: '11px', color: '#0F766E', fontWeight: 700, textTransform: 'uppercase' }}>Start Date & Time</label>
+                <div style={{ fontSize: '15px', fontWeight: 700, marginTop: '4px', color: '#0F766E' }}>
+                  {log.start_date || log.log_date} {log.start_time}
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#ffffff', padding: '14px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
+                <label style={{ fontSize: '11px', color: '#0F766E', fontWeight: 700, textTransform: 'uppercase' }}>End Date & Time</label>
+                <div style={{ fontSize: '15px', fontWeight: 700, marginTop: '4px', color: '#0F766E' }}>
+                  {log.end_date || log.log_date} {log.end_time || log.log_time}
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#ffffff', padding: '14px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
+                <label style={{ fontSize: '11px', color: '#0F766E', fontWeight: 700, textTransform: 'uppercase' }}>Calculated Duration</label>
+                <div style={{ fontSize: '15px', fontWeight: 700, marginTop: '4px', color: '#0F766E' }}>
+                  {log.duration_minutes !== null ? `${log.duration_minutes} minutes` : 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ backgroundColor: '#ffffff', padding: '14px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
+                <label style={{ fontSize: '11px', color: '#0F766E', fontWeight: 700, textTransform: 'uppercase' }}>Start Temperature</label>
+                <div style={{ fontSize: '18px', fontWeight: 800, marginTop: '4px', color: '#0F766E' }}>
+                  {log.start_temp !== null ? `${log.start_temp} °C` : 'N/A'}
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#ffffff', padding: '14px', borderRadius: '8px', border: '1px solid #CCFBF1' }}>
+                <label style={{ fontSize: '11px', color: '#0F766E', fontWeight: 700, textTransform: 'uppercase' }}>Final Temperature (Target ≤ 8.0°C)</label>
+                <div style={{ fontSize: '18px', fontWeight: 800, marginTop: '4px', color: isPassed ? '#15803D' : '#991B1B' }}>
+                  {log.end_temp !== null ? `${log.end_temp} °C` : 'N/A'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Comments Section if applicable */}
+          {log.comments && (
+            <div className="card" style={{ padding: '20px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#991B1B', fontWeight: 700 }}>
+                <AlertTriangle size={18} />
+                <span>Comments / Corrective Action Taken</span>
+              </div>
+              <div style={{ fontSize: '14px', color: '#7F1D1D', lineHeight: 1.5 }}>
+                {log.comments}
+              </div>
+            </div>
+          )}
+
+          {/* Verification Card */}
+          <div className="card" style={{ padding: '24px' }}>
+            <h4 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Staff Verification</h4>
+            {log.signature && (
+              <div>
+                <label style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                  Signature of {log.staff_name || 'Staff Member'}
+                </label>
+                <div style={{ border: '1px solid var(--color-border-light)', borderRadius: '8px', padding: '12px', backgroundColor: '#FAFAFA', display: 'inline-block' }}>
+                  <img src={log.signature} alt="Staff Signature" style={{ maxHeight: '80px', display: 'block' }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </PageLayout>
+  );
+};
+
+export default CoolingProcessViewPage;

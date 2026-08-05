@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { Thermometer, ArrowRight, Truck, Flame } from 'lucide-react';
+import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
 const HaccpLogsSidebarPage = () => {
@@ -53,6 +53,33 @@ const HaccpLogsSidebarPage = () => {
             </div>
             <h3 style={styles.cardTitle}>Cooking Temperature</h3>
             <p style={styles.cardDesc}>Log the 6-step Cook, Cool, Reheat & Hot Holding process with CCP limit checks.</p>
+          </Link>
+
+          {/* Blast Chilling Card */}
+          <Link href="/haccp-logs/blast-chilling" style={styles.masterCard}>
+            <div style={styles.iconContainer}>
+              <Snowflake size={28} color="var(--color-primary)" />
+            </div>
+            <h3 style={styles.cardTitle}>Blast Chilling</h3>
+            <p style={styles.cardDesc}>CCP-4 rapid cooling cycle monitoring (from ≥63°C to ≤3°C within 90 minutes).</p>
+          </Link>
+
+          {/* Cooling Process Card */}
+          <Link href="/haccp-logs/cooling-process" style={styles.masterCard}>
+            <div style={styles.iconContainer}>
+              <Wind size={28} color="var(--color-primary)" />
+            </div>
+            <h3 style={styles.cardTitle}>Cooling Process</h3>
+            <p style={styles.cardDesc}>CCP-6 ambient cooling monitoring (cool to ≤8°C within 2 hours / 120 minutes).</p>
+          </Link>
+
+          {/* Staff Health Declaration Card */}
+          <Link href="/haccp-logs/health-declaration" style={styles.masterCard}>
+            <div style={styles.iconContainer}>
+              <HeartPulse size={28} color="var(--color-primary)" />
+            </div>
+            <h3 style={styles.cardTitle}>Staff Health Declaration</h3>
+            <p style={styles.cardDesc}>Daily pre-shift health screening, symptom declaration, and fit-for-duty certification.</p>
           </Link>
 
           {/* Placeholders for future modules */}

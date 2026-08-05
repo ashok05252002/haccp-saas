@@ -329,6 +329,64 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/cooking-logs/{id}', [\App\Http\Controllers\CookingLogController::class, 'show']);
     Route::post('/api/cooking-logs', [\App\Http\Controllers\CookingLogController::class, 'store']);
 
+    // Blast Chilling Logs (Frontend)
+    Route::get('/haccp-logs/blast-chilling', function () {
+        return Inertia::render('BlastChillingMonitoringPage');
+    })->name('haccp-logs.blast-chilling');
+
+    Route::get('/haccp-logs/blast-chilling/add', function () {
+        return Inertia::render('BlastChillingFormPage');
+    })->name('haccp-logs.blast-chilling.add');
+
+    Route::get('/haccp-logs/blast-chilling/view/{id}', function ($id) {
+        return Inertia::render('BlastChillingViewPage', ['logId' => $id]);
+    })->name('haccp-logs.blast-chilling.view');
+
+    // Blast Chilling Logs (API)
+    Route::get('/api/blast-chilling-logs', [\App\Http\Controllers\BlastChillingLogController::class, 'index']);
+    Route::get('/api/blast-chilling-logs/{id}', [\App\Http\Controllers\BlastChillingLogController::class, 'show']);
+    Route::post('/api/blast-chilling-logs', [\App\Http\Controllers\BlastChillingLogController::class, 'store']);
+    Route::delete('/api/blast-chilling-logs/{id}', [\App\Http\Controllers\BlastChillingLogController::class, 'destroy']);
+
+    // Cooling Process Logs (Frontend)
+    Route::get('/haccp-logs/cooling-process', function () {
+        return Inertia::render('CoolingProcessMonitoringPage');
+    })->name('haccp-logs.cooling-process');
+
+    Route::get('/haccp-logs/cooling-process/add', function () {
+        return Inertia::render('CoolingProcessFormPage');
+    })->name('haccp-logs.cooling-process.add');
+
+    Route::get('/haccp-logs/cooling-process/view/{id}', function ($id) {
+        return Inertia::render('CoolingProcessViewPage', ['logId' => $id]);
+    })->name('haccp-logs.cooling-process.view');
+
+    // Cooling Process Logs (API)
+    Route::get('/api/cooling-process-logs', [\App\Http\Controllers\CoolingProcessLogController::class, 'index']);
+    Route::get('/api/cooling-process-logs/{id}', [\App\Http\Controllers\CoolingProcessLogController::class, 'show']);
+    Route::post('/api/cooling-process-logs', [\App\Http\Controllers\CoolingProcessLogController::class, 'store']);
+    Route::delete('/api/cooling-process-logs/{id}', [\App\Http\Controllers\CoolingProcessLogController::class, 'destroy']);
+
+    // Staff Health Declaration Logs (Frontend)
+    Route::get('/haccp-logs/health-declaration', function () {
+        return Inertia::render('HealthDeclarationLogsPage');
+    })->name('haccp-logs.health-declaration');
+
+    Route::get('/haccp-logs/health-declaration/add', function () {
+        return Inertia::render('HealthDeclarationFormPage');
+    })->name('haccp-logs.health-declaration.add');
+
+    Route::get('/haccp-logs/health-declaration/view/{id}', function ($id) {
+        return Inertia::render('HealthDeclarationViewPage', ['logId' => $id]);
+    })->name('haccp-logs.health-declaration.view');
+
+    // Staff Health Declaration Logs (API)
+    Route::get('/api/health-declaration-logs/dependencies', [\App\Http\Controllers\HealthDeclarationLogController::class, 'formDependencies']);
+    Route::get('/api/health-declaration-logs', [\App\Http\Controllers\HealthDeclarationLogController::class, 'index']);
+    Route::get('/api/health-declaration-logs/{id}', [\App\Http\Controllers\HealthDeclarationLogController::class, 'show']);
+    Route::post('/api/health-declaration-logs', [\App\Http\Controllers\HealthDeclarationLogController::class, 'store']);
+    Route::delete('/api/health-declaration-logs/{id}', [\App\Http\Controllers\HealthDeclarationLogController::class, 'destroy']);
+
     // User & Role Management (Frontend)
     Route::get('/manager-hub/users-roles', function () {
         return Inertia::render('UserRoleManagementPage');

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
+import Modal from '../common/Modal';
 import axios from 'axios';
 import { Save, AlertCircle, Trash2, Plus, X, Info } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
@@ -11,6 +12,22 @@ const DeliveryIntakeForm = ({ onSave, onCancel }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // Quick Add Food Item Modal State
+  const [foodModalOpen, setFoodModalOpen] = useState(false);
+  const [targetProductId, setTargetProductId] = useState(null);
+  const [storageTypes, setStorageTypes] = useState([]);
+  const [uoms, setUoms] = useState([]);
+  const [foodModalLoading, setFoodModalLoading] = useState(false);
+  const [foodModalSaving, setFoodModalSaving] = useState(false);
+  const [foodModalError, setFoodModalError] = useState('');
+
+  const [newFoodItemForm, setNewFoodItemForm] = useState({
+    name: '',
+    storage_type_id: '',
+    uom_id: '',
+    status: 'Active'
+  });
 
   const sigCanvas = useRef(null);
 
@@ -51,6 +68,85 @@ const DeliveryIntakeForm = ({ onSave, onCancel }) => {
     fetchMasterData();
   }, []);
 
+  const handleOpenFoodModal = async (productId = null) => {
+    setTargetProductId(productId);
+    setNewFoodItemForm({ name: '', storage_type_id: '', uom_id: '', status: 'Active' });
+    setFoodModalError('');
+    setFoodModalOpen(true);
+
+    if (storageTypes.length === 0 || uoms.length === 0) {
+      setFoodModalLoading(true);
+      try {
+        const [stRes, uomRes] = await Promise.all([
+          axios.get('/api/storage-types'),
+          axios.get('/api/uoms')
+        ]);
+        const stList = stRes.data || [];
+        const uomList = (uomRes.data || []).filter(u => u.status === 'Active');
+        setStorageTypes(stList);
+        setUoms(uomList);
+
+        setNewFoodItemForm(prev => ({
+          ...prev,
+          storage_type_id: stList.length > 0 ? stList[0].id : '',
+          uom_id: uomList.length > 0 ? uomList[0].id : ''
+        }));
+      } catch (err) {
+        console.error('Failed to load storage types/UOMs for food item modal', err);
+        setFoodModalError('Failed to load master options.');
+      } finally {
+        setFoodModalLoading(false);
+      }
+    } else {
+      setNewFoodItemForm(prev => ({
+        ...prev,
+        storage_type_id: storageTypes.length > 0 ? storageTypes[0].id : '',
+        uom_id: uoms.length > 0 ? uoms[0].id : ''
+      }));
+    }
+  };
+
+  const handleSaveNewFoodItem = async (e) => {
+    e.preventDefault();
+    setFoodModalError('');
+
+    if (!newFoodItemForm.name.trim()) {
+      setFoodModalError('Food Item Name is required.');
+      return;
+    }
+    if (!newFoodItemForm.storage_type_id) {
+      setFoodModalError('Storage Type is required.');
+      return;
+    }
+    if (!newFoodItemForm.uom_id) {
+      setFoodModalError('Default UOM is required.');
+      return;
+    }
+
+    setFoodModalSaving(true);
+    try {
+      const res = await axios.post('/api/food-items', newFoodItemForm);
+      const createdItem = res.data;
+
+      setFoodItems(prev => [...prev, createdItem]);
+
+      if (targetProductId) {
+        handleProductChange(targetProductId, 'food_item_id', String(createdItem.id));
+      }
+
+      setFoodModalOpen(false);
+    } catch (err) {
+      console.error('Failed to create new food item', err);
+      if (err.response && err.response.data && err.response.data.errors && err.response.data.errors.name) {
+        setFoodModalError(err.response.data.errors.name[0]);
+      } else {
+        setFoodModalError(err.response?.data?.message || 'Failed to create new food item.');
+      }
+    } finally {
+      setFoodModalSaving(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({
@@ -82,7 +178,10 @@ const DeliveryIntakeForm = ({ onSave, onCancel }) => {
 
   const handleSignatureEnd = () => {
     if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
-      setForm({ ...form, signature: sigCanvas.current.getTrimmedCanvas().toDataURL('image/png') });
+      const dataUrl = sigCanvas.current.getCanvas
+        ? sigCanvas.current.getCanvas().toDataURL('image/png')
+        : sigCanvas.current.toDataURL('image/png');
+      setForm(prev => ({ ...prev, signature: dataUrl }));
     }
   };
 
@@ -233,7 +332,29 @@ const DeliveryIntakeForm = ({ onSave, onCancel }) => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
-                    <label className="form-label">Food Item / Product <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label className="form-label" style={{ margin: 0, fontWeight: 600 }}>
+                        Food Item / Product <span style={{ color: 'var(--color-danger)' }}>*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenFoodModal(p.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--color-primary)',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: 0
+                        }}
+                      >
+                        <Plus size={13} /> Add to Master
+                      </button>
+                    </div>
                     <select className="form-select" value={p.food_item_id} onChange={(e) => handleProductChange(p.id, 'food_item_id', e.target.value)} required>
                       <option value="">Select product...</option>
                       {foodItems.map(f => (
@@ -352,6 +473,99 @@ const DeliveryIntakeForm = ({ onSave, onCancel }) => {
           Save Intake Log
         </Button>
       </div>
+
+      {/* Quick Add Food Item Modal */}
+      <Modal
+        isOpen={foodModalOpen}
+        onClose={() => setFoodModalOpen(false)}
+        title="Add New Master Food Item"
+        size="md"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setFoodModalOpen(false)}
+              disabled={foodModalSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSaveNewFoodItem}
+              disabled={foodModalSaving || foodModalLoading}
+            >
+              {foodModalSaving ? 'Saving...' : 'Save Food Item'}
+            </Button>
+          </div>
+        }
+      >
+        {foodModalLoading ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+            Loading storage types & units...
+          </div>
+        ) : (
+          <form onSubmit={handleSaveNewFoodItem} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {foodModalError && (
+              <div style={{
+                padding: '10px 14px',
+                backgroundColor: '#FEE2E2',
+                color: '#B91C1C',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600
+              }}>
+                {foodModalError}
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Food Item Name *</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Fresh Chicken Breast"
+                value={newFoodItemForm.name}
+                onChange={e => setNewFoodItemForm({ ...newFoodItemForm, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Storage Type *</label>
+              <select
+                className="form-select"
+                value={newFoodItemForm.storage_type_id}
+                onChange={e => setNewFoodItemForm({ ...newFoodItemForm, storage_type_id: e.target.value })}
+                required
+              >
+                <option value="">-- Select Storage Type --</option>
+                {storageTypes.map(st => (
+                  <option key={st.id} value={st.id}>{st.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Default Unit of Measure (UOM) *</label>
+              <select
+                className="form-select"
+                value={newFoodItemForm.uom_id}
+                onChange={e => setNewFoodItemForm({ ...newFoodItemForm, uom_id: e.target.value })}
+                required
+              >
+                <option value="">-- Select UOM --</option>
+                {uoms.map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.unit_code} — {u.unit_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </form>
+        )}
+      </Modal>
     </form>
   );
 };

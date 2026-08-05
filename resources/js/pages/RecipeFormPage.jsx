@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, ArrowLeft, PlusCircle, Trash, Save, AlertCircle 
+  ChefHat, ArrowLeft, PlusCircle, Plus, Trash, Save, AlertCircle 
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Modal from '../components/common/Modal';
 import axios from 'axios';
 
 const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Prep', 'Dessert'];
@@ -18,6 +19,22 @@ const RecipeFormPage = ({ recipeId }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
+
+  // Modal State for Quick Adding Master Ingredient
+  const [modalOpen, setModalOpen] = useState(false);
+  const [targetRowIdx, setTargetRowIdx] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [uoms, setUoms] = useState([]);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalSaving, setModalSaving] = useState(false);
+  const [modalError, setModalError] = useState('');
+
+  const [newIngForm, setNewIngForm] = useState({
+    name: '',
+    ingredient_category_id: '',
+    uom_id: '',
+    status: 'Active'
+  });
 
   const [form, setForm] = useState({
     name: '',
@@ -32,12 +49,32 @@ const RecipeFormPage = ({ recipeId }) => {
     ]
   });
 
+  const availableUnits = useMemo(() => {
+    const list = [...UNITS];
+    uoms.forEach(u => {
+      if (u.unit_code && !list.includes(u.unit_code)) {
+        list.push(u.unit_code);
+      }
+    });
+    return list;
+  }, [uoms]);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const ingRes = await axios.get('/api/ingredients');
-        setMasterIngredients(ingRes.data || []);
+        const [ingRes, uomRes, catRes] = await Promise.all([
+          axios.get('/api/ingredients'),
+          axios.get('/api/uoms'),
+          axios.get('/api/ingredient-categories')
+        ]);
+        const ingList = ingRes.data || [];
+        const uomList = (uomRes.data || []).filter(u => u.status === 'Active');
+        const catList = catRes.data || [];
+
+        setMasterIngredients(ingList);
+        setUoms(uomList);
+        setCategories(catList);
 
         if (isEdit) {
           const recipeRes = await axios.get(`/api/recipes/${recipeId}`);
@@ -71,6 +108,88 @@ const RecipeFormPage = ({ recipeId }) => {
     fetchData();
   }, [recipeId, isEdit]);
 
+  const handleOpenAddModal = async (rowIdx = null) => {
+    setTargetRowIdx(rowIdx);
+    setNewIngForm({ name: '', ingredient_category_id: '', uom_id: '', status: 'Active' });
+    setModalError('');
+    setModalOpen(true);
+
+    if (categories.length === 0 || uoms.length === 0) {
+      setModalLoading(true);
+      try {
+        const [catRes, uomRes] = await Promise.all([
+          axios.get('/api/ingredient-categories'),
+          axios.get('/api/uoms')
+        ]);
+        const catList = catRes.data || [];
+        const uomList = (uomRes.data || []).filter(u => u.status === 'Active');
+        setCategories(catList);
+        setUoms(uomList);
+
+        if (catList.length > 0) {
+          setNewIngForm(prev => ({ ...prev, ingredient_category_id: catList[0].id }));
+        }
+      } catch (err) {
+        console.error('Failed to load categories/UOMs for ingredient modal', err);
+        setModalError('Failed to load ingredient categories & units.');
+      } finally {
+        setModalLoading(false);
+      }
+    } else {
+      if (categories.length > 0) {
+        setNewIngForm(prev => ({ ...prev, ingredient_category_id: categories[0].id }));
+      }
+    }
+  };
+
+  const handleSaveNewIngredient = async (e) => {
+    e.preventDefault();
+    setModalError('');
+
+    if (!newIngForm.name.trim()) {
+      setModalError('Ingredient Name is required.');
+      return;
+    }
+    if (!newIngForm.ingredient_category_id) {
+      setModalError('Ingredient Category is required.');
+      return;
+    }
+
+    setModalSaving(true);
+    try {
+      const res = await axios.post('/api/ingredients', newIngForm);
+      const createdIng = res.data;
+
+      // Update masterIngredients state
+      setMasterIngredients(prev => [...prev, createdIng]);
+
+      // If opened for a specific row index, auto-select in that row
+      if (targetRowIdx !== null && targetRowIdx >= 0) {
+        handleIngredientChange(targetRowIdx, 'ingredient_id', String(createdIng.id));
+      } else {
+        // Append a new ingredient line pre-selected with this new ingredient
+        setForm(prev => ({
+          ...prev,
+          ingredients: [
+            ...prev.ingredients,
+            { ingredient_id: String(createdIng.id), ingredient_name: createdIng.name, quantity: '100', unit: 'grams' }
+          ]
+        }));
+      }
+
+      setModalOpen(false);
+    } catch (err) {
+      console.error('Failed to create new ingredient', err);
+      if (err.response && err.response.data && err.response.data.errors && err.response.data.errors.name) {
+        setModalError(err.response.data.errors.name[0]);
+      } else {
+        setModalError(err.response?.data?.message || 'Failed to create new ingredient.');
+      }
+    } finally {
+      setModalSaving(false);
+    }
+  };
+
   const handleAddIngredientRow = () => {
     setForm(prev => ({
       ...prev,
@@ -90,10 +209,12 @@ const RecipeFormPage = ({ recipeId }) => {
       const updated = [...prev.ingredients];
       if (field === 'ingredient_id') {
         const selectedMaster = masterIngredients.find(m => String(m.id) === String(value));
+        const matchedUom = selectedMaster?.uom?.unit_code || selectedMaster?.uom?.unit_name;
         updated[idx] = {
           ...updated[idx],
           ingredient_id: value,
-          ingredient_name: selectedMaster ? selectedMaster.name : updated[idx].ingredient_name
+          ingredient_name: selectedMaster ? selectedMaster.name : updated[idx].ingredient_name,
+          unit: matchedUom || updated[idx].unit
         };
       } else {
         updated[idx] = { ...updated[idx], [field]: value };
@@ -303,15 +424,26 @@ const RecipeFormPage = ({ recipeId }) => {
                     Select unique ingredients and specify quantity required per dish serving.
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  icon={PlusCircle}
-                  onClick={handleAddIngredientRow}
-                >
-                  Add Ingredient Line
-                </Button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    icon={Plus}
+                    onClick={() => handleOpenAddModal(null)}
+                  >
+                    Add Master Ingredient
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    icon={PlusCircle}
+                    onClick={handleAddIngredientRow}
+                  >
+                    Add Ingredient Line
+                  </Button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -329,14 +461,39 @@ const RecipeFormPage = ({ recipeId }) => {
                         display: 'grid',
                         gridTemplateColumns: '2fr 1fr 1fr 40px',
                         gap: '12px',
-                        alignItems: 'center',
+                        alignItems: 'flex-end',
                         backgroundColor: '#F9FAFB',
-                        padding: '12px 16px',
+                        padding: '14px 16px',
                         borderRadius: '10px',
                         border: '1px solid var(--color-border-light)'
                       }}
                     >
+                      {/* Master Ingredient Select Column */}
                       <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <label className="form-label" style={{ fontSize: '12px', margin: 0, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                            Master Ingredient *
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAddModal(idx)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--color-primary)',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: 0
+                            }}
+                          >
+                            <Plus size={13} /> Add to Master
+                          </button>
+                        </div>
+
                         {masterIngredients.length > 0 ? (
                           <select
                             className="form-input"
@@ -368,7 +525,13 @@ const RecipeFormPage = ({ recipeId }) => {
                         )}
                       </div>
 
+                      {/* Quantity Input Column */}
                       <div>
+                        <div style={{ marginBottom: '6px' }}>
+                          <label className="form-label" style={{ fontSize: '12px', margin: 0, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                            Quantity *
+                          </label>
+                        </div>
                         <input
                           type="number"
                           step="any"
@@ -379,19 +542,26 @@ const RecipeFormPage = ({ recipeId }) => {
                         />
                       </div>
 
+                      {/* Unit (UOM) Select Column */}
                       <div>
+                        <div style={{ marginBottom: '6px' }}>
+                          <label className="form-label" style={{ fontSize: '12px', margin: 0, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                            Unit (UOM) *
+                          </label>
+                        </div>
                         <select
                           className="form-input"
                           value={ing.unit}
                           onChange={e => handleIngredientChange(idx, 'unit', e.target.value)}
                         >
-                          {UNITS.map(u => (
+                          {availableUnits.map(u => (
                             <option key={u} value={u}>{u}</option>
                           ))}
                         </select>
                       </div>
 
-                      <div style={{ textAlign: 'center' }}>
+                      {/* Delete Action Column */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '38px' }}>
                         <button
                           type="button"
                           onClick={() => handleRemoveIngredientRow(idx)}
@@ -437,6 +607,98 @@ const RecipeFormPage = ({ recipeId }) => {
           </form>
         )}
       </div>
+
+      {/* Quick Add Master Ingredient Modal */}
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Add New Master Ingredient"
+        size="md"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setModalOpen(false)}
+              disabled={modalSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSaveNewIngredient}
+              disabled={modalSaving || modalLoading}
+            >
+              {modalSaving ? 'Saving Ingredient...' : 'Save Ingredient'}
+            </Button>
+          </div>
+        }
+      >
+        {modalLoading ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+            Loading categories & units...
+          </div>
+        ) : (
+          <form onSubmit={handleSaveNewIngredient} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {modalError && (
+              <div style={{
+                padding: '10px 14px',
+                backgroundColor: '#FEE2E2',
+                color: '#B91C1C',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600
+              }}>
+                {modalError}
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Ingredient Name *</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Fresh Basil Leaves"
+                value={newIngForm.name}
+                onChange={e => setNewIngForm({ ...newIngForm, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Ingredient Category *</label>
+              <select
+                className="form-input"
+                value={newIngForm.ingredient_category_id}
+                onChange={e => setNewIngForm({ ...newIngForm, ingredient_category_id: e.target.value })}
+                required
+              >
+                <option value="">-- Select Category --</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Default Unit of Measure (UOM)</label>
+              <select
+                className="form-input"
+                value={newIngForm.uom_id}
+                onChange={e => setNewIngForm({ ...newIngForm, uom_id: e.target.value })}
+              >
+                <option value="">-- Select UOM (Optional) --</option>
+                {uoms.map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.unit_code} — {u.unit_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </form>
+        )}
+      </Modal>
     </PageLayout>
   );
 };
