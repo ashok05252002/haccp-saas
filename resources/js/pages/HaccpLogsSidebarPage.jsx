@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind, Gauge, Lock } from 'lucide-react';
+import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind, Gauge, Lock, Droplets, Bug } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
 const HaccpLogsSidebarPage = () => {
@@ -69,6 +69,20 @@ const HaccpLogsSidebarPage = () => {
       title: 'Food Dispatch & Transfer',
       desc: 'Record food transport parameters, dispatch temperatures, and raw/RTE separation checks.',
       icon: Truck,
+    },
+    {
+      key: 'haccp.fryer-oil',
+      href: '/haccp-logs/fryer-oil',
+      title: 'Fryer Oil & Grease Management',
+      desc: 'Monitor oil condition, frying temperatures (160–175°C), oil changes, and grease trap disposal.',
+      icon: Droplets,
+    },
+    {
+      key: 'haccp.pest-control',
+      href: '/haccp-logs/pest-control',
+      title: 'Pest Prevention & Activity Log',
+      desc: 'Verify premises protection, pest sightings/evidence, corrective actions, and contractor visits.',
+      icon: Bug,
     },
     {
       key: 'haccp.health-declaration',

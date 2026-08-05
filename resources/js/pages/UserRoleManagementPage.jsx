@@ -19,6 +19,8 @@ const HACCP_MODULE_PERMISSIONS = [
   { key: 'haccp.cooling-process', label: 'Cooling Process' },
   { key: 'haccp.probe-calibration', label: 'Probe Accuracy Check' },
   { key: 'haccp.food-dispatch', label: 'Food Dispatch & Transfer' },
+  { key: 'haccp.fryer-oil', label: 'Fryer Oil & Grease Management' },
+  { key: 'haccp.pest-control', label: 'Pest Prevention & Activity Log' },
   { key: 'haccp.health-declaration', label: 'Staff Health Declaration' },
 ];
 

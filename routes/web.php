@@ -490,6 +490,44 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::post('/api/food-dispatch-logs', [\App\Http\Controllers\FoodDispatchLogController::class, 'store']);
     Route::delete('/api/food-dispatch-logs/{id}', [\App\Http\Controllers\FoodDispatchLogController::class, 'destroy']);
 
+    // Fryer Oil Logs (Frontend)
+    Route::get('/haccp-logs/fryer-oil', function () {
+        return Inertia::render('FryerOilMonitoringPage');
+    })->name('haccp-logs.fryer-oil');
+
+    Route::get('/haccp-logs/fryer-oil/add', function () {
+        return Inertia::render('FryerOilFormPage');
+    })->name('haccp-logs.fryer-oil.add');
+
+    Route::get('/haccp-logs/fryer-oil/view/{id}', function ($id) {
+        return Inertia::render('FryerOilViewPage', ['logId' => $id]);
+    })->name('haccp-logs.fryer-oil.view');
+
+    // Fryer Oil Logs (API)
+    Route::get('/api/fryer-oil-logs', [\App\Http\Controllers\FryerOilLogController::class, 'index']);
+    Route::get('/api/fryer-oil-logs/{id}', [\App\Http\Controllers\FryerOilLogController::class, 'show']);
+    Route::post('/api/fryer-oil-logs', [\App\Http\Controllers\FryerOilLogController::class, 'store']);
+    Route::delete('/api/fryer-oil-logs/{id}', [\App\Http\Controllers\FryerOilLogController::class, 'destroy']);
+
+    // Pest Control Logs (Frontend)
+    Route::get('/haccp-logs/pest-control', function () {
+        return Inertia::render('PestControlMonitoringPage');
+    })->name('haccp-logs.pest-control');
+
+    Route::get('/haccp-logs/pest-control/add', function () {
+        return Inertia::render('PestControlFormPage');
+    })->name('haccp-logs.pest-control.add');
+
+    Route::get('/haccp-logs/pest-control/view/{id}', function ($id) {
+        return Inertia::render('PestControlViewPage', ['logId' => $id]);
+    })->name('haccp-logs.pest-control.view');
+
+    // Pest Control Logs (API)
+    Route::get('/api/pest-control-logs', [\App\Http\Controllers\PestControlLogController::class, 'index']);
+    Route::get('/api/pest-control-logs/{id}', [\App\Http\Controllers\PestControlLogController::class, 'show']);
+    Route::post('/api/pest-control-logs', [\App\Http\Controllers\PestControlLogController::class, 'store']);
+    Route::delete('/api/pest-control-logs/{id}', [\App\Http\Controllers\PestControlLogController::class, 'destroy']);
+
     // Staff Health Declaration Logs (Frontend)
     Route::get('/haccp-logs/health-declaration', function () {
         return Inertia::render('HealthDeclarationLogsPage');
