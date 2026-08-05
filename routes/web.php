@@ -31,6 +31,7 @@ use App\Http\Controllers\WasteTypeController;
 use App\Http\Controllers\WasteSourceStageController;
 use App\Http\Controllers\WasteReasonController;
 use App\Http\Controllers\WasteDisposalMethodController;
+use App\Http\Controllers\PestControlQuestionController;
 use App\Http\Controllers\BranchContextController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -228,6 +229,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('WasteSetupPage');
     })->name('manager.hub.waste-setup');
 
+    // Pest Control Setup Master Page Route
+    Route::get('/manager-hub/pest-control-setup', function () {
+        return Inertia::render('PestControlSetupPage');
+    })->name('manager.hub.pest-control-setup');
+
     // Legacy redirect for temperature-equipment
     Route::get('/manager-hub/temperature-equipment', function () {
         return redirect()->route('manager.hub.storage-zones');
@@ -388,6 +394,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/waste-disposal-methods', [WasteDisposalMethodController::class, 'index']);
     Route::post('/api/waste-disposal-methods', [WasteDisposalMethodController::class, 'store']);
     Route::put('/api/waste-disposal-methods/{id}', [WasteDisposalMethodController::class, 'update']);
+
+    // Pest Control Questions API Routes
+    Route::get('/api/pest-control-questions', [PestControlQuestionController::class, 'index']);
+    Route::post('/api/pest-control-questions', [PestControlQuestionController::class, 'store']);
+    Route::put('/api/pest-control-questions/{id}', [PestControlQuestionController::class, 'update']);
 
     // Temperature Logs API Routes
     Route::get('/api/temperature-logs', [\App\Http\Controllers\TemperatureLogController::class, 'index']);

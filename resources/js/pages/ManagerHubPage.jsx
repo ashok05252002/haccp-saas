@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets, Recycle, Trash2
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets, Recycle, Trash2, Bug
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -104,6 +104,14 @@ const ManagerHubPage = () => {
       icon: Trash2, 
       active: true,
       route: '/manager-hub/waste-setup'
+    },
+    { 
+      key: 'pest-control-setup', 
+      label: 'Pest Control Setup', 
+      desc: 'Manage pest control checklist questions and active status.',
+      icon: Bug, 
+      active: true,
+      route: '/manager-hub/pest-control-setup'
     },
     { 
       key: 'training-tasks', 
