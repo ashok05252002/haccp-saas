@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets, Recycle
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets, Recycle, Trash2
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -96,6 +96,14 @@ const ManagerHubPage = () => {
       icon: Recycle, 
       active: true,
       route: '/manager-hub/grease-used-oil-setup'
+    },
+    { 
+      key: 'waste-setup', 
+      label: 'Waste Setup', 
+      desc: 'Manage waste types, source stages, waste reasons, and disposal methods.',
+      icon: Trash2, 
+      active: true,
+      route: '/manager-hub/waste-setup'
     },
     { 
       key: 'training-tasks', 

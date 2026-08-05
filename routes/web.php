@@ -27,6 +27,10 @@ use App\Http\Controllers\GreaseDisposalTypeController;
 use App\Http\Controllers\GreaseTrapAreaController;
 use App\Http\Controllers\GreaseDisposalMethodController;
 use App\Http\Controllers\WasteContractorController;
+use App\Http\Controllers\WasteTypeController;
+use App\Http\Controllers\WasteSourceStageController;
+use App\Http\Controllers\WasteReasonController;
+use App\Http\Controllers\WasteDisposalMethodController;
 use App\Http\Controllers\BranchContextController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -219,6 +223,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('GreaseUsedOilSetupPage');
     })->name('manager.hub.grease-used-oil-setup');
 
+    // Waste Setup Master Page Route
+    Route::get('/manager-hub/waste-setup', function () {
+        return Inertia::render('WasteSetupPage');
+    })->name('manager.hub.waste-setup');
+
     // Legacy redirect for temperature-equipment
     Route::get('/manager-hub/temperature-equipment', function () {
         return redirect()->route('manager.hub.storage-zones');
@@ -359,6 +368,26 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/waste-contractors', [WasteContractorController::class, 'index']);
     Route::post('/api/waste-contractors', [WasteContractorController::class, 'store']);
     Route::put('/api/waste-contractors/{id}', [WasteContractorController::class, 'update']);
+
+    // Waste Types API Routes
+    Route::get('/api/waste-types', [WasteTypeController::class, 'index']);
+    Route::post('/api/waste-types', [WasteTypeController::class, 'store']);
+    Route::put('/api/waste-types/{id}', [WasteTypeController::class, 'update']);
+
+    // Waste Source Stages API Routes
+    Route::get('/api/waste-source-stages', [WasteSourceStageController::class, 'index']);
+    Route::post('/api/waste-source-stages', [WasteSourceStageController::class, 'store']);
+    Route::put('/api/waste-source-stages/{id}', [WasteSourceStageController::class, 'update']);
+
+    // Waste Reasons API Routes
+    Route::get('/api/waste-reasons', [WasteReasonController::class, 'index']);
+    Route::post('/api/waste-reasons', [WasteReasonController::class, 'store']);
+    Route::put('/api/waste-reasons/{id}', [WasteReasonController::class, 'update']);
+
+    // Waste Disposal Methods API Routes
+    Route::get('/api/waste-disposal-methods', [WasteDisposalMethodController::class, 'index']);
+    Route::post('/api/waste-disposal-methods', [WasteDisposalMethodController::class, 'store']);
+    Route::put('/api/waste-disposal-methods/{id}', [WasteDisposalMethodController::class, 'update']);
 
     // Temperature Logs API Routes
     Route::get('/api/temperature-logs', [\App\Http\Controllers\TemperatureLogController::class, 'index']);
