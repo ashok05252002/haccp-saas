@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
+<<<<<<< HEAD
 import { Head, router, usePage } from '@inertiajs/react';
 import {
   ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Lock, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets, Recycle
+=======
+import { Head, router } from '@inertiajs/react';
+import { 
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets, Recycle, Trash2, Bug
+>>>>>>> 96b59321be49da806785d8a3de4f8e1ba0774391
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -98,9 +104,31 @@ const ManagerHubPage = () => {
       active: true,
       route: '/manager-hub/grease-used-oil-setup'
     },
+<<<<<<< HEAD
     {
       key: 'training-tasks',
       label: 'Training Tasks',
+=======
+    { 
+      key: 'waste-setup', 
+      label: 'Waste Setup', 
+      desc: 'Manage waste types, source stages, waste reasons, and disposal methods.',
+      icon: Trash2, 
+      active: true,
+      route: '/manager-hub/waste-setup'
+    },
+    { 
+      key: 'pest-control-setup', 
+      label: 'Pest Control Setup', 
+      desc: 'Manage pest control checklist questions and active status.',
+      icon: Bug, 
+      active: true,
+      route: '/manager-hub/pest-control-setup'
+    },
+    { 
+      key: 'training-tasks', 
+      label: 'Training Tasks', 
+>>>>>>> 96b59321be49da806785d8a3de4f8e1ba0774391
       desc: 'Manage staff training tasks, frequencies, and position or employee assignments.',
       icon: GraduationCap,
       active: true,
