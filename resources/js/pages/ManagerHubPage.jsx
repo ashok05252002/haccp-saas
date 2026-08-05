@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -72,6 +72,14 @@ const ManagerHubPage = () => {
       icon: Flame, 
       active: true,
       route: '/manager-hub/holding-stations'
+    },
+    { 
+      key: 'training-tasks', 
+      label: 'Training Tasks', 
+      desc: 'Manage staff training tasks, frequencies, and position or employee assignments.',
+      icon: GraduationCap, 
+      active: true,
+      route: '/manager-hub/training-tasks'
     },
     { 
       key: 'thermometers', 
