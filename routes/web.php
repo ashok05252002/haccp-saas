@@ -23,6 +23,10 @@ use App\Http\Controllers\DefrostingMethodController;
 use App\Http\Controllers\FryerStationController;
 use App\Http\Controllers\OilQualityOptionController;
 use App\Http\Controllers\OilActionController;
+use App\Http\Controllers\GreaseDisposalTypeController;
+use App\Http\Controllers\GreaseTrapAreaController;
+use App\Http\Controllers\GreaseDisposalMethodController;
+use App\Http\Controllers\WasteContractorController;
 use App\Http\Controllers\BranchContextController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -210,6 +214,11 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
         return Inertia::render('FryerOilSetupPage');
     })->name('manager.hub.fryer-oil-setup');
 
+    // Grease & Used Oil Setup Master Page Route
+    Route::get('/manager-hub/grease-used-oil-setup', function () {
+        return Inertia::render('GreaseUsedOilSetupPage');
+    })->name('manager.hub.grease-used-oil-setup');
+
     // Legacy redirect for temperature-equipment
     Route::get('/manager-hub/temperature-equipment', function () {
         return redirect()->route('manager.hub.storage-zones');
@@ -330,6 +339,26 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/oil-actions', [OilActionController::class, 'index']);
     Route::post('/api/oil-actions', [OilActionController::class, 'store']);
     Route::put('/api/oil-actions/{id}', [OilActionController::class, 'update']);
+
+    // Grease Disposal Types API Routes
+    Route::get('/api/grease-disposal-types', [GreaseDisposalTypeController::class, 'index']);
+    Route::post('/api/grease-disposal-types', [GreaseDisposalTypeController::class, 'store']);
+    Route::put('/api/grease-disposal-types/{id}', [GreaseDisposalTypeController::class, 'update']);
+
+    // Grease Trap Areas API Routes
+    Route::get('/api/grease-trap-areas', [GreaseTrapAreaController::class, 'index']);
+    Route::post('/api/grease-trap-areas', [GreaseTrapAreaController::class, 'store']);
+    Route::put('/api/grease-trap-areas/{id}', [GreaseTrapAreaController::class, 'update']);
+
+    // Grease Disposal Methods API Routes
+    Route::get('/api/grease-disposal-methods', [GreaseDisposalMethodController::class, 'index']);
+    Route::post('/api/grease-disposal-methods', [GreaseDisposalMethodController::class, 'store']);
+    Route::put('/api/grease-disposal-methods/{id}', [GreaseDisposalMethodController::class, 'update']);
+
+    // Waste Contractors API Routes
+    Route::get('/api/waste-contractors', [WasteContractorController::class, 'index']);
+    Route::post('/api/waste-contractors', [WasteContractorController::class, 'store']);
+    Route::put('/api/waste-contractors/{id}', [WasteContractorController::class, 'update']);
 
     // Temperature Logs API Routes
     Route::get('/api/temperature-logs', [\App\Http\Controllers\TemperatureLogController::class, 'index']);

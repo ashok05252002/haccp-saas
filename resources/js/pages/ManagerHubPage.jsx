@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets, Recycle
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -88,6 +88,14 @@ const ManagerHubPage = () => {
       icon: Droplets, 
       active: true,
       route: '/manager-hub/fryer-oil-setup'
+    },
+    { 
+      key: 'grease-used-oil-setup', 
+      label: 'Grease & Used Oil Setup', 
+      desc: 'Manage disposal types, grease trap areas, disposal methods, and waste contractors.',
+      icon: Recycle, 
+      active: true,
+      route: '/manager-hub/grease-used-oil-setup'
     },
     { 
       key: 'training-tasks', 
