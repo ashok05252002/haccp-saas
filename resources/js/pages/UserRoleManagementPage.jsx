@@ -21,7 +21,12 @@ const HACCP_MODULE_PERMISSIONS = [
   { key: 'haccp.food-dispatch', label: 'Food Dispatch & Transfer' },
   { key: 'haccp.fryer-oil', label: 'Fryer Oil & Grease Management' },
   { key: 'haccp.pest-control', label: 'Pest Prevention & Activity Log' },
+  { key: 'haccp.food-waste', label: 'Food Waste & Disposal Log' },
+  { key: 'haccp.hot-holding', label: 'Hot Holding / Bain Marie' },
+  { key: 'haccp.staff-training', label: 'Staff Training & Hygiene Log' },
   { key: 'haccp.health-declaration', label: 'Staff Health Declaration' },
+  { key: 'haccp.thawing', label: 'Thawing / Defrosting Record' },
+  { key: 'haccp.reports', label: 'HACCP Reports & Audits' },
 ];
 
 const MANAGER_PANEL_PERMISSIONS = [

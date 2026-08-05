@@ -27,6 +27,7 @@ const menuItems = [
   { path: '/bulk-planning', label: 'Bulk Planning', icon: CalendarDays },
   { path: '/manager-hub', label: 'Manager Hub', icon: Settings },
   { path: '/haccp-logs', label: 'HACCP Logs', icon: ClipboardCheck },
+  { path: '/haccp-reports', label: 'HACCP Reports', icon: FileBarChart },
 ];
 
 const Sidebar = () => {

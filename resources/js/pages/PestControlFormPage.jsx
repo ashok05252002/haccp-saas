@@ -1,84 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { ArrowLeft, Info, CheckCircle, AlertTriangle, Check, X, Bug } from 'lucide-react';
+import { ArrowLeft, Info, CheckCircle, AlertTriangle, Check, X } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
 import axios from 'axios';
 
-const CHECK_TYPES = [
-  'Routine Daily Check',
-  'Weekly Pest Inspection',
-  'Pest Sighting',
-  'Contractor Visit',
-  'Follow-up Check',
-];
-
-const EVIDENCE_TYPES = [
-  'Live pest',
-  'Droppings',
-  'Gnaw marks',
-  'Damaged packaging',
-  'Dead insect/pest',
-  'Other',
-];
-
-const DEFAULT_QUESTIONS = [
-  { id: 1, text: 'Are premises protected against pests and free from signs of pest activity?' },
-  { id: 2, text: 'Are external doors and windows protected where required?' },
-  { id: 3, text: 'Are insect-control units or pest-control devices maintained properly?' },
-  { id: 4, text: 'Is food protected from possible pest contamination?' },
-  { id: 5, text: 'Are pest sightings or pest-control contractor visits recorded?' },
-  { id: 6, text: 'Are doors kept closed or protected to reduce pest entry?' },
-  { id: 7, text: 'Are waste areas kept clean and covered?' },
-  { id: 8, text: 'Are drains, gaps, and wall/floor junctions in good condition?' },
-  { id: 9, text: 'Are dry goods stored off the floor and in sealed containers?' },
-  { id: 10, text: 'Are damaged food packages checked for possible pest contamination?' },
-];
-
-const PEST_TYPES = ['Rodents (Rats/Mice)', 'Cockroaches', 'Flies / Flying Insects', 'Ants', 'Stored Product Insects', 'Other'];
-const LOCATIONS = ['Main Kitchen', 'Dry Food Store', 'Walk-in Fridge / Freezer', 'Waste Storage Area', 'Dining Area', 'Goods Receiving Bay', 'External Grounds', 'Other'];
-
 const PestControlFormPage = () => {
   const [staffList, setStaffList] = useState([]);
-  const [contractorsList, setContractorsList] = useState([]);
+  const [masterQuestions, setMasterQuestions] = useState([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
 
   const today = new Date().toISOString().split('T')[0];
   const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
-  // Section 1: Inspection & Check Details
+  // Inspection Details
   const [logDate, setLogDate] = useState(today);
   const [logTime, setLogTime] = useState(nowTime);
   const [staffName, setStaffName] = useState('');
-  const [checkType, setCheckType] = useState(CHECK_TYPES[0]);
 
-  // Section 2: Premises Protection Checklist
-  const [checklistAnswers, setChecklistAnswers] = useState(() => {
-    const initialMap = {};
-    DEFAULT_QUESTIONS.forEach(q => {
-      initialMap[q.id] = { answer: true, note: '' };
-    });
-    return initialMap;
-  });
+  // Master Data Checklist Answers: { [qId]: { answer: true|false, note: '' } }
+  const [checklistAnswers, setChecklistAnswers] = useState({});
 
-  // Section 3: Pest Activity Details
-  const [pestActivityObserved, setPestActivityObserved] = useState(false);
-  const [pestType, setPestType] = useState(PEST_TYPES[0]);
-  const [locationFound, setLocationFound] = useState(LOCATIONS[0]);
-  const [evidenceObserved, setEvidenceObserved] = useState(EVIDENCE_TYPES[0]);
-  const [foodAffected, setFoodAffected] = useState(false);
-  const [actionNotes, setActionNotes] = useState('');
-  const [contractorContacted, setContractorContacted] = useState(false);
+  // Premises Free of Pest Activity Toggle (Default: YES / Safe)
+  const [isPestFree, setIsPestFree] = useState(true);
+  const [remarks, setRemarks] = useState('');
 
-  // Section 4: Contractor Visit Details
+  // Contractor Visit Details (Optional)
   const [contractorName, setContractorName] = useState('');
   const [visitDate, setVisitDate] = useState(today);
   const [reportRefNumber, setReportRefNumber] = useState('');
   const [recommendations, setRecommendations] = useState('');
   const [nextVisitDueDate, setNextVisitDueDate] = useState('');
 
-  // Section 5: General & Verification
+  // General Comments & Verification
   const [generalComments, setGeneralComments] = useState('');
   const [signedByStaffName, setSignedByStaffName] = useState('');
   const [signature, setSignature] = useState('');
@@ -87,6 +43,7 @@ const PestControlFormPage = () => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
+    // Fetch Staff List
     axios.get('/api/tenant-users').then(res => {
       setStaffList(res.data || []);
       if (res.data && res.data.length > 0) {
@@ -95,11 +52,21 @@ const PestControlFormPage = () => {
       }
     }).catch(() => {});
 
-    axios.get('/api/waste-contractors').then(res => {
-      setContractorsList(res.data || []);
-      if (res.data && res.data.length > 0) setContractorName(res.data[0].name);
-      else setContractorName('EcoPest Solutions Ltd');
-    }).catch(() => setContractorName('EcoPest Solutions Ltd'));
+    // Fetch Pest Control Setup Questions from Master Data
+    axios.get('/api/pest-control-questions').then(res => {
+      const activeQs = (res.data || []).filter(q => q.status === 'Active' || !q.status);
+      setMasterQuestions(activeQs);
+
+      const initialAnswers = {};
+      activeQs.forEach(q => {
+        initialAnswers[q.id] = { answer: true, note: '' };
+      });
+      setChecklistAnswers(initialAnswers);
+    }).catch(err => {
+      console.error('Failed to load pest control questions', err);
+    }).finally(() => {
+      setLoadingQuestions(false);
+    });
   }, []);
 
   const handleChecklistToggle = (qId, answer) => {
@@ -116,10 +83,9 @@ const PestControlFormPage = () => {
     }));
   };
 
-  // Evaluation
+  // Evaluation Status: Passed if all questions Yes and Premises Pest Free
   const hasFailedChecklist = Object.values(checklistAnswers).some(a => a.answer === false);
-  const passed = !hasFailedChecklist && !pestActivityObserved;
-  const showContractorSection = checkType === 'Contractor Visit' || contractorContacted;
+  const passed = !hasFailedChecklist && isPestFree;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -129,7 +95,7 @@ const PestControlFormPage = () => {
     if (!signedByStaffName) newErrors.signedBy = 'Signed by staff member is required.';
     if (!signature) newErrors.signature = 'Signature is required.';
 
-    // Check notes for No answers
+    // Check notes for any No answers in master questions
     let failedNoteMissing = false;
     Object.entries(checklistAnswers).forEach(([qId, data]) => {
       if (data.answer === false && !data.note.trim()) {
@@ -140,8 +106,8 @@ const PestControlFormPage = () => {
       newErrors.checklist = 'Please add follow-up notes for any questions marked No.';
     }
 
-    if (pestActivityObserved && !actionNotes.trim()) {
-      newErrors.actionNotes = 'Action / follow-up notes are required when pest activity is observed.';
+    if (!isPestFree && !remarks.trim()) {
+      newErrors.remarks = 'Remarks / Action Notes are required when pest activity is observed.';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -151,9 +117,9 @@ const PestControlFormPage = () => {
 
     setSubmitting(true);
     try {
-      const checklistData = DEFAULT_QUESTIONS.map(q => ({
+      const checklistData = masterQuestions.map(q => ({
         id: q.id,
-        text: q.text,
+        text: q.question_text || q.text,
         answer: checklistAnswers[q.id]?.answer ?? true,
         note: checklistAnswers[q.id]?.note || '',
       }));
@@ -162,20 +128,15 @@ const PestControlFormPage = () => {
         log_date: logDate,
         log_time: logTime,
         staff_name: staffName,
-        check_type: checkType,
+        check_type: 'General Check',
         checklist_answers: checklistData,
-        pest_activity_observed: pestActivityObserved,
-        pest_type: pestActivityObserved ? pestType : null,
-        location_found: pestActivityObserved ? locationFound : null,
-        evidence_observed: pestActivityObserved ? evidenceObserved : null,
-        food_affected: pestActivityObserved ? foodAffected : false,
-        action_notes: pestActivityObserved ? actionNotes : '',
-        contractor_contacted: pestActivityObserved ? contractorContacted : false,
-        contractor_name: showContractorSection ? contractorName : null,
-        visit_date: showContractorSection ? visitDate : null,
-        report_ref_number: showContractorSection ? reportRefNumber : null,
-        next_visit_due_date: showContractorSection ? nextVisitDueDate : null,
-        recommendations: showContractorSection ? recommendations : null,
+        pest_activity_observed: !isPestFree,
+        action_notes: !isPestFree ? remarks : '',
+        contractor_name: contractorName || null,
+        visit_date: visitDate || null,
+        report_ref_number: reportRefNumber || null,
+        next_visit_due_date: nextVisitDueDate || null,
+        recommendations: recommendations || null,
         general_comments: generalComments,
         signed_by_staff_name: signedByStaffName,
         signature: signature,
@@ -207,7 +168,7 @@ const PestControlFormPage = () => {
             <span className="badge badge-standard">EC 852/2004 Annex II</span>
           </div>
           <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-            Verify pest ingress barriers, record pest activity sightings, and log professional contractor recommendations.
+            Record pest prevention checks, pest activity observations, and corrective actions.
           </p>
         </div>
 
@@ -219,18 +180,15 @@ const PestControlFormPage = () => {
               <strong>Pest Control Guidance</strong>
               <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px' }}>
                 <li>Keep doors, windows, drains, and gaps sealed to prevent pest access.</li>
-                <li>Check daily for signs of droppings, gnaw marks, insects, damaged packaging, or pest sightings.</li>
-                <li>If pest activity is discovered, record location, containment action, and notify contractor.</li>
+                <li>Check regularly for signs of pests or damaged packaging.</li>
+                <li>If pest activity is found, mark No and type remarks / corrective action taken.</li>
               </ul>
             </div>
           </div>
 
-          {/* Section 1: Inspection & Check Details */}
-          <Card>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-              Section 1: Inspection & Check Details
-            </h3>
-
+          {/* Unified Form Card */}
+          <Card style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Date, Time, Staff */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
               <div className="form-group">
                 <label className="form-label">Date *</label>
@@ -253,310 +211,169 @@ const PestControlFormPage = () => {
                 )}
                 {errors.staffName && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.staffName}</span>}
               </div>
+            </div>
+
+            {/* Master Data Checklist Questions */}
+            <div>
+              {errors.checklist && <div style={{ color: 'var(--color-danger)', fontSize: '13px', marginBottom: '12px' }}>{errors.checklist}</div>}
+
+              {loadingQuestions ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading checklist questions from Pest Control Setup...</div>
+              ) : masterQuestions.length === 0 ? (
+                <div style={{ padding: '16px', backgroundColor: '#F9FAFB', border: '1px dashed var(--color-border-light)', borderRadius: '8px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+                  No active checklist questions configured in <strong>Pest Control Setup</strong>. You can configure questions in <strong>Manager Hub → Pest Control Setup</strong>.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {masterQuestions.map((q, idx) => {
+                    const currentAns = checklistAnswers[q.id]?.answer ?? true;
+                    const currentNote = checklistAnswers[q.id]?.note || '';
+
+                    return (
+                      <div key={q.id} style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px 16px', backgroundColor: '#F9FAFB', border: '1px solid var(--color-border-light)', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                          <div style={{ flex: 1, fontSize: '14px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                            <span style={{ fontWeight: 700, marginRight: '6px', color: 'var(--color-text-secondary)' }}>{idx + 1}.</span>
+                            {q.question_text || q.text}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleChecklistToggle(q.id, true)}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                                border: `1px solid ${currentAns ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
+                                backgroundColor: currentAns ? 'var(--color-primary)' : '#fff',
+                                color: currentAns ? '#fff' : 'var(--color-text-secondary)',
+                              }}
+                            >
+                              <Check size={14} /> Yes
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleChecklistToggle(q.id, false)}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                                border: `1px solid ${!currentAns ? '#DC2626' : 'var(--color-border-light)'}`,
+                                backgroundColor: !currentAns ? '#DC2626' : '#fff',
+                                color: !currentAns ? '#fff' : 'var(--color-text-secondary)',
+                              }}
+                            >
+                              <X size={14} /> No
+                            </button>
+                          </div>
+                        </div>
+
+                        {!currentAns && (
+                          <div className="form-group" style={{ marginTop: '6px', marginBottom: 0 }}>
+                            <input
+                              className="form-input"
+                              placeholder="Add note / follow-up required * (Mandatory for No)"
+                              value={currentNote}
+                              onChange={e => handleChecklistNoteChange(q.id, e.target.value)}
+                              style={{ borderColor: !currentNote.trim() ? 'var(--color-danger)' : 'var(--color-border-light)', backgroundColor: '#FFF5F5', fontSize: '13px' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Is Premises Free of Pest Activity? (Default: YES) */}
+            <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                  Is premises free of pest activity? *
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setPestFree(true)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                      border: `1px solid ${isPestFree ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
+                      backgroundColor: isPestFree ? 'var(--color-primary)' : '#fff',
+                      color: isPestFree ? '#fff' : 'var(--color-text-secondary)',
+                    }}
+                  >
+                    <Check size={14} /> Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPestFree(false)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                      border: `1px solid ${!isPestFree ? '#DC2626' : 'var(--color-border-light)'}`,
+                      backgroundColor: !isPestFree ? '#DC2626' : '#fff',
+                      color: !isPestFree ? '#fff' : 'var(--color-text-secondary)',
+                    }}
+                  >
+                    <X size={14} /> No
+                  </button>
+                </div>
+              </div>
+
+              {/* If NO (Pest Activity Found), show only Remarks text field */}
+              {!isPestFree && (
+                <div className="form-group" style={{ marginTop: '12px' }}>
+                  <label className="form-label" style={{ color: '#DC2626', fontWeight: 600 }}>Remarks / Action Notes *</label>
+                  <textarea
+                    className="form-input"
+                    rows={3}
+                    placeholder="Type remarks regarding pest activity observed and corrective actions taken..."
+                    value={remarks}
+                    onChange={e => setRemarks(e.target.value)}
+                    style={{ backgroundColor: '#FFF5F5', borderColor: !remarks.trim() ? '#DC2626' : 'var(--color-border-light)' }}
+                    required
+                  />
+                  {errors.remarks && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.remarks}</span>}
+                </div>
+              )}
+            </div>
+
+            {/* General Comments */}
+            <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '20px' }}>
+              <div className="form-group">
+                <label className="form-label">General Comments / Observations</label>
+                <textarea className="form-input" rows={2} placeholder="Add any additional observations..." value={generalComments} onChange={e => setGeneralComments(e.target.value)} />
+              </div>
+
+              {/* Status Evaluation Banner */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', backgroundColor: passed ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${passed ? '#A7F3D0' : '#F8B4B4'}`, borderRadius: '8px', color: passed ? '#047857' : '#9B1C1C', fontSize: '13.5px', fontWeight: 500, marginTop: '16px' }}>
+                {passed ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+                <span>
+                  Evaluation: <strong>{passed ? 'Passed (Pest Free & all checks OK)' : 'Attention Required (Remarks recorded or check failed)'}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Staff Verification & Signature */}
+            <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '20px' }}>
+              <div className="form-group" style={{ maxWidth: '400px', marginBottom: '20px' }}>
+                <label className="form-label">Signed By *</label>
+                {staffList.length > 0 ? (
+                  <select className="form-select" value={signedByStaffName} onChange={e => setSignedByStaffName(e.target.value)}>
+                    {staffList.map(s => (
+                      <option key={s.id} value={s.name}>{s.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input className="form-input" type="text" placeholder="Signed By Name" value={signedByStaffName} onChange={e => setSignedByStaffName(e.target.value)} required />
+                )}
+                {errors.signedBy && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.signedBy}</span>}
+              </div>
 
               <div className="form-group">
-                <label className="form-label">Check Type *</label>
-                <select className="form-select" value={checkType} onChange={e => setCheckType(e.target.value)}>
-                  {CHECK_TYPES.map(ct => (
-                    <option key={ct} value={ct}>{ct}</option>
-                  ))}
-                </select>
+                <label className="form-label">Signature *</label>
+                <SignaturePad value={signature} onChange={setSignature} />
+                {errors.signature && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.signature}</span>}
               </div>
-            </div>
-          </Card>
-
-          {/* Section 2: Premises Protection Checklist */}
-          <Card>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-              Section 2: Premises Protection Checklist
-            </h3>
-
-            {errors.checklist && <div style={{ color: 'var(--color-danger)', fontSize: '13px', marginBottom: '12px' }}>{errors.checklist}</div>}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {DEFAULT_QUESTIONS.map((q, idx) => {
-                const currentAns = checklistAnswers[q.id]?.answer ?? true;
-                const currentNote = checklistAnswers[q.id]?.note || '';
-
-                return (
-                  <div key={q.id} style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px 16px', backgroundColor: '#F9FAFB', border: '1px solid var(--color-border-light)', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                      <div style={{ flex: 1, fontSize: '14px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                        <span style={{ fontWeight: 700, marginRight: '6px', color: 'var(--color-text-secondary)' }}>{idx + 1}.</span>
-                        {q.text}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleChecklistToggle(q.id, true)}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                            border: `1px solid ${currentAns ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
-                            backgroundColor: currentAns ? 'var(--color-primary)' : '#fff',
-                            color: currentAns ? '#fff' : 'var(--color-text-secondary)',
-                          }}
-                        >
-                          <Check size={14} /> Yes
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleChecklistToggle(q.id, false)}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                            border: `1px solid ${!currentAns ? '#DC2626' : 'var(--color-border-light)'}`,
-                            backgroundColor: !currentAns ? '#DC2626' : '#fff',
-                            color: !currentAns ? '#fff' : 'var(--color-text-secondary)',
-                          }}
-                        >
-                          <X size={14} /> No
-                        </button>
-                      </div>
-                    </div>
-
-                    {!currentAns && (
-                      <div className="form-group" style={{ marginTop: '6px', marginBottom: 0 }}>
-                        <input
-                          className="form-input"
-                          placeholder="Add note / follow-up required * (Mandatory for No)"
-                          value={currentNote}
-                          onChange={e => handleChecklistNoteChange(q.id, e.target.value)}
-                          style={{ borderColor: !currentNote.trim() ? 'var(--color-danger)' : 'var(--color-border-light)', backgroundColor: '#FFF5F5', fontSize: '13px' }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* Section 3: Pest Activity Details */}
-          <Card>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '12px', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>
-                Section 3: Pest Activity Details
-              </h3>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '13.5px', fontWeight: 600 }}>Any pest activity observed?</span>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setPestActivityObserved(false)}
-                    style={{
-                      padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                      border: `1px solid ${!pestActivityObserved ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
-                      backgroundColor: !pestActivityObserved ? 'var(--color-primary)' : '#fff',
-                      color: !pestActivityObserved ? '#fff' : 'var(--color-text-secondary)',
-                    }}
-                  >
-                    No
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPestActivityObserved(true)}
-                    style={{
-                      padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                      border: `1px solid ${pestActivityObserved ? '#DC2626' : 'var(--color-border-light)'}`,
-                      backgroundColor: pestActivityObserved ? '#DC2626' : '#fff',
-                      color: pestActivityObserved ? '#fff' : 'var(--color-text-secondary)',
-                    }}
-                  >
-                    Yes
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {pestActivityObserved && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label">Pest Type *</label>
-                    <select className="form-select" value={pestType} onChange={e => setPestType(e.target.value)}>
-                      {PEST_TYPES.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Location Found *</label>
-                    <select className="form-select" value={locationFound} onChange={e => setLocationFound(e.target.value)}>
-                      {LOCATIONS.map(l => (
-                        <option key={l} value={l}>{l}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Evidence Observed *</label>
-                    <select className="form-select" value={evidenceObserved} onChange={e => setEvidenceObserved(e.target.value)}>
-                      {EVIDENCE_TYPES.map(ev => (
-                        <option key={ev} value={ev}>{ev}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Food affected?</label>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setFoodAffected(false)}
-                        style={{
-                          padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                          border: `1px solid ${!foodAffected ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
-                          backgroundColor: !foodAffected ? 'var(--color-primary)' : '#fff',
-                          color: !foodAffected ? '#fff' : 'var(--color-text-secondary)',
-                        }}
-                      >
-                        No
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFoodAffected(true)}
-                        style={{
-                          padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                          border: `1px solid ${foodAffected ? '#DC2626' : 'var(--color-border-light)'}`,
-                          backgroundColor: foodAffected ? '#DC2626' : '#fff',
-                          color: foodAffected ? '#fff' : 'var(--color-text-secondary)',
-                        }}
-                      >
-                        Yes
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Action / Follow-up Notes *</label>
-                  <textarea className="form-input" rows={3} placeholder="Detail action taken, containment, pest contractor call..." value={actionNotes} onChange={e => setActionNotes(e.target.value)} required />
-                  {errors.actionNotes && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.actionNotes}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Contractor contacted?</label>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setContractorContacted(false)}
-                      style={{
-                        padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                        border: `1px solid ${!contractorContacted ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
-                        backgroundColor: !contractorContacted ? 'var(--color-primary)' : '#fff',
-                        color: !contractorContacted ? '#fff' : 'var(--color-text-secondary)',
-                      }}
-                    >
-                      No
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setContractorContacted(true)}
-                      style={{
-                        padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                        border: `1px solid ${contractorContacted ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
-                        backgroundColor: contractorContacted ? 'var(--color-primary)' : '#fff',
-                        color: contractorContacted ? '#fff' : 'var(--color-text-secondary)',
-                      }}
-                    >
-                      Yes
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </Card>
-
-          {/* Section 4: Contractor Visit Details */}
-          {showContractorSection && (
-            <Card>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-                Section 4: Contractor Visit Details
-              </h3>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">Contractor Name</label>
-                  {contractorsList.length > 0 ? (
-                    <select className="form-select" value={contractorName} onChange={e => setContractorName(e.target.value)}>
-                      {contractorsList.map(c => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input className="form-input" type="text" placeholder="e.g. EcoPest Solutions Ltd" value={contractorName} onChange={e => setContractorName(e.target.value)} />
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Visit Date</label>
-                  <input className="form-input" type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)} />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Report / Reference Number</label>
-                  <input className="form-input" type="text" placeholder="e.g. REF-99281" value={reportRefNumber} onChange={e => setReportRefNumber(e.target.value)} />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Next Visit Due Date</label>
-                  <input className="form-input" type="date" value={nextVisitDueDate} onChange={e => setNextVisitDueDate(e.target.value)} />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ marginTop: '16px' }}>
-                <label className="form-label">Recommendations / Notes</label>
-                <textarea className="form-input" rows={2} placeholder="Contractor recommendations, bait station status..." value={recommendations} onChange={e => setRecommendations(e.target.value)} />
-              </div>
-            </Card>
-          )}
-
-          {/* Section 5: General Comments */}
-          <Card>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-              Section 5: General Comments
-            </h3>
-
-            <div className="form-group">
-              <textarea className="form-input" rows={2} placeholder="Add any additional observations..." value={generalComments} onChange={e => setGeneralComments(e.target.value)} />
-            </div>
-
-            {/* Status Evaluation Banner */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', backgroundColor: passed ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${passed ? '#A7F3D0' : '#F8B4B4'}`, borderRadius: '8px', color: passed ? '#047857' : '#9B1C1C', fontSize: '13.5px', fontWeight: 500, marginTop: '16px' }}>
-              {passed ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-              <span>
-                Evaluation: <strong>{passed ? 'Passed (All checks passed & no pest activity)' : 'Attention Required (Follow-up note or pest activity recorded)'}</strong>
-              </span>
-            </div>
-          </Card>
-
-          {/* Section 6: Verification & Signature */}
-          <Card>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-              Section 6: Staff Verification & Signature
-            </h3>
-
-            <div className="form-group" style={{ maxWidth: '400px', marginBottom: '20px' }}>
-              <label className="form-label">Signed By *</label>
-              {staffList.length > 0 ? (
-                <select className="form-select" value={signedByStaffName} onChange={e => setSignedByStaffName(e.target.value)}>
-                  {staffList.map(s => (
-                    <option key={s.id} value={s.name}>{s.name}</option>
-                  ))}
-                </select>
-              ) : (
-                <input className="form-input" type="text" placeholder="Signed By Name" value={signedByStaffName} onChange={e => setSignedByStaffName(e.target.value)} required />
-              )}
-              {errors.signedBy && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.signedBy}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Signature *</label>
-              <SignaturePad value={signature} onChange={setSignature} />
-              {errors.signature && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.signature}</span>}
             </div>
           </Card>
 

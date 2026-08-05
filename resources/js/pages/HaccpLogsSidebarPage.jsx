@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind, Gauge, Lock, Droplets, Bug } from 'lucide-react';
+import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind, Gauge, Lock, Droplets, Bug, Trash, GraduationCap } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
 const HaccpLogsSidebarPage = () => {
@@ -83,6 +83,34 @@ const HaccpLogsSidebarPage = () => {
       title: 'Pest Prevention & Activity Log',
       desc: 'Verify premises protection, pest sightings/evidence, corrective actions, and contractor visits.',
       icon: Bug,
+    },
+    {
+      key: 'haccp.food-waste',
+      href: '/haccp-logs/food-waste',
+      title: 'Food Waste & Disposal Log',
+      desc: 'Track wasted food items, disposal reasons, financial cost impact (£), and prevention measures.',
+      icon: Trash,
+    },
+    {
+      key: 'haccp.hot-holding',
+      href: '/haccp-logs/hot-holding',
+      title: 'Hot Holding / Bain Marie',
+      desc: 'Monitor bain marie, hot display counters, and heated units to verify safe holding temperatures (≥63°C).',
+      icon: Flame,
+    },
+    {
+      key: 'haccp.staff-training',
+      href: '/haccp-logs/staff-training',
+      title: 'Staff Training & Hygiene Log',
+      desc: 'Complete and track staff food-safety, hygiene, and safe-catering training tasks.',
+      icon: GraduationCap,
+    },
+    {
+      key: 'haccp.thawing',
+      href: '/haccp-logs/thawing',
+      title: 'Thawing / Defrosting Record',
+      desc: 'Log controlled defrosting methods, completion times, and temperatures (≤5°C).',
+      icon: Snowflake,
     },
     {
       key: 'haccp.health-declaration',

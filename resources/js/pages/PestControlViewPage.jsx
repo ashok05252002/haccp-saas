@@ -62,7 +62,7 @@ const PestControlViewPage = ({ logId }) => {
               <StatusBadge status={log.status} />
             </div>
             <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-              Logged on {log.log_date} at {log.log_time} by {log.staff_name} ({log.check_type})
+              Logged on {log.log_date} at {log.log_time} by {log.staff_name}
             </p>
           </div>
 
@@ -71,36 +71,25 @@ const PestControlViewPage = ({ logId }) => {
           </Button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* SECTION 1: INSPECTION DETAILS */}
-          <Card>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-              Section 1: Inspection & Check Details
-            </h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Date & Time</span>
-                <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.log_date} at {log.log_time}</strong>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Check Type</span>
-                <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.check_type}</strong>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Inspector / Staff Member</span>
-                <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.staff_name}</strong>
-              </div>
+        <Card style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Inspection Details */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+            <div>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Date & Time</span>
+              <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.log_date} at {log.log_time}</strong>
             </div>
-          </Card>
 
-          {/* SECTION 2: PREMISES PROTECTION CHECKLIST */}
-          <Card>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-              Section 2: Premises Protection Checklist Results
-            </h3>
+            <div>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Inspector / Staff Member</span>
+              <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.staff_name}</strong>
+            </div>
+          </div>
+
+          {/* Master Data Checklist Questions Results */}
+          <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '20px' }}>
+            <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '14px', color: 'var(--color-text-primary)' }}>
+              Checklist Questions Results
+            </div>
 
             {Array.isArray(log.checklist_answers) && log.checklist_answers.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -133,102 +122,44 @@ const PestControlViewPage = ({ logId }) => {
             ) : (
               <div style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>No checklist items recorded.</div>
             )}
-          </Card>
+          </div>
 
-          {/* SECTION 3: PEST ACTIVITY DETAILS */}
-          <Card>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-              Section 3: Pest Activity Details
-            </h3>
+          {/* Is Premises Free of Pest Activity? */}
+          <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '20px' }}>
+            <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '14px', color: 'var(--color-text-primary)' }}>
+              Is premises free of pest activity?
+            </div>
 
-            {log.pest_activity_observed ? (
+            {!log.pest_activity_observed ? (
+              <div style={{ backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '10px 14px', borderRadius: '8px', color: '#047857', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle size={16} /> YES - Premises is Pest Free & Clean
+              </div>
+            ) : (
               <div>
-                <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #F8B4B4', padding: '10px 14px', borderRadius: '8px', color: '#9B1C1C', fontSize: '13px', fontWeight: 700, marginBottom: '16px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                  <Bug size={16} /> Pest Activity Was Sighted / Recorded
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                  <div>
-                    <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Pest Type</span>
-                    <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.pest_type || 'N/A'}</strong>
-                  </div>
-
-                  <div>
-                    <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Location Found</span>
-                    <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.location_found || 'N/A'}</strong>
-                  </div>
-
-                  <div>
-                    <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Evidence Observed</span>
-                    <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.evidence_observed || 'N/A'}</strong>
-                  </div>
-
-                  <div>
-                    <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Food Affected?</span>
-                    <strong style={{ fontSize: '15px', color: log.food_affected ? '#DC2626' : '#059669' }}>
-                      {log.food_affected ? 'YES (Affected)' : 'No'}
-                    </strong>
-                  </div>
+                <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #F8B4B4', padding: '10px 14px', borderRadius: '8px', color: '#9B1C1C', fontSize: '13px', fontWeight: 700, marginBottom: '12px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <Bug size={16} /> NO - Pest Activity Observed
                 </div>
 
                 {log.action_notes && (
-                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-border-light)' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Action / Follow-up Notes</span>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--color-text-primary)' }}>{log.action_notes}</p>
+                  <div style={{ backgroundColor: '#FFF5F5', border: '1px solid #F8B4B4', padding: '12px 14px', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '12px', color: '#9B1C1C', display: 'block', fontWeight: 700, marginBottom: '4px' }}>Remarks / Action Notes</span>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#9B1C1C' }}>{log.action_notes}</p>
                   </div>
                 )}
               </div>
-            ) : (
-              <div style={{ backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '10px 14px', borderRadius: '8px', color: '#047857', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                <CheckCircle size={16} /> No Pest Activity Observed During Inspection
-              </div>
             )}
-          </Card>
+          </div>
 
-          {/* SECTION 4: CONTRACTOR VISIT DETAILS */}
-          {(log.contractor_name || log.report_ref_number || log.recommendations) && (
-            <Card>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-                Section 4: Contractor Visit Details
-              </h3>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                <div>
-                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Contractor Name</span>
-                  <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.contractor_name || 'N/A'}</strong>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Visit Date</span>
-                  <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.visit_date || 'N/A'}</strong>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Report Ref Number</span>
-                  <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.report_ref_number || 'N/A'}</strong>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Next Visit Due Date</span>
-                  <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.next_visit_due_date || 'N/A'}</strong>
-                </div>
-              </div>
-
-              {log.recommendations && (
-                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-border-light)' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Recommendations / Notes</span>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--color-text-primary)' }}>{log.recommendations}</p>
-                </div>
-              )}
-            </Card>
+          {/* General Comments */}
+          {log.general_comments && (
+            <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '20px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>General Comments</span>
+              <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--color-text-primary)' }}>{log.general_comments}</p>
+            </div>
           )}
 
-          {/* VERIFICATION & SIGNATURE */}
-          <Card>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-              Staff Verification & Signature
-            </h3>
-
+          {/* Verification & Signature */}
+          <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Signed By Staff</span>
@@ -246,8 +177,8 @@ const PestControlViewPage = ({ logId }) => {
                 )}
               </div>
             </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
       </div>
     </PageLayout>
   );

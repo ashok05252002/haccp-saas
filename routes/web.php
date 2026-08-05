@@ -568,6 +568,64 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::post('/api/pest-control-logs', [\App\Http\Controllers\PestControlLogController::class, 'store']);
     Route::delete('/api/pest-control-logs/{id}', [\App\Http\Controllers\PestControlLogController::class, 'destroy']);
 
+    // Food Waste Logs (Frontend)
+    Route::get('/haccp-logs/food-waste', function () {
+        return Inertia::render('FoodWasteMonitoringPage');
+    })->name('haccp-logs.food-waste');
+
+    Route::get('/haccp-logs/food-waste/add', function () {
+        return Inertia::render('FoodWasteFormPage');
+    })->name('haccp-logs.food-waste.add');
+
+    Route::get('/haccp-logs/food-waste/view/{id}', function ($id) {
+        return Inertia::render('FoodWasteViewPage', ['logId' => $id]);
+    })->name('haccp-logs.food-waste.view');
+
+    // Food Waste Logs (API)
+    Route::get('/api/food-waste-logs', [\App\Http\Controllers\FoodWasteLogController::class, 'index']);
+    Route::get('/api/food-waste-logs/{id}', [\App\Http\Controllers\FoodWasteLogController::class, 'show']);
+    Route::post('/api/food-waste-logs', [\App\Http\Controllers\FoodWasteLogController::class, 'store']);
+    Route::delete('/api/food-waste-logs/{id}', [\App\Http\Controllers\FoodWasteLogController::class, 'destroy']);
+
+    // Staff Training & Hygiene Logs (Frontend)
+    Route::get('/haccp-logs/staff-training', function () {
+        return Inertia::render('StaffTrainingMonitoringPage');
+    })->name('haccp-logs.staff-training');
+
+    Route::get('/haccp-logs/staff-training/task/{staffId}', function ($staffId) {
+        return Inertia::render('StaffTrainingTaskPage', ['staffId' => $staffId]);
+    })->name('haccp-logs.staff-training.task');
+
+    Route::get('/haccp-logs/staff-training/view/{id}', function ($id) {
+        return Inertia::render('StaffTrainingViewPage', ['logId' => $id]);
+    })->name('haccp-logs.staff-training.view');
+
+    // Staff Training & Hygiene Logs (API)
+    Route::get('/api/staff-training-logs', [\App\Http\Controllers\StaffTrainingLogController::class, 'index']);
+    Route::get('/api/staff-training-logs/{id}', [\App\Http\Controllers\StaffTrainingLogController::class, 'show']);
+    Route::post('/api/staff-training-logs', [\App\Http\Controllers\StaffTrainingLogController::class, 'store']);
+    Route::delete('/api/staff-training-logs/{id}', [\App\Http\Controllers\StaffTrainingLogController::class, 'destroy']);
+
+    // Hot Holding / Bain Marie Logs (Frontend)
+    Route::get('/haccp-logs/hot-holding', function () {
+        return Inertia::render('HotHoldingMonitoringPage');
+    })->name('haccp-logs.hot-holding');
+
+    Route::get('/haccp-logs/hot-holding/add', function () {
+        return Inertia::render('HotHoldingFormPage');
+    })->name('haccp-logs.hot-holding.add');
+
+    Route::get('/haccp-logs/hot-holding/view/{id}', function ($id) {
+        return Inertia::render('HotHoldingViewPage', ['logId' => $id]);
+    })->name('haccp-logs.hot-holding.view');
+
+    // Hot Holding / Bain Marie Logs (API)
+    Route::get('/api/hot-holding-logs', [\App\Http\Controllers\HotHoldingLogController::class, 'index']);
+    Route::get('/api/hot-holding-logs/{id}', [\App\Http\Controllers\HotHoldingLogController::class, 'show']);
+    Route::post('/api/hot-holding-logs', [\App\Http\Controllers\HotHoldingLogController::class, 'store']);
+    Route::put('/api/hot-holding-logs/{id}', [\App\Http\Controllers\HotHoldingLogController::class, 'update']);
+    Route::delete('/api/hot-holding-logs/{id}', [\App\Http\Controllers\HotHoldingLogController::class, 'destroy']);
+
     // Staff Health Declaration Logs (Frontend)
     Route::get('/haccp-logs/health-declaration', function () {
         return Inertia::render('HealthDeclarationLogsPage');
@@ -587,6 +645,33 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::get('/api/health-declaration-logs/{id}', [\App\Http\Controllers\HealthDeclarationLogController::class, 'show']);
     Route::post('/api/health-declaration-logs', [\App\Http\Controllers\HealthDeclarationLogController::class, 'store']);
     Route::delete('/api/health-declaration-logs/{id}', [\App\Http\Controllers\HealthDeclarationLogController::class, 'destroy']);
+
+    // HACCP Reports & Historical Audits (Frontend & API)
+    Route::get('/haccp-reports', function () {
+        return Inertia::render('HaccpReportsPage');
+    })->name('haccp-reports');
+
+    Route::get('/api/haccp-reports', [\App\Http\Controllers\HaccpReportController::class, 'index']);
+    Route::get('/api/haccp-reports/export-csv', [\App\Http\Controllers\HaccpReportController::class, 'exportCsv']);
+
+    // Thawing / Defrosting Record (Frontend)
+    Route::get('/haccp-logs/thawing', function () {
+        return Inertia::render('ThawingMonitoringPage');
+    })->name('haccp-logs.thawing');
+
+    Route::get('/haccp-logs/thawing/add', function () {
+        return Inertia::render('ThawingFormPage');
+    })->name('haccp-logs.thawing.add');
+
+    Route::get('/haccp-logs/thawing/view/{id}', function ($id) {
+        return Inertia::render('ThawingViewPage', ['logId' => $id]);
+    })->name('haccp-logs.thawing.view');
+
+    // Thawing / Defrosting Record (API)
+    Route::get('/api/thawing-logs', [\App\Http\Controllers\ThawingLogController::class, 'index']);
+    Route::get('/api/thawing-logs/{id}', [\App\Http\Controllers\ThawingLogController::class, 'show']);
+    Route::post('/api/thawing-logs', [\App\Http\Controllers\ThawingLogController::class, 'store']);
+    Route::delete('/api/thawing-logs/{id}', [\App\Http\Controllers\ThawingLogController::class, 'destroy']);
 
     // User & Role Management (Frontend)
     Route::get('/manager-hub/users-roles', function () {

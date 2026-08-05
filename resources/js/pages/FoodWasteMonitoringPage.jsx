@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Plus, Search, Calendar, Eye, Trash2, CheckCircle2, AlertTriangle, Bug, ArrowLeft, ShieldCheck, UserCheck } from 'lucide-react';
+import { Plus, Search, Calendar, Eye, Trash2, CheckCircle2, AlertTriangle, ArrowLeft, Trash, Scale, PoundSterling } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -9,7 +9,7 @@ import StatusBadge from '../components/common/StatusBadge';
 import Modal from '../components/common/Modal';
 import axios from 'axios';
 
-const PestControlMonitoringPage = () => {
+const FoodWasteMonitoringPage = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,10 +22,10 @@ const PestControlMonitoringPage = () => {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/pest-control-logs');
+      const res = await axios.get('/api/food-waste-logs');
       setLogs(res.data || []);
     } catch (err) {
-      console.error('Failed to fetch pest control logs', err);
+      console.error('Failed to fetch food waste logs', err);
     } finally {
       setLoading(false);
     }
@@ -43,11 +43,11 @@ const PestControlMonitoringPage = () => {
     if (!deleteId) return;
     setDeleting(true);
     try {
-      await axios.delete(`/api/pest-control-logs/${deleteId}`);
+      await axios.delete(`/api/food-waste-logs/${deleteId}`);
       setDeleteId(null);
       fetchLogs();
     } catch (err) {
-      console.error('Failed to delete pest control log', err);
+      console.error('Failed to delete log entry', err);
       alert('Failed to delete log entry.');
     } finally {
       setDeleting(false);
@@ -60,10 +60,8 @@ const PestControlMonitoringPage = () => {
       const q = searchQuery.toLowerCase();
       const matchSearch =
         (log.staff_name && log.staff_name.toLowerCase().includes(q)) ||
-        (log.check_type && log.check_type.toLowerCase().includes(q)) ||
-        (log.pest_type && log.pest_type.toLowerCase().includes(q)) ||
-        (log.location_found && log.location_found.toLowerCase().includes(q)) ||
-        (log.contractor_name && log.contractor_name.toLowerCase().includes(q));
+        (log.main_reason && log.main_reason.toLowerCase().includes(q)) ||
+        (log.quantity_summary && log.quantity_summary.toLowerCase().includes(q));
 
       const matchDate = !dateFilter || log.log_date === dateFilter;
       const matchStatus = statusFilter === 'ALL' || log.status === statusFilter;
@@ -75,15 +73,22 @@ const PestControlMonitoringPage = () => {
   // Statistics
   const stats = useMemo(() => {
     const total = logs.length;
-    const passed = logs.filter(l => l.status === 'Passed').length;
-    const activityReported = logs.filter(l => l.pest_activity_observed).length;
-    const contractorVisits = logs.filter(l => l.check_type === 'Contractor Visit' || l.contractor_contacted).length;
-    return { total, passed, activityReported, contractorVisits };
+    let costSum = 0;
+    let totalItemsCount = 0;
+    let attentionRequired = 0;
+
+    logs.forEach(l => {
+      costSum += parseFloat(l.total_cost_impact) || 0;
+      totalItemsCount += parseInt(l.total_entries) || 0;
+      if (l.status === 'Attention Required') attentionRequired++;
+    });
+
+    return { total, costSum, totalItemsCount, attentionRequired };
   }, [logs]);
 
   return (
     <PageLayout>
-      <Head title="Pest Prevention & Activity Logs" />
+      <Head title="Food Waste & Disposal Logs" />
 
       <div>
         <button onClick={() => router.visit('/haccp-logs')} className="back-btn" style={{ marginBottom: '16px' }}>
@@ -95,17 +100,17 @@ const PestControlMonitoringPage = () => {
         <div className="panel-header-row" style={{ marginBottom: '24px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <h1 className="page-title">Pest Prevention & Activity Log</h1>
+              <h1 className="page-title">Food Waste & Disposal Log</h1>
               <span className="badge badge-prp">PRP</span>
               <span className="badge badge-standard">EC 852/2004 Annex II</span>
             </div>
             <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-              Record premises protection checks, pest sightings/evidence, corrective actions, and professional contractor visits.
+              Track wasted food, disposal reasons, financial cost impact, and prevention measures.
             </p>
           </div>
 
-          <Button variant="primary" icon={Plus} onClick={() => router.visit('/haccp-logs/pest-control/add')}>
-            Log Pest Control Check
+          <Button variant="primary" icon={Plus} onClick={() => router.visit('/haccp-logs/food-waste/add')}>
+            Log Food Waste
           </Button>
         </div>
 
@@ -113,41 +118,41 @@ const PestControlMonitoringPage = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           <Card style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px' }}>
             <div style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
-              <ShieldCheck size={22} />
+              <Trash size={22} />
             </div>
             <div>
               <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-text-primary)' }}>{stats.total}</div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Total Inspections</div>
-            </div>
-          </Card>
-
-          <Card style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px' }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669' }}>
-              <CheckCircle2 size={22} />
-            </div>
-            <div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#059669' }}>{stats.passed}</div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Passed Checks</div>
-            </div>
-          </Card>
-
-          <Card style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px' }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}>
-              <Bug size={22} />
-            </div>
-            <div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#DC2626' }}>{stats.activityReported}</div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Pest Activity Sighted</div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Total Waste Logs</div>
             </div>
           </Card>
 
           <Card style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px' }}>
             <div style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#F3E8FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7C3AED' }}>
-              <UserCheck size={22} />
+              <Scale size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#7C3AED' }}>{stats.contractorVisits}</div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Contractor Visits</div>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: '#7C3AED' }}>{stats.totalItemsCount}</div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Total Items Logged</div>
+            </div>
+          </Card>
+
+          <Card style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}>
+              <PoundSterling size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: '#DC2626' }}>£{stats.costSum.toFixed(2)}</div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Total Cost Impact</div>
+            </div>
+          </Card>
+
+          <Card style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#FFFBEB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706' }}>
+              <AlertTriangle size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: '#D97706' }}>{stats.attentionRequired}</div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Severe Risks / Expired</div>
             </div>
           </Card>
         </div>
@@ -156,7 +161,7 @@ const PestControlMonitoringPage = () => {
         <Card style={{ padding: '16px 20px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ flex: 1, minWidth: '260px' }}>
-              <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search by check type, staff, pest type, location, contractor..." />
+              <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search by staff, reason, quantity summary..." />
             </div>
 
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -193,20 +198,20 @@ const PestControlMonitoringPage = () => {
         {/* Logs Table */}
         <Card style={{ padding: 0, overflow: 'hidden' }}>
           {loading ? (
-            <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading pest control logs...</div>
+            <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading food waste logs...</div>
           ) : filteredLogs.length === 0 ? (
             <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-              No pest control log entries found. Click "Log Pest Control Check" to add one.
+              No food waste log entries found. Click "Log Food Waste" to add one.
             </div>
           ) : (
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Date & Time</th>
-                  <th>Premises Status</th>
-                  <th>Pest Activity</th>
-                  <th>Location & Evidence</th>
-                  <th>Contractor Visit</th>
+                  <th>Total Items</th>
+                  <th>Quantity Breakdown</th>
+                  <th>Main Reason</th>
+                  <th>Cost Impact</th>
                   <th>Staff</th>
                   <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
@@ -220,42 +225,18 @@ const PestControlMonitoringPage = () => {
                       <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{log.log_time}</div>
                     </td>
                     <td>
-                      {log.status === 'Passed' ? (
-                        <span style={{ color: '#059669', fontSize: '13px', fontWeight: 600 }}>All Checks OK</span>
-                      ) : (
-                        <span style={{ color: '#DC2626', fontSize: '13px', fontWeight: 600 }}>Follow-up Required</span>
-                      )}
+                      <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{log.total_entries} items</span>
                     </td>
                     <td>
-                      {log.pest_activity_observed ? (
-                        <span style={{ backgroundColor: '#FEF2F2', color: '#B91C1C', border: '1px solid #F8B4B4', padding: '2px 8px', borderRadius: '4px', fontSize: '11.5px', fontWeight: 700 }}>
-                          YES - {log.pest_type || 'Pest Activity'}
-                        </span>
-                      ) : (
-                        <span style={{ backgroundColor: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '4px', fontSize: '11.5px', fontWeight: 600 }}>
-                          No Activity
-                        </span>
-                      )}
+                      <strong style={{ color: 'var(--color-text-primary)' }}>{log.quantity_summary || '0 kg'}</strong>
                     </td>
                     <td>
-                      {log.pest_activity_observed ? (
-                        <div>
-                          <div><strong>Location:</strong> {log.location_found || '-'}</div>
-                          <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)' }}>{log.evidence_observed || '-'}</div>
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--color-text-muted)' }}>-</span>
-                      )}
+                      {log.main_reason || 'N/A'}
                     </td>
                     <td>
-                      {log.contractor_name ? (
-                        <div>
-                          <div>{log.contractor_name}</div>
-                          {log.report_ref_number && <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)' }}>Ref: {log.report_ref_number}</div>}
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--color-text-muted)' }}>None</span>
-                      )}
+                      <strong style={{ color: parseFloat(log.total_cost_impact) > 0 ? '#DC2626' : 'var(--color-text-primary)' }}>
+                        £{parseFloat(log.total_cost_impact || 0).toFixed(2)}
+                      </strong>
                     </td>
                     <td>{log.staff_name}</td>
                     <td>
@@ -263,7 +244,7 @@ const PestControlMonitoringPage = () => {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        <Button variant="secondary" size="sm" icon={Eye} onClick={() => router.visit(`/haccp-logs/pest-control/view/${log.id}`)} />
+                        <Button variant="secondary" size="sm" icon={Eye} onClick={() => router.visit(`/haccp-logs/food-waste/view/${log.id}`)} />
                         <Button variant="secondary" size="sm" icon={Trash2} onClick={() => confirmDelete(log.id)} style={{ color: '#EF4444' }} />
                       </div>
                     </td>
@@ -280,7 +261,7 @@ const PestControlMonitoringPage = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#DC2626' }}>
               <AlertTriangle size={24} />
               <p style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-primary)' }}>
-                Are you sure you want to delete this pest control log entry? This action cannot be undone.
+                Are you sure you want to delete this food waste log entry? This action cannot be undone.
               </p>
             </div>
 
@@ -299,4 +280,4 @@ const PestControlMonitoringPage = () => {
   );
 };
 
-export default PestControlMonitoringPage;
+export default FoodWasteMonitoringPage;
