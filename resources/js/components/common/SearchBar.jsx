@@ -11,6 +11,7 @@ const SearchBar = ({ value, onChange, placeholder = 'Search...', className = '' 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="search-bar-input"
+        style={{ color: '#071713' }}
       />
       {value && (
         <button type="button" onClick={() => onChange('')} className="search-clear-btn">

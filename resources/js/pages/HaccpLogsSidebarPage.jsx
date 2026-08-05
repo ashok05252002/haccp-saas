@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind } from 'lucide-react';
+import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind, Gauge } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
 const HaccpLogsSidebarPage = () => {
@@ -71,6 +71,24 @@ const HaccpLogsSidebarPage = () => {
             </div>
             <h3 style={styles.cardTitle}>Cooling Process</h3>
             <p style={styles.cardDesc}>CCP-6 ambient cooling monitoring (cool to ≤8°C within 2 hours / 120 minutes).</p>
+          </Link>
+
+          {/* Probe Accuracy Check Card */}
+          <Link href="/haccp-logs/probe-calibration" style={styles.masterCard}>
+            <div style={styles.iconContainer}>
+              <Gauge size={28} color="var(--color-primary)" />
+            </div>
+            <h3 style={styles.cardTitle}>Probe Accuracy Check</h3>
+            <p style={styles.cardDesc}>Equipment calibration verification (boiling 99–101°C & ice water −1 to 1°C checks).</p>
+          </Link>
+
+          {/* Food Dispatch & Transfer Card */}
+          <Link href="/haccp-logs/food-dispatch" style={styles.masterCard}>
+            <div style={styles.iconContainer}>
+              <Truck size={28} color="var(--color-primary)" />
+            </div>
+            <h3 style={styles.cardTitle}>Food Dispatch & Transfer</h3>
+            <p style={styles.cardDesc}>Record food transport parameters, dispatch temperatures, and raw/RTE separation checks.</p>
           </Link>
 
           {/* Staff Health Declaration Card */}

@@ -367,6 +367,44 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::post('/api/cooling-process-logs', [\App\Http\Controllers\CoolingProcessLogController::class, 'store']);
     Route::delete('/api/cooling-process-logs/{id}', [\App\Http\Controllers\CoolingProcessLogController::class, 'destroy']);
 
+    // Probe Calibration Logs (Frontend)
+    Route::get('/haccp-logs/probe-calibration', function () {
+        return Inertia::render('ProbeCalibrationMonitoringPage');
+    })->name('haccp-logs.probe-calibration');
+
+    Route::get('/haccp-logs/probe-calibration/add', function () {
+        return Inertia::render('ProbeCalibrationFormPage');
+    })->name('haccp-logs.probe-calibration.add');
+
+    Route::get('/haccp-logs/probe-calibration/view/{id}', function ($id) {
+        return Inertia::render('ProbeCalibrationViewPage', ['logId' => $id]);
+    })->name('haccp-logs.probe-calibration.view');
+
+    // Probe Calibration Logs (API)
+    Route::get('/api/probe-calibration-logs', [\App\Http\Controllers\ProbeCalibrationLogController::class, 'index']);
+    Route::get('/api/probe-calibration-logs/{id}', [\App\Http\Controllers\ProbeCalibrationLogController::class, 'show']);
+    Route::post('/api/probe-calibration-logs', [\App\Http\Controllers\ProbeCalibrationLogController::class, 'store']);
+    Route::delete('/api/probe-calibration-logs/{id}', [\App\Http\Controllers\ProbeCalibrationLogController::class, 'destroy']);
+
+    // Food Dispatch Logs (Frontend)
+    Route::get('/haccp-logs/food-dispatch', function () {
+        return Inertia::render('FoodDispatchMonitoringPage');
+    })->name('haccp-logs.food-dispatch');
+
+    Route::get('/haccp-logs/food-dispatch/add', function () {
+        return Inertia::render('FoodDispatchFormPage');
+    })->name('haccp-logs.food-dispatch.add');
+
+    Route::get('/haccp-logs/food-dispatch/view/{id}', function ($id) {
+        return Inertia::render('FoodDispatchViewPage', ['logId' => $id]);
+    })->name('haccp-logs.food-dispatch.view');
+
+    // Food Dispatch Logs (API)
+    Route::get('/api/food-dispatch-logs', [\App\Http\Controllers\FoodDispatchLogController::class, 'index']);
+    Route::get('/api/food-dispatch-logs/{id}', [\App\Http\Controllers\FoodDispatchLogController::class, 'show']);
+    Route::post('/api/food-dispatch-logs', [\App\Http\Controllers\FoodDispatchLogController::class, 'store']);
+    Route::delete('/api/food-dispatch-logs/{id}', [\App\Http\Controllers\FoodDispatchLogController::class, 'destroy']);
+
     // Staff Health Declaration Logs (Frontend)
     Route::get('/haccp-logs/health-declaration', function () {
         return Inertia::render('HealthDeclarationLogsPage');

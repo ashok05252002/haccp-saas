@@ -738,3 +738,103 @@ body.sidebar-minimized {
 .modal-lg {
   max-width: 800px;
 }
+
+/* ==========================================================================
+   CROSS-PLATFORM & WINDOWS OS TEXT VISIBILITY HARDENING
+   ========================================================================== */
+
+/* 1. Global Headings & Typography */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-text-primary);
+}
+
+/* 2. Modal & Overlay Protection */
+.modal {
+  background-color: #FFFFFF !important;
+  color: #071713 !important;
+}
+
+.modal-title,
+.modal-header,
+.modal-header h1,
+.modal-header h2,
+.modal-header h3,
+.modal-body,
+.modal-footer {
+  color: #071713 !important;
+}
+
+.modal-close {
+  color: #688078 !important;
+}
+.modal-close:hover {
+  background-color: #F3F4F6 !important;
+  color: #071713 !important;
+}
+
+/* 3. Form Inputs, Textareas & Selects */
+.form-input,
+.form-select,
+.form-textarea,
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="time"] {
+  color: #071713 !important;
+  background-color: #FFFFFF !important;
+  -webkit-text-fill-color: #071713 !important;
+  opacity: 1 !important;
+}
+
+select option {
+  color: #071713 !important;
+  background-color: #FFFFFF !important;
+}
+
+/* 4. Disabled & Read-only Inputs */
+input:disabled,
+textarea:disabled,
+select:disabled,
+.form-input:disabled,
+.form-select:disabled {
+  color: #374151 !important;
+  -webkit-text-fill-color: #374151 !important;
+  background-color: #F3F4F6 !important;
+  opacity: 1 !important;
+}
+
+/* 5. Cross-Browser Placeholder Hardening */
+::placeholder,
+::-webkit-input-placeholder,
+::-moz-placeholder,
+:-ms-input-placeholder,
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: #566E65 !important;
+  -webkit-text-fill-color: #566E65 !important;
+  opacity: 1 !important;
+}
+
+/* 6. Chromium Windows Autofill Fix */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #071713 !important;
+  box-shadow: 0 0 0px 1000px #FFFFFF inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* 7. Search Bar Input Fix */
+.search-bar-input {
+  color: #071713 !important;
+  -webkit-text-fill-color: #071713 !important;
+}
+
