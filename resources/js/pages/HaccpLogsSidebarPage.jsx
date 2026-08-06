@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind, Gauge, Lock, Droplets, Bug, Trash, GraduationCap } from 'lucide-react';
+import { Thermometer, ArrowRight, Truck, Flame, HeartPulse, Snowflake, Wind, Gauge, Lock, Droplets, Bug, Trash, GraduationCap, ShieldCheck } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
 const HaccpLogsSidebarPage = () => {

@@ -1,45 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
-import { Download, Printer, FileText, Calendar, CheckCircle2, AlertTriangle, Filter, BarChart3 } from 'lucide-react';
+import { Download, Printer, FileText, Calendar, CheckCircle2, AlertTriangle, Filter, BarChart3, Clock } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import StatusBadge from '../components/common/StatusBadge';
+import MultiSelectDropdown from '../components/common/MultiSelectDropdown';
 import axios from 'axios';
 
-const MODULE_OPTIONS = [
-  { id: 'all', title: 'All Modules' },
-  { id: 'hot-holding', title: 'Hot Holding / Bain Marie' },
-  { id: 'food-waste', title: 'Food Waste & Disposal Log' },
-  { id: 'staff-training', title: 'Staff Training & Hygiene Log' },
-  { id: 'pest-control', title: 'Pest Prevention & Activity Log' },
-  { id: 'health-declaration', title: 'Staff Health Declaration' },
-  { id: 'temperature', title: 'Temperature Monitoring' },
-  { id: 'delivery-intake', title: 'Delivery Intake' },
-  { id: 'cooking-temperature', title: 'Cooking Temperature' },
-  { id: 'cleaning', title: 'Cleaning & Sanitation' },
-  { id: 'blast-chilling', title: 'Blast Chilling' },
-  { id: 'cooling-process', title: 'Cooling Process' },
-  { id: 'probe-calibration', title: 'Probe Accuracy Check' },
-  { id: 'food-dispatch', title: 'Food Dispatch & Transfer' },
-  { id: 'fryer-oil', title: 'Fryer Oil & Grease Management' },
+const ALL_MODULE_OPTIONS = [
+  { id: 'temperature', name: 'Temperature Monitoring' },
+  { id: 'delivery-intake', name: 'Delivery Intake' },
+  { id: 'cleaning', name: 'Cleaning & Sanitation' },
+  { id: 'cooking-temperature', name: 'Cooking Temperature' },
+  { id: 'blast-chilling', name: 'Blast Chilling' },
+  { id: 'cooling-process', name: 'Cooling Process' },
+  { id: 'probe-calibration', name: 'Probe Accuracy Check' },
+  { id: 'food-dispatch', name: 'Food Dispatch & Transfer' },
+  { id: 'fryer-oil', name: 'Fryer Oil & Grease Management' },
+  { id: 'pest-control', name: 'Pest Prevention & Activity Log' },
+  { id: 'food-waste', name: 'Food Waste & Disposal Log' },
+  { id: 'hot-holding', name: 'Hot Holding / Bain Marie' },
+  { id: 'staff-training', name: 'Staff Training & Hygiene Log' },
+  { id: 'thawing', name: 'Thawing / Defrosting Record' },
+  { id: 'health-declaration', name: 'Staff Health Declaration' },
 ];
 
 const HaccpReportsPage = () => {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [reportDate, setReportDate] = useState(todayStr);
-  const [moduleFilter, setModuleFilter] = useState('all');
+  const todayObj = new Date();
+  const todayStr = todayObj.toISOString().split('T')[0];
+
+  const [fromDate, setFromDate] = useState(todayStr);
+  const [toDate, setToDate] = useState(todayStr);
+  const [activePreset, setActivePreset] = useState('today');
+  const [selectedModuleIds, setSelectedModuleIds] = useState([]);
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Quick Date Preset Helpers
+  const handlePresetSelect = (presetType) => {
+    setActivePreset(presetType);
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+
+    if (presetType === 'today') {
+      setFromDate(today);
+      setToDate(today);
+    } else if (presetType === 'this_week') {
+      const dayOfWeek = now.getDay();
+      const diffToMon = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      const monday = new Date(now.setDate(diffToMon)).toISOString().split('T')[0];
+      setFromDate(monday);
+      setToDate(todayStr);
+    } else if (presetType === 'this_month') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      setFromDate(firstDay);
+      setToDate(todayStr);
+    } else if (presetType === 'last_30_days') {
+      const past30 = new Date();
+      past30.setDate(past30.getDate() - 30);
+      setFromDate(past30.toISOString().split('T')[0]);
+      setToDate(todayStr);
+    }
+  };
+
   const fetchReports = async () => {
     setLoading(true);
     try {
+      const moduleParam = selectedModuleIds.length > 0 ? selectedModuleIds.join(',') : 'all';
       const res = await axios.get('/api/haccp-reports', {
         params: {
-          date: reportDate,
-          module: moduleFilter,
+          from_date: fromDate,
+          to_date: toDate,
+          preset: activePreset,
+          module: moduleParam,
         },
       });
       setData(res.data);
@@ -52,10 +87,11 @@ const HaccpReportsPage = () => {
 
   useEffect(() => {
     fetchReports();
-  }, [reportDate, moduleFilter]);
+  }, [fromDate, toDate, selectedModuleIds]);
 
   const handleCSV = () => {
-    window.open(`/api/haccp-reports/export-csv?date=${reportDate}&module=${moduleFilter}`, '_blank');
+    const moduleParam = selectedModuleIds.length > 0 ? selectedModuleIds.join(',') : 'all';
+    window.open(`/api/haccp-reports/export-csv?from_date=${fromDate}&to_date=${toDate}&module=${moduleParam}`, '_blank');
   };
 
   const handlePrint = () => {
@@ -81,7 +117,7 @@ const HaccpReportsPage = () => {
 
           <div style={{ display: 'flex', gap: '8px' }}>
             <Button variant="secondary" icon={Download} onClick={handleCSV}>
-              Export CSV
+              Export CSV Report
             </Button>
             <Button variant="secondary" icon={Printer} onClick={handlePrint}>
               Print Report
@@ -89,45 +125,143 @@ const HaccpReportsPage = () => {
           </div>
         </div>
 
-        {/* Filter Controls Bar */}
-        <Card style={{ padding: '16px 20px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px' }}>
-              <Calendar size={18} color="var(--color-primary)" />
-              <div style={{ flex: 1 }}>
-                <label className="form-label" style={{ fontSize: '11px', marginBottom: '2px' }}>Audit Date</label>
+        {/* Filter Controls Bar with Date Ranges & Multi-Select Modules */}
+        <Card style={{ padding: '20px', marginBottom: '24px', borderRadius: '16px' }}>
+          {/* Quick Date Range Preset Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+              Quick Date Filters:
+            </span>
+
+            <button
+              type="button"
+              onClick={() => handlePresetSelect('today')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundColor: activePreset === 'today' ? 'var(--color-primary)' : '#F3F4F6',
+                color: activePreset === 'today' ? '#fff' : 'var(--color-text-secondary)',
+                transition: 'all 150ms ease',
+              }}
+            >
+              Today
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handlePresetSelect('this_week')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundColor: activePreset === 'this_week' ? 'var(--color-primary)' : '#F3F4F6',
+                color: activePreset === 'this_week' ? '#fff' : 'var(--color-text-secondary)',
+                transition: 'all 150ms ease',
+              }}
+            >
+              This Week
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handlePresetSelect('this_month')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundColor: activePreset === 'this_month' ? 'var(--color-primary)' : '#F3F4F6',
+                color: activePreset === 'this_month' ? '#fff' : 'var(--color-text-secondary)',
+                transition: 'all 150ms ease',
+              }}
+            >
+              This Month
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handlePresetSelect('last_30_days')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundColor: activePreset === 'last_30_days' ? 'var(--color-primary)' : '#F3F4F6',
+                color: activePreset === 'last_30_days' ? '#fff' : 'var(--color-text-secondary)',
+                transition: 'all 150ms ease',
+              }}
+            >
+              Last 30 Days
+            </button>
+          </div>
+
+          {/* Custom Date Inputs & Multi-Select Module Filter */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', alignItems: 'flex-start' }}>
+            
+            {/* From Date */}
+            <div>
+              <label className="form-label" style={{ fontSize: '11px', marginBottom: '4px' }}>From Date</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={18} color="var(--color-primary)" />
                 <input
                   type="date"
                   className="form-input"
-                  value={reportDate}
-                  onChange={e => setReportDate(e.target.value)}
-                  style={{ fontSize: '13px', padding: '6px 10px' }}
+                  value={fromDate}
+                  onChange={(e) => {
+                    setFromDate(e.target.value);
+                    setActivePreset('');
+                  }}
+                  style={{ fontSize: '13px', padding: '8px 10px' }}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px' }}>
-              <Filter size={18} color="var(--color-primary)" />
-              <div style={{ flex: 1 }}>
-                <label className="form-label" style={{ fontSize: '11px', marginBottom: '2px' }}>Filter by Module</label>
-                <select
-                  className="form-select"
-                  value={moduleFilter}
-                  onChange={e => setModuleFilter(e.target.value)}
-                  style={{ fontSize: '13px', padding: '6px 10px' }}
-                >
-                  {MODULE_OPTIONS.map(m => (
-                    <option key={m.id} value={m.id}>{m.title}</option>
-                  ))}
-                </select>
+            {/* To Date */}
+            <div>
+              <label className="form-label" style={{ fontSize: '11px', marginBottom: '4px' }}>To Date</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={18} color="var(--color-primary)" />
+                <input
+                  type="date"
+                  className="form-input"
+                  value={toDate}
+                  onChange={(e) => {
+                    setToDate(e.target.value);
+                    setActivePreset('');
+                  }}
+                  style={{ fontSize: '13px', padding: '8px 10px' }}
+                />
               </div>
             </div>
+
+            {/* Multi-Select Modules Filter */}
+            <div>
+              <MultiSelectDropdown 
+                label="Filter by Modules (Multi-Select)"
+                options={ALL_MODULE_OPTIONS}
+                selectedIds={selectedModuleIds}
+                onChange={setSelectedModuleIds}
+                placeholder="All 15 Modules Selected..."
+              />
+            </div>
+
           </div>
         </Card>
 
         {loading ? (
           <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-            Loading HACCP report data...
+            Loading HACCP report data for range ({fromDate} to {toDate})...
           </div>
         ) : (
           <>
@@ -142,7 +276,7 @@ const HaccpReportsPage = () => {
 
               <Card style={{ padding: '16px 20px', textAlign: 'center' }}>
                 <div style={{ fontSize: '24px', fontWeight: 800, color: '#2563EB', marginBottom: '2px' }}>
-                  {data?.modulesUsed || 0} / {data?.totalModules || 13}
+                  {data?.modulesUsed || 0} / {data?.totalModules || 15}
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>Modules Active</div>
               </Card>
@@ -173,7 +307,7 @@ const HaccpReportsPage = () => {
                           {log.moduleName}
                         </h3>
                         <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                          Log Record ID: #{log.id} • Date: {log.date} at {log.time}
+                          Log Record ID: #{log.id} • Date: <strong>{log.date}</strong> at {log.time}
                         </div>
                       </div>
 
@@ -263,7 +397,7 @@ const HaccpReportsPage = () => {
               ) : (
                 <Card style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                   <FileText size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
-                  <div>No HACCP log records found for {reportDate}.</div>
+                  <div>No HACCP log records found for range ({fromDate} to {toDate}).</div>
                 </Card>
               )}
             </div>

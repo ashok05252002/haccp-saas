@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import { 
-  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Lock, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets, Recycle, Trash2, Bug
+  ChefHat, Sparkles, Scale, Truck, Search, X, Package, ClipboardCheck, Lock, Thermometer, HeartPulse, Refrigerator, Users, Flame, GraduationCap, Snowflake, Droplets, Recycle, Trash2, Bug, ShieldCheck
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 
@@ -142,6 +142,13 @@ const ManagerHubPage = () => {
       desc: 'Manage staff accounts, user profiles, and assign custom operational roles.',
       icon: Users,
       route: '/manager-hub/users-roles'
+    },
+    {
+      key: 'manager.supervision-review',
+      label: 'Supervision Review & Sign-Off',
+      desc: 'Verify daily/weekly log ratios, inspect non-compliances, and execute manager sign-offs.',
+      icon: ShieldCheck,
+      route: '/supervision-review'
     }
   ];
 

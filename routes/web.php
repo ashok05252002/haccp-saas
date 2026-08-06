@@ -673,6 +673,14 @@ Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
     Route::post('/api/thawing-logs', [\App\Http\Controllers\ThawingLogController::class, 'store']);
     Route::delete('/api/thawing-logs/{id}', [\App\Http\Controllers\ThawingLogController::class, 'destroy']);
 
+    // Supervision Review Module (Frontend & API)
+    Route::get('/supervision-review', [\App\Http\Controllers\SupervisionReviewController::class, 'index'])->name('supervision-review');
+    Route::get('/supervision-review/history', [\App\Http\Controllers\SupervisionReviewController::class, 'historyPage'])->name('supervision-review.history');
+    Route::get('/api/supervision-reviews/summary', [\App\Http\Controllers\SupervisionReviewController::class, 'getSummary']);
+    Route::post('/api/supervision-reviews', [\App\Http\Controllers\SupervisionReviewController::class, 'store']);
+    Route::post('/api/supervision-reviews/toggle-cleaning-log', [\App\Http\Controllers\SupervisionReviewController::class, 'toggleCleaningLog']);
+    Route::get('/api/supervision-reviews/export-csv', [\App\Http\Controllers\SupervisionReviewController::class, 'exportCsv']);
+
     // User & Role Management (Frontend)
     Route::get('/manager-hub/users-roles', function () {
         return Inertia::render('UserRoleManagementPage');
