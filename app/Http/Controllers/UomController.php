@@ -34,12 +34,15 @@ class UomController extends Controller
 
     public function storeUnitType(Request $request)
     {
-        $tenantId = Auth::user()->tenant_id;
+        $user = Auth::user();
+        $tenantId = $user->tenant_id;
+        $branchId = $user->branch_id ?? session('active_branch_id');
+
         $request->validate([
             'name' => [
                 'required', 'string', 'max:255',
-                Rule::unique('unit_types')->where(function ($query) use ($tenantId) {
-                    return $query->where('tenant_id', $tenantId);
+                Rule::unique('unit_types')->where(function ($query) use ($tenantId, $branchId) {
+                    return $query->where('tenant_id', $tenantId)->where('branch_id', $branchId);
                 })
             ],
             'status' => 'required|string|in:Active,Inactive',
@@ -47,6 +50,7 @@ class UomController extends Controller
 
         $type = UnitType::create([
             'tenant_id' => $tenantId,
+            'branch_id' => $branchId,
             'name' => $request->name,
             'status' => $request->status,
         ]);
@@ -56,14 +60,16 @@ class UomController extends Controller
 
     public function updateUnitType(Request $request, $id)
     {
-        $tenantId = Auth::user()->tenant_id;
+        $user = Auth::user();
+        $tenantId = $user->tenant_id;
+        $branchId = $user->branch_id ?? session('active_branch_id');
         $type = UnitType::where('tenant_id', $tenantId)->findOrFail($id);
 
         $request->validate([
             'name' => [
                 'required', 'string', 'max:255',
-                Rule::unique('unit_types')->where(function ($query) use ($tenantId) {
-                    return $query->where('tenant_id', $tenantId);
+                Rule::unique('unit_types')->where(function ($query) use ($tenantId, $branchId) {
+                    return $query->where('tenant_id', $tenantId)->where('branch_id', $branchId);
                 })->ignore($id)
             ],
             'status' => 'required|string|in:Active,Inactive',
@@ -120,18 +126,21 @@ class UomController extends Controller
 
     public function storeBaseUnit(Request $request)
     {
-        $tenantId = Auth::user()->tenant_id;
+        $user = Auth::user();
+        $tenantId = $user->tenant_id;
+        $branchId = $user->branch_id ?? session('active_branch_id');
+
         $request->validate([
             'name' => [
                 'required', 'string', 'max:255',
-                Rule::unique('base_units')->where(function ($query) use ($tenantId) {
-                    return $query->where('tenant_id', $tenantId);
+                Rule::unique('base_units')->where(function ($query) use ($tenantId, $branchId) {
+                    return $query->where('tenant_id', $tenantId)->where('branch_id', $branchId);
                 })
             ],
             'code' => [
                 'required', 'string', 'max:20',
-                Rule::unique('base_units')->where(function ($query) use ($tenantId) {
-                    return $query->where('tenant_id', $tenantId);
+                Rule::unique('base_units')->where(function ($query) use ($tenantId, $branchId) {
+                    return $query->where('tenant_id', $tenantId)->where('branch_id', $branchId);
                 })
             ],
             'unit_type_id' => 'required|integer|exists:unit_types,id',
@@ -140,6 +149,7 @@ class UomController extends Controller
 
         $baseUnit = BaseUnit::create([
             'tenant_id' => $tenantId,
+            'branch_id' => $branchId,
             'name' => $request->name,
             'code' => $request->code,
             'unit_type_id' => $request->unit_type_id,
@@ -149,6 +159,7 @@ class UomController extends Controller
         // Auto-register Base Unit as selectable UOM
         Uom::create([
             'tenant_id' => $tenantId,
+            'branch_id' => $branchId,
             'unit_name' => $request->name,
             'unit_code' => $request->code,
             'unit_type_id' => $request->unit_type_id,
@@ -164,20 +175,22 @@ class UomController extends Controller
 
     public function updateBaseUnit(Request $request, $id)
     {
-        $tenantId = Auth::user()->tenant_id;
+        $user = Auth::user();
+        $tenantId = $user->tenant_id;
+        $branchId = $user->branch_id ?? session('active_branch_id');
         $baseUnit = BaseUnit::where('tenant_id', $tenantId)->findOrFail($id);
 
         $request->validate([
             'name' => [
                 'required', 'string', 'max:255',
-                Rule::unique('base_units')->where(function ($query) use ($tenantId) {
-                    return $query->where('tenant_id', $tenantId);
+                Rule::unique('base_units')->where(function ($query) use ($tenantId, $branchId) {
+                    return $query->where('tenant_id', $tenantId)->where('branch_id', $branchId);
                 })->ignore($id)
             ],
             'code' => [
                 'required', 'string', 'max:20',
-                Rule::unique('base_units')->where(function ($query) use ($tenantId) {
-                    return $query->where('tenant_id', $tenantId);
+                Rule::unique('base_units')->where(function ($query) use ($tenantId, $branchId) {
+                    return $query->where('tenant_id', $tenantId)->where('branch_id', $branchId);
                 })->ignore($id)
             ],
             'unit_type_id' => 'required|integer|exists:unit_types,id',
@@ -268,18 +281,21 @@ class UomController extends Controller
 
     public function store(Request $request)
     {
-        $tenantId = Auth::user()->tenant_id;
+        $user = Auth::user();
+        $tenantId = $user->tenant_id;
+        $branchId = $user->branch_id ?? session('active_branch_id');
+
         $request->validate([
             'unit_name' => [
                 'required', 'string', 'max:255',
-                Rule::unique('uoms')->where(function ($query) use ($tenantId) {
-                    return $query->where('tenant_id', $tenantId);
+                Rule::unique('uoms')->where(function ($query) use ($tenantId, $branchId) {
+                    return $query->where('tenant_id', $tenantId)->where('branch_id', $branchId);
                 })
             ],
             'unit_code' => [
                 'required', 'string', 'max:20',
-                Rule::unique('uoms')->where(function ($query) use ($tenantId) {
-                    return $query->where('tenant_id', $tenantId);
+                Rule::unique('uoms')->where(function ($query) use ($tenantId, $branchId) {
+                    return $query->where('tenant_id', $tenantId)->where('branch_id', $branchId);
                 })
             ],
             'unit_type_id' => 'required|integer|exists:unit_types,id',
@@ -299,6 +315,7 @@ class UomController extends Controller
 
         $uom = Uom::create([
             'tenant_id' => $tenantId,
+            'branch_id' => $branchId,
             'unit_name' => $request->unit_name,
             'unit_code' => $request->unit_code,
             'unit_type_id' => $request->unit_type_id,
@@ -316,20 +333,22 @@ class UomController extends Controller
 
     public function update(Request $request, $id)
     {
-        $tenantId = Auth::user()->tenant_id;
+        $user = Auth::user();
+        $tenantId = $user->tenant_id;
+        $branchId = $user->branch_id ?? session('active_branch_id');
         $uom = Uom::where('tenant_id', $tenantId)->findOrFail($id);
 
         $request->validate([
             'unit_name' => [
                 'required', 'string', 'max:255',
-                Rule::unique('uoms')->where(function ($query) use ($tenantId) {
-                    return $query->where('tenant_id', $tenantId);
+                Rule::unique('uoms')->where(function ($query) use ($tenantId, $branchId) {
+                    return $query->where('tenant_id', $tenantId)->where('branch_id', $branchId);
                 })->ignore($id)
             ],
             'unit_code' => [
                 'required', 'string', 'max:20',
-                Rule::unique('uoms')->where(function ($query) use ($tenantId) {
-                    return $query->where('tenant_id', $tenantId);
+                Rule::unique('uoms')->where(function ($query) use ($tenantId, $branchId) {
+                    return $query->where('tenant_id', $tenantId)->where('branch_id', $branchId);
                 })->ignore($id)
             ],
             'unit_type_id' => 'required|integer|exists:unit_types,id',
@@ -391,76 +410,78 @@ class UomController extends Controller
 
     private function seedDefaultUoms($tenantId)
     {
+        $branchId = Auth::user()->branch_id ?? session('active_branch_id');
+
         // 1. Seed categories
-        $weight = UnitType::create(['tenant_id' => $tenantId, 'name' => 'Weight', 'status' => 'Active']);
-        $volume = UnitType::create(['tenant_id' => $tenantId, 'name' => 'Volume', 'status' => 'Active']);
-        $count = UnitType::create(['tenant_id' => $tenantId, 'name' => 'Count', 'status' => 'Active']);
-        $length = UnitType::create(['tenant_id' => $tenantId, 'name' => 'Length', 'status' => 'Active']);
+        $weight = UnitType::create(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'name' => 'Weight', 'status' => 'Active']);
+        $volume = UnitType::create(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'name' => 'Volume', 'status' => 'Active']);
+        $count = UnitType::create(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'name' => 'Count', 'status' => 'Active']);
+        $length = UnitType::create(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'name' => 'Length', 'status' => 'Active']);
 
         // 2. Seed Base Units
         $kgBase = BaseUnit::create([
-            'tenant_id' => $tenantId, 'name' => 'Kilogram', 'code' => 'KG', 'unit_type_id' => $weight->id, 'status' => 'Active'
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'name' => 'Kilogram', 'code' => 'KG', 'unit_type_id' => $weight->id, 'status' => 'Active'
         ]);
         $lBase = BaseUnit::create([
-            'tenant_id' => $tenantId, 'name' => 'Liter', 'code' => 'L', 'unit_type_id' => $volume->id, 'status' => 'Active'
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'name' => 'Liter', 'code' => 'L', 'unit_type_id' => $volume->id, 'status' => 'Active'
         ]);
         $pcsBase = BaseUnit::create([
-            'tenant_id' => $tenantId, 'name' => 'Piece', 'code' => 'PCS', 'unit_type_id' => $count->id, 'status' => 'Active'
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'name' => 'Piece', 'code' => 'PCS', 'unit_type_id' => $count->id, 'status' => 'Active'
         ]);
 
         // 3. Seed Selectable UOM units
         // kg base
         Uom::create([
-            'tenant_id' => $tenantId, 'unit_name' => 'Kilogram', 'unit_code' => 'KG',
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'unit_name' => 'Kilogram', 'unit_code' => 'KG',
             'unit_type_id' => $weight->id, 'base_unit_id' => $kgBase->id, 'conversion_factor' => 1.0,
             'decimal_allowed' => true, 'display_order' => 1, 'status' => 'Active', 'description' => 'Primary metric weight.'
         ]);
         Uom::create([
-            'tenant_id' => $tenantId, 'unit_name' => 'Gram', 'unit_code' => 'G',
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'unit_name' => 'Gram', 'unit_code' => 'G',
             'unit_type_id' => $weight->id, 'base_unit_id' => $kgBase->id, 'conversion_factor' => 0.001,
             'decimal_allowed' => true, 'display_order' => 2, 'status' => 'Active', 'description' => '1 G = 0.001 KG.'
         ]);
         Uom::create([
-            'tenant_id' => $tenantId, 'unit_name' => 'Milligram', 'unit_code' => 'MG',
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'unit_name' => 'Milligram', 'unit_code' => 'MG',
             'unit_type_id' => $weight->id, 'base_unit_id' => $kgBase->id, 'conversion_factor' => 0.000001,
             'decimal_allowed' => true, 'display_order' => 3, 'status' => 'Active', 'description' => '1 MG = 0.000001 KG.'
         ]);
 
         // l base
         Uom::create([
-            'tenant_id' => $tenantId, 'unit_name' => 'Liter', 'unit_code' => 'L',
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'unit_name' => 'Liter', 'unit_code' => 'L',
             'unit_type_id' => $volume->id, 'base_unit_id' => $lBase->id, 'conversion_factor' => 1.0,
             'decimal_allowed' => true, 'display_order' => 4, 'status' => 'Active', 'description' => 'Primary metric volume.'
         ]);
         Uom::create([
-            'tenant_id' => $tenantId, 'unit_name' => 'Milliliter', 'unit_code' => 'ML',
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'unit_name' => 'Milliliter', 'unit_code' => 'ML',
             'unit_type_id' => $volume->id, 'base_unit_id' => $lBase->id, 'conversion_factor' => 0.001,
             'decimal_allowed' => true, 'display_order' => 5, 'status' => 'Active', 'description' => '1 ML = 0.001 L.'
         ]);
 
         // pcs base
         Uom::create([
-            'tenant_id' => $tenantId, 'unit_name' => 'Piece', 'unit_code' => 'PCS',
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'unit_name' => 'Piece', 'unit_code' => 'PCS',
             'unit_type_id' => $count->id, 'base_unit_id' => $pcsBase->id, 'conversion_factor' => 1.0,
             'decimal_allowed' => false, 'display_order' => 6, 'status' => 'Active', 'description' => 'Single item unit.'
         ]);
         Uom::create([
-            'tenant_id' => $tenantId, 'unit_name' => 'Dozen', 'unit_code' => 'DOZ',
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'unit_name' => 'Dozen', 'unit_code' => 'DOZ',
             'unit_type_id' => $count->id, 'base_unit_id' => $pcsBase->id, 'conversion_factor' => 12.0,
             'decimal_allowed' => false, 'display_order' => 7, 'status' => 'Active', 'description' => '1 DOZ = 12 PCS.'
         ]);
         Uom::create([
-            'tenant_id' => $tenantId, 'unit_name' => 'Bottle', 'unit_code' => 'BTL',
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'unit_name' => 'Bottle', 'unit_code' => 'BTL',
             'unit_type_id' => $count->id, 'base_unit_id' => $pcsBase->id, 'conversion_factor' => 1.0,
             'decimal_allowed' => false, 'display_order' => 8, 'status' => 'Active', 'description' => '1 BTL = 1 PCS.'
         ]);
         Uom::create([
-            'tenant_id' => $tenantId, 'unit_name' => 'Packet', 'unit_code' => 'PKT',
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'unit_name' => 'Packet', 'unit_code' => 'PKT',
             'unit_type_id' => $count->id, 'base_unit_id' => $pcsBase->id, 'conversion_factor' => 1.0,
             'decimal_allowed' => false, 'display_order' => 9, 'status' => 'Active', 'description' => '1 PKT = 1 PCS.'
         ]);
         Uom::create([
-            'tenant_id' => $tenantId, 'unit_name' => 'Box', 'unit_code' => 'BOX',
+            'tenant_id' => $tenantId, 'branch_id' => $branchId, 'unit_name' => 'Box', 'unit_code' => 'BOX',
             'unit_type_id' => $count->id, 'base_unit_id' => $pcsBase->id, 'conversion_factor' => 1.0,
             'decimal_allowed' => false, 'display_order' => 10, 'status' => 'Active', 'description' => '1 BOX = 1 PCS.'
         ]);
