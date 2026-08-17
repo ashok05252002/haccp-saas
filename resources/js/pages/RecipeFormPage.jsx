@@ -268,12 +268,19 @@ const RecipeFormPage = ({ recipeId }) => {
       return;
     }
 
+    const parsedServings = parseInt(form.servings, 10);
+    const validServings = (isNaN(parsedServings) || parsedServings < 1) ? 1 : parsedServings;
+    const payload = {
+      ...form,
+      servings: validServings
+    };
+
     setSubmitting(true);
     try {
       if (isEdit) {
-        await axios.put(`/api/recipes/${recipeId}`, form);
+        await axios.put(`/api/recipes/${recipeId}`, payload);
       } else {
-        await axios.post('/api/recipes', form);
+        await axios.post('/api/recipes', payload);
       }
       router.visit('/recipes');
     } catch (err) {
@@ -396,7 +403,15 @@ const RecipeFormPage = ({ recipeId }) => {
                     min="1"
                     className="form-input"
                     value={form.servings}
-                    onChange={e => setForm({ ...form, servings: parseInt(e.target.value, 10) || 1 })}
+                    onChange={e => setForm({ ...form, servings: e.target.value })}
+                    onBlur={() => {
+                      const parsed = parseInt(form.servings, 10);
+                      if (isNaN(parsed) || parsed < 1) {
+                        setForm(prev => ({ ...prev, servings: 1 }));
+                      } else {
+                        setForm(prev => ({ ...prev, servings: parsed }));
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -470,28 +485,10 @@ const RecipeFormPage = ({ recipeId }) => {
                     >
                       {/* Master Ingredient Select Column */}
                       <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <div style={{ marginBottom: '6px' }}>
                           <label className="form-label" style={{ fontSize: '12px', margin: 0, fontWeight: 600, color: 'var(--color-text-primary)' }}>
                             Master Ingredient *
                           </label>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenAddModal(idx)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--color-primary)',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: 0
-                            }}
-                          >
-                            <Plus size={13} /> Add to Master
-                          </button>
                         </div>
 
                         {masterIngredients.length > 0 ? (
