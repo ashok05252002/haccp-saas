@@ -5,7 +5,9 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import TemperatureForm from '../components/haccp/TemperatureForm';
 
-const TemperatureFormPage = () => {
+const TemperatureFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
+
   const handleSave = () => {
     router.visit('/haccp-logs/temperature');
   };
@@ -16,9 +18,9 @@ const TemperatureFormPage = () => {
 
   return (
     <PageLayout>
-      <Head title="Add Temperature Entry" />
+      <Head title={isEdit ? "Edit Temperature Entry" : "Add Temperature Entry"} />
 
-      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
         <div style={{ flexShrink: 0 }}>
           <button onClick={() => router.visit('/haccp-logs/temperature')} className="back-btn">
             <ArrowLeft size={16} />
@@ -27,17 +29,17 @@ const TemperatureFormPage = () => {
 
           <div className="panel-header-row">
             <div>
-              <h1 className="page-title">Add Temperature Entry</h1>
+              <h1 className="page-title">{isEdit ? "Edit Temperature Entry" : "Add Temperature Entry"}</h1>
               <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                Record new temperature values for your equipment.
+                {isEdit ? "Update logged temperature readings, equipment, and corrective actions." : "Record new temperature values for your equipment."}
               </p>
             </div>
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '24px', marginRight: '-12px', paddingRight: '12px' }}>
+        <div style={{ flex: 1, paddingBottom: '32px' }}>
           <Card padding="0">
-            <TemperatureForm onSave={handleSave} onCancel={handleCancel} />
+            <TemperatureForm logId={logId} onSave={handleSave} onCancel={handleCancel} />
           </Card>
         </div>
       </div>

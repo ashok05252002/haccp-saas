@@ -4,13 +4,16 @@ import SignatureCanvas from 'react-signature-canvas';
 import { Snowflake, AlertTriangle, CheckCircle, Save, Droplets, Thermometer, Box } from 'lucide-react';
 import axios from 'axios';
 
-const TemperatureForm = ({ onSave, onCancel }) => {
+const TemperatureForm = ({ onSave, onCancel, logId }) => {
+  const isEdit = Boolean(logId);
   const [loading, setLoading] = useState(true);
   const [storageZones, setStorageZones] = useState([]);
   const [thermometers, setThermometers] = useState([]);
   const [staffMembers, setStaffMembers] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [existingSignature, setExistingSignature] = useState(null);
+  const [editZoneId, setEditZoneId] = useState(null);
 
   // Form State
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -42,6 +45,31 @@ const TemperatureForm = ({ onSave, onCancel }) => {
         activeZones.forEach(zone => {
           initialReadings[zone.id] = { temperature: '', comment: '' };
         });
+
+        if (logId) {
+          try {
+            const logRes = await axios.get(`/api/temperature-logs/${logId}`);
+            const logData = logRes.data;
+            if (logData) {
+              if (logData.log_date) setLogDate(logData.log_date);
+              if (logData.log_time) setLogTime(logData.log_time);
+              if (logData.staff_name) setStaffName(logData.staff_name);
+              if (logData.thermometer_id) setThermometerId(String(logData.thermometer_id));
+              if (logData.signature) setExistingSignature(logData.signature);
+              if (logData.storage_zone_id) {
+                setEditZoneId(logData.storage_zone_id);
+                initialReadings[logData.storage_zone_id] = {
+                  temperature: logData.temperature !== null ? String(logData.temperature) : '',
+                  comment: logData.comment || ''
+                };
+              }
+            }
+          } catch (fetchErr) {
+            console.error('Failed to load existing temperature log', fetchErr);
+            setError('Failed to load existing log data.');
+          }
+        }
+
         setReadings(initialReadings);
 
       } catch (err) {
@@ -52,7 +80,7 @@ const TemperatureForm = ({ onSave, onCancel }) => {
       }
     };
     fetchData();
-  }, []);
+  }, [logId]);
 
   const handleRowChange = (id, field, val) => {
     setReadings(prev => ({
@@ -81,7 +109,49 @@ const TemperatureForm = ({ onSave, onCancel }) => {
     setSubmitting(true);
     setError(null);
 
-    // Filter out readings that are empty
+    let signatureData = null;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    } else if (existingSignature) {
+      signatureData = existingSignature;
+    }
+
+    if (isEdit) {
+      // In edit mode, update the specific record
+      const targetZoneId = editZoneId || Object.keys(readings).find(k => readings[k]?.temperature !== '');
+      const reading = targetZoneId ? readings[targetZoneId] : null;
+
+      if (!reading || reading.temperature === '') {
+        setError('Please enter a valid temperature for the equipment.');
+        setSubmitting(false);
+        return;
+      }
+
+      const targetZone = storageZones.find(z => String(z.id) === String(targetZoneId));
+      const isValid = targetZone ? (validateTemperature(targetZone, reading.temperature) ?? true) : true;
+
+      try {
+        await axios.put(`/api/temperature-logs/${logId}`, {
+          log_date: logDate,
+          log_time: logTime,
+          staff_name: staffName,
+          thermometer_id: thermometerId ? parseInt(thermometerId) : null,
+          storage_zone_id: targetZone ? targetZone.id : undefined,
+          temperature: parseFloat(reading.temperature),
+          is_valid: isValid,
+          comment: reading.comment,
+          signature: signatureData
+        });
+        if (onSave) onSave();
+      } catch (err) {
+        console.error('Failed to update log', err);
+        setError(err.response?.data?.message || 'Failed to update temperature log.');
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Filter out readings that are empty for Add mode
     const validReadings = [];
     storageZones.forEach(zone => {
       const reading = readings[zone.id];
@@ -102,21 +172,16 @@ const TemperatureForm = ({ onSave, onCancel }) => {
       return;
     }
 
-    let signatureData = null;
-    if (sigPad.current && !sigPad.current.isEmpty()) {
-      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
-    }
-
     try {
       await axios.post('/api/temperature-logs', {
         log_date: logDate,
         log_time: logTime,
         staff_name: staffName,
-        thermometer_id: thermometerId || null,
+        thermometer_id: thermometerId ? parseInt(thermometerId) : null,
         readings: validReadings,
         signature: signatureData
       });
-      onSave();
+      if (onSave) onSave();
     } catch (err) {
       console.error('Failed to save logs', err);
       setError(err.response?.data?.message || 'Failed to save logs.');
@@ -347,9 +412,16 @@ const TemperatureForm = ({ onSave, onCancel }) => {
         <div style={{ marginTop: '36px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h4 style={{ ...styles.sectionTitle, color: 'var(--color-text-primary)' }}>Signature</h4>
-            <button variant="secondary" size="sm" onClick={() => sigPad.current.clear()} type="button" style={styles.clearBtn}>
-              Clear Signature
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {existingSignature && (
+                <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                  (Existing signature preserved unless redrawn)
+                </span>
+              )}
+              <button variant="secondary" size="sm" onClick={() => { sigPad.current?.clear(); setExistingSignature(null); }} type="button" style={styles.clearBtn}>
+                Clear Signature
+              </button>
+            </div>
           </div>
           <div style={styles.sigPadWrapper}>
             <SignatureCanvas 
@@ -367,7 +439,7 @@ const TemperatureForm = ({ onSave, onCancel }) => {
           Cancel
         </Button>
         <Button variant="primary" type="submit" icon={Save} disabled={submitting || storageZones.length === 0} style={styles.saveBtn}>
-          {submitting ? 'Saving...' : 'Save Entries'}
+          {submitting ? 'Saving...' : (isEdit ? 'Update Entry' : 'Save Entries')}
         </Button>
       </div>
     </form>

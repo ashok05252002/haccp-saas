@@ -8,7 +8,7 @@ import Modal from '../components/common/Modal';
 import SignaturePad from '../components/common/SignaturePad';
 import axios from 'axios';
 
-const StaffTrainingTaskPage = ({ staffId }) => {
+const StaffTrainingTaskPage = ({ staffId, logId }) => {
   const [staff, setStaff] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [completedLogs, setCompletedLogs] = useState([]);
@@ -39,14 +39,43 @@ const StaffTrainingTaskPage = ({ staffId }) => {
         axios.get('/api/staff-training-logs'),
       ]);
 
-      const foundStaff = (staffRes.data || []).find(s => String(s.id) === String(staffId));
-      setStaff(foundStaff || { id: staffId, name: 'Staff Member', role: 'Staff' });
-      if (foundStaff) setSignedByStaffName(foundStaff.name);
-
+      const allStaff = staffRes.data || [];
       const rawTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data?.tasks || []);
       const allTasks = rawTasks.filter(t => t.status === 'Active' || !t.status);
+      const allLogs = logsRes.data || [];
+
       setTasks(allTasks);
-      setCompletedLogs(logsRes.data || []);
+      setCompletedLogs(allLogs);
+
+      if (logId) {
+        try {
+          const logRes = await axios.get(`/api/staff-training-logs/${logId}`);
+          const logData = logRes.data;
+          if (logData) {
+            const found = allStaff.find(s => s.name?.toLowerCase() === logData.staff_name?.toLowerCase());
+            const sObj = found || { id: null, name: logData.staff_name || 'Staff Member', role: logData.staff_position || 'Staff' };
+            setStaff(sObj);
+            setSignedByStaffName(sObj.name);
+
+            const foundTask = allTasks.find(t => t.title?.toLowerCase() === logData.task_title?.toLowerCase());
+            const tObj = foundTask || { id: logData.task_id, title: logData.task_title, description: logData.task_description || '' };
+            
+            setSelectedTask(tObj);
+            setEditingLogId(logData.id);
+            setTrainerName(logData.trainer_name || '');
+            setNotes(logData.notes || '');
+            setUnderstandingConfirmed(logData.understanding_confirmed !== undefined ? Boolean(logData.understanding_confirmed) : true);
+            setSignature(logData.signature || '');
+            setModalOpen(true);
+          }
+        } catch (fetchLogErr) {
+          console.error('Failed to load staff training log for edit', fetchLogErr);
+        }
+      } else if (staffId) {
+        const foundStaff = allStaff.find(s => String(s.id) === String(staffId));
+        setStaff(foundStaff || { id: staffId, name: 'Staff Member', role: 'Staff' });
+        if (foundStaff) setSignedByStaffName(foundStaff.name);
+      }
     } catch (err) {
       console.error('Failed to load staff task data', err);
     } finally {
@@ -56,7 +85,7 @@ const StaffTrainingTaskPage = ({ staffId }) => {
 
   useEffect(() => {
     fetchData();
-  }, [staffId]);
+  }, [staffId, logId]);
 
   const assignedTasks = useMemo(() => {
     if (!staff) return [];

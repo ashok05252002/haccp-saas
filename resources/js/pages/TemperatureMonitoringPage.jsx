@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
-import { Plus, Thermometer, ArrowLeft, Pencil, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { Plus, Thermometer, ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -13,31 +13,13 @@ const TemperatureMonitoringPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modals state
+  // View Modal state
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
-
-  // Edit Form State
-  const [editTemp, setEditTemp] = useState('');
-  const [editStaff, setEditStaff] = useState('');
-  const [editComment, setEditComment] = useState('');
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [editError, setEditError] = useState(null);
 
   const openViewModal = (log) => {
     setSelectedLog(log);
     setViewModalOpen(true);
-  };
-
-  const openEditModal = (log) => {
-    setSelectedLog(log);
-    setEditTemp(log.temperature !== null ? String(log.temperature) : '');
-    setEditStaff(log.staff_name || '');
-    setEditComment(log.comment || '');
-    setEditError(null);
-    setViewModalOpen(false);
-    setEditModalOpen(true);
   };
 
   const fetchLogs = useCallback(async () => {
@@ -55,32 +37,6 @@ const TemperatureMonitoringPage = () => {
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
-
-  const handleUpdateLog = async (e) => {
-    e.preventDefault();
-    if (!selectedLog) return;
-    if (editTemp === '' || isNaN(parseFloat(editTemp))) {
-      setEditError('Please enter a valid temperature.');
-      return;
-    }
-
-    try {
-      setSavingEdit(true);
-      setEditError(null);
-      await axios.put(`/api/temperature-logs/${selectedLog.id}`, {
-        temperature: parseFloat(editTemp),
-        staff_name: editStaff,
-        comment: editComment,
-      });
-      setEditModalOpen(false);
-      fetchLogs();
-    } catch (err) {
-      console.error('Failed to update temperature log', err);
-      setEditError(err.response?.data?.message || 'Failed to update temperature log.');
-    } finally {
-      setSavingEdit(false);
-    }
-  };
 
   const handleDeleteLog = async (id) => {
     if (!confirm('Are you sure you want to delete this temperature log?')) return;
@@ -200,7 +156,12 @@ const TemperatureMonitoringPage = () => {
                         <Button variant="secondary" size="sm" onClick={() => openViewModal(log)}>
                           View
                         </Button>
-                        <Button variant="outline" size="sm" icon={Pencil} onClick={() => openEditModal(log)}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          icon={Pencil} 
+                          onClick={() => router.visit(`/haccp-logs/temperature/edit/${log.id}`)}
+                        >
                           Edit
                         </Button>
                       </div>
@@ -220,9 +181,15 @@ const TemperatureMonitoringPage = () => {
         title="View Temperature Log Details"
         footer={
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-            <Button variant="outline" icon={Pencil} onClick={() => openEditModal(selectedLog)}>
-              Edit Entry
-            </Button>
+            {selectedLog && (
+              <Button 
+                variant="outline" 
+                icon={Pencil} 
+                onClick={() => router.visit(`/haccp-logs/temperature/edit/${selectedLog.id}`)}
+              >
+                Edit Entry
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => setViewModalOpen(false)}>
               Close
             </Button>
@@ -274,91 +241,6 @@ const TemperatureMonitoringPage = () => {
               </div>
             </div>
           </div>
-        )}
-      </Modal>
-
-      {/* Edit Log Modal */}
-      <Modal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        title={`Edit Temperature Entry - ${selectedLog?.storage_zone?.name || 'Equipment'}`}
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', width: '100%' }}>
-            <Button variant="secondary" onClick={() => setEditModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" loading={savingEdit} onClick={handleUpdateLog}>
-              Save Changes
-            </Button>
-          </div>
-        }
-      >
-        {selectedLog && (
-          <form onSubmit={handleUpdateLog} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {editError && (
-              <div style={{ padding: '10px 14px', backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: '8px', color: '#B91C1C', fontSize: '14px' }}>
-                {editError}
-              </div>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                <label className="form-label" style={{ fontWeight: 600 }}>Equipment</label>
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  disabled 
-                  value={selectedLog.storage_zone?.name || 'Unknown'} 
-                  style={{ backgroundColor: '#F3F4F6' }}
-                />
-              </div>
-              <div>
-                <label className="form-label" style={{ fontWeight: 600 }}>Date & Time</label>
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  disabled 
-                  value={`${selectedLog.log_date} ${selectedLog.log_time}`} 
-                  style={{ backgroundColor: '#F3F4F6' }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="form-label" style={{ fontWeight: 600 }}>Temperature (°C) *</label>
-              <input 
-                type="number" 
-                step="0.1" 
-                className="form-control" 
-                required 
-                value={editTemp} 
-                onChange={(e) => setEditTemp(e.target.value)} 
-                placeholder="e.g. 3.5"
-              />
-            </div>
-
-            <div>
-              <label className="form-label" style={{ fontWeight: 600 }}>Logged By Staff</label>
-              <input 
-                type="text" 
-                className="form-control" 
-                value={editStaff} 
-                onChange={(e) => setEditStaff(e.target.value)} 
-                placeholder="Staff name"
-              />
-            </div>
-
-            <div>
-              <label className="form-label" style={{ fontWeight: 600 }}>Comments / Corrective Action</label>
-              <textarea 
-                className="form-control" 
-                rows="3" 
-                value={editComment} 
-                onChange={(e) => setEditComment(e.target.value)} 
-                placeholder="Optional notes or corrective actions..."
-              />
-            </div>
-          </form>
         )}
       </Modal>
     </PageLayout>

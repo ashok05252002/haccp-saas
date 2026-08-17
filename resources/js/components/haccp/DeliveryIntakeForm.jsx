@@ -277,6 +277,14 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
           </div>
         )}
 
+        {/* CCP-1 Critical Limits Info Banner */}
+        <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Info size={20} color="#16A34A" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: '13px', color: '#166534', lineHeight: 1.5 }}>
+            <strong>CCP-1 Delivery Acceptance Limits:</strong> Chilled foods ≤ 5°C &bull; Frozen foods ≤ -18°C &bull; Packaging clean and intact &bull; Vehicle hygienic &bull; Check expiration dates.
+          </div>
+        </div>
+
         {/* General Intake Details */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
