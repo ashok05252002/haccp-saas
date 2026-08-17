@@ -495,8 +495,8 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
 
                       {/* Rule Text Display below Food Item / Product dropdown */}
                       {p.food_item_id && st && (
-                        <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
-                          <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>Storage Type:</span> {st.name} <span style={{ margin: '0 6px', color: 'var(--color-border)' }}>|</span> <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>Rule:</span> {getStorageTypeRuleText(st)}
+                        <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-primary-darker)', fontWeight: 500, lineHeight: 1.4 }}>
+                          <span style={{ fontWeight: 700, color: 'var(--color-primary-darker)' }}>Storage Type:</span> {st.name} <span style={{ margin: '0 6px', color: 'var(--color-border)' }}>|</span> <span style={{ fontWeight: 700, color: 'var(--color-primary-darker)' }}>Rule:</span> {getStorageTypeRuleText(st)}
                         </div>
                       )}
                     </div>
