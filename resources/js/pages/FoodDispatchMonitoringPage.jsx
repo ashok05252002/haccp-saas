@@ -126,13 +126,22 @@ const FoodDispatchMonitoringPage = () => {
       key: 'actions',
       align: 'right',
       render: (log) => (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => router.visit(`/haccp-logs/food-dispatch/view/${log.id}`)}
-        >
-          View
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => router.visit(`/haccp-logs/food-dispatch/view/${log.id}`)}
+          >
+            View
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.visit(`/haccp-logs/food-dispatch/edit/${log.id}`)}
+          >
+            Edit
+          </Button>
+        </div>
       ),
     },
   ];

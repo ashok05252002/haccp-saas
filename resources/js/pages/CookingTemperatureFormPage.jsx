@@ -5,7 +5,9 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import CookingTemperatureForm from '../components/haccp/CookingTemperatureForm';
 
-const CookingTemperatureFormPage = () => {
+const CookingTemperatureFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
+
   const handleSave = () => {
     router.visit('/haccp-logs/cooking-temperature');
   };
@@ -16,7 +18,7 @@ const CookingTemperatureFormPage = () => {
 
   return (
     <PageLayout>
-      <Head title="Add Cooking & Process Entry" />
+      <Head title={isEdit ? "Edit Cooking & Process Entry" : "Add Cooking & Process Entry"} />
 
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
         <div style={{ flexShrink: 0 }}>
@@ -27,9 +29,9 @@ const CookingTemperatureFormPage = () => {
 
           <div className="panel-header-row">
             <div>
-              <h1 className="page-title">Add Cooking & Process Entry</h1>
+              <h1 className="page-title">{isEdit ? "Edit Cooking & Process Entry" : "Add Cooking & Process Entry"}</h1>
               <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                Complete the 6-step Cook, Cool, Reheat & Hold Process log.
+                {isEdit ? "Update details for this Cook, Cool, Reheat & Hold Process log." : "Complete the 6-step Cook, Cool, Reheat & Hold Process log."}
               </p>
             </div>
           </div>
@@ -37,7 +39,7 @@ const CookingTemperatureFormPage = () => {
 
         <div style={{ flex: 1, paddingBottom: '32px' }}>
           <Card padding="0">
-            <CookingTemperatureForm onSave={handleSave} onCancel={handleCancel} />
+            <CookingTemperatureForm logId={logId} onSave={handleSave} onCancel={handleCancel} />
           </Card>
         </div>
       </div>

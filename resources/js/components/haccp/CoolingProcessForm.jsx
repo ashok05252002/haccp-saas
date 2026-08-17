@@ -5,9 +5,11 @@ import SignatureCanvas from 'react-signature-canvas';
 import { Info, AlertTriangle, Plus, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 
-const CoolingProcessForm = ({ onSave, onCancel }) => {
+const CoolingProcessForm = ({ onSave, onCancel, logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [existingSignature, setExistingSignature] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const nowTimeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -74,6 +76,38 @@ const CoolingProcessForm = ({ onSave, onCancel }) => {
     };
     fetchMasterData();
   }, []);
+
+  useEffect(() => {
+    if (!logId) return;
+    const fetchExisting = async () => {
+      try {
+        setLoadingExisting(true);
+        const res = await axios.get(`/api/cooling-process-logs/${logId}`);
+        const data = res.data;
+        if (data) {
+          if (data.food_item) setFoodItem(data.food_item);
+          if (data.cooling_method) setCoolingMethod(data.cooling_method);
+          if (data.storage_location) setStorageLocation(data.storage_location);
+          if (data.start_date) setStartDate(data.start_date);
+          if (data.start_time) setStartTime(data.start_time);
+          if (data.start_temp !== null && data.start_temp !== undefined) setStartTemp(String(data.start_temp));
+          if (data.end_date) setEndDate(data.end_date);
+          if (data.end_time) setEndTime(data.end_time);
+          if (data.end_temp !== null && data.end_temp !== undefined) setEndTemp(String(data.end_temp));
+          if (data.duration_minutes !== null && data.duration_minutes !== undefined) setDurationMinutes(data.duration_minutes);
+          if (data.comments) setComments(data.comments);
+          if (data.staff_name) setStaffName(data.staff_name);
+          if (data.signature) setExistingSignature(data.signature);
+        }
+      } catch (err) {
+        console.error('Failed to fetch cooling process log for edit', err);
+        setError('Failed to load existing log data.');
+      } finally {
+        setLoadingExisting(false);
+      }
+    };
+    fetchExisting();
+  }, [logId]);
 
   // Calculate Duration in minutes whenever start/end date and start/end time change
   useEffect(() => {
@@ -211,13 +245,17 @@ const CoolingProcessForm = ({ onSave, onCancel }) => {
       return;
     }
 
-    if (!sigPad.current || sigPad.current.isEmpty()) {
+    let signatureData = existingSignature;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    }
+
+    if (!signatureData) {
       setError('Staff Verification Signature is mandatory.');
       return;
     }
 
     setSubmitting(true);
-    const signatureData = sigPad.current.getCanvas().toDataURL('image/png');
 
     const payload = {
       food_item: foodItem,
@@ -236,7 +274,11 @@ const CoolingProcessForm = ({ onSave, onCancel }) => {
     };
 
     try {
-      await axios.post('/api/cooling-process-logs', payload);
+      if (logId) {
+        await axios.put(`/api/cooling-process-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/cooling-process-logs', payload);
+      }
       if (onSave) onSave();
     } catch (err) {
       console.error('Failed to save cooling process log', err);

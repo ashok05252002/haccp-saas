@@ -17,7 +17,8 @@ const DEFAULT_METHODS = [
 const DEFAULT_FOODS = ['Frozen Beef Patties', 'Frozen Chicken Breasts', 'Frozen Salmon Fillets', 'Frozen Pastry Sheets'];
 const DEFAULT_STORAGE_LOCATIONS = ['Prep Chiller 1', 'Walk-in Fridge', 'Raw Meat Chiller', 'Chiller / Defrosting Area'];
 
-const ThawingFormPage = () => {
+const ThawingFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
   const [defrostMethods, setDefrostMethods] = useState(DEFAULT_METHODS);
   const [defrostMethod, setDefrostMethod] = useState(DEFAULT_METHODS[0]);
 
@@ -115,6 +116,28 @@ const ThawingFormPage = () => {
       if (res.data && res.data.length > 0) setNewFoodStorageTypeId(res.data[0].id);
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!logId) return;
+    axios.get(`/api/thawing-logs/${logId}`).then(res => {
+      const data = res.data;
+      if (data) {
+        if (data.food_item_name) setFoodItemName(data.food_item_name);
+        if (data.defrost_method) setDefrostMethod(data.defrost_method);
+        if (data.storage_location) setStorageLocation(data.storage_location);
+        if (data.start_date) setStartDate(data.start_date);
+        if (data.start_time) setStartTime(data.start_time);
+        if (data.completed_date) setCompletedDate(data.completed_date);
+        if (data.completed_time) setCompletedTime(data.completed_time);
+        if (data.defrost_temp !== null && data.defrost_temp !== undefined) setDefrostTemp(String(data.defrost_temp));
+        if (data.comments) setComments(data.comments);
+        if (data.signed_by_staff_name) setSignedByStaffName(data.signed_by_staff_name);
+        if (data.signature) setSignature(data.signature);
+      }
+    }).catch(err => {
+      console.error('Failed to fetch thawing log for edit', err);
+    });
+  }, [logId]);
 
   // Temperature Compliance Validation (<= 5.0°C for chilled methods)
   const tempNum = parseFloat(defrostTemp);
@@ -218,7 +241,7 @@ const ThawingFormPage = () => {
 
     setSubmitting(true);
     try {
-      await axios.post('/api/thawing-logs', {
+      const payload = {
         log_date: today,
         log_time: nowTime,
         food_item_name: foodItemName,
@@ -232,7 +255,13 @@ const ThawingFormPage = () => {
         comments: comments,
         signed_by_staff_name: signedByStaffName,
         signature: signature,
-      });
+      };
+
+      if (logId) {
+        await axios.put(`/api/thawing-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/thawing-logs', payload);
+      }
 
       router.visit('/haccp-logs/thawing');
     } catch (err) {

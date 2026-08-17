@@ -21,7 +21,8 @@ const createEmptyRow = (foodName = '', defaultTime = '') => ({
   comments: '',
 });
 
-const HotHoldingFormPage = () => {
+const HotHoldingFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
   const [holdingUnits, setHoldingUnits] = useState(DEFAULT_UNITS);
   const [selectedUnit, setSelectedUnit] = useState(DEFAULT_UNITS[0]);
 
@@ -99,10 +100,58 @@ const HotHoldingFormPage = () => {
     }).catch(() => {});
 
     // Initial 1 Row Only
-    setRows([
-      createEmptyRow('Tomato Soup', nowTime),
-    ]);
+    if (!logId) {
+      setRows([
+        createEmptyRow('Tomato Soup', nowTime),
+      ]);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!logId) return;
+    axios.get(`/api/hot-holding-logs/${logId}`).then(res => {
+      const data = res.data;
+      if (data) {
+        if (data.log_date) setLogDate(data.log_date);
+        if (data.log_time) setLogTime(data.log_time);
+        if (data.holding_unit) setSelectedUnit(data.holding_unit);
+        if (data.staff_name) setStaffName(data.staff_name);
+        if (data.general_comments) setGeneralComments(data.general_comments);
+        if (data.signed_by_staff_name) setSignedByStaffName(data.signed_by_staff_name);
+        if (data.signature) setSignature(data.signature);
+
+        let itemsData = data.items || [];
+        if (typeof itemsData === 'string') {
+          try { itemsData = JSON.parse(itemsData); } catch (e) { itemsData = []; }
+        }
+
+        if (Array.isArray(itemsData) && itemsData.length > 0) {
+          const loadedRows = itemsData.map(item => ({
+            id: 'h_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            foodName: item.foodName || item.food_name || item.name || '',
+            timeIntoHold: item.timeIntoHold || item.time_into_hold || item.time || '',
+            check1: item.check1 !== undefined && item.check1 !== null ? item.check1 : (item.temp1 || item.temp || ''),
+            check2: item.check2 !== undefined && item.check2 !== null ? item.check2 : (item.temp2 || ''),
+            check3: item.check3 !== undefined && item.check3 !== null ? item.check3 : (item.temp3 || ''),
+            check4: item.check4 !== undefined && item.check4 !== null ? item.check4 : (item.temp4 || ''),
+            comments: item.comments || item.notes || '',
+          }));
+          setRows(loadedRows);
+
+          // Check if any row has check2, 3, or 4
+          const hasCheck4 = loadedRows.some(r => r.check4 !== '');
+          const hasCheck3 = loadedRows.some(r => r.check3 !== '');
+          const hasCheck2 = loadedRows.some(r => r.check2 !== '');
+          if (hasCheck4) setVisibleChecksCount(4);
+          else if (hasCheck3) setVisibleChecksCount(3);
+          else if (hasCheck2) setVisibleChecksCount(2);
+          else setVisibleChecksCount(1);
+        }
+      }
+    }).catch(err => {
+      console.error('Failed to fetch hot holding log for edit', err);
+    });
+  }, [logId]);
 
   /* Row Handlers */
   const handleRowChange = (id, field, value) => {
@@ -199,7 +248,7 @@ const HotHoldingFormPage = () => {
 
     setSubmitting(true);
     try {
-      await axios.post('/api/hot-holding-logs', {
+      const payload = {
         log_date: logDate,
         log_time: logTime,
         holding_unit: selectedUnit,
@@ -208,7 +257,13 @@ const HotHoldingFormPage = () => {
         general_comments: generalComments,
         signed_by_staff_name: signedByStaffName,
         signature: signature,
-      });
+      };
+
+      if (logId) {
+        await axios.put(`/api/hot-holding-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/hot-holding-logs', payload);
+      }
 
       router.visit('/haccp-logs/hot-holding');
     } catch (err) {

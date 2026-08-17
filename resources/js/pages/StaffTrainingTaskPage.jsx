@@ -17,6 +17,7 @@ const StaffTrainingTaskPage = ({ staffId }) => {
   // Modal Completion Form
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [editingLogId, setEditingLogId] = useState(null);
   const [trainerName, setTrainerName] = useState('');
   const [notes, setNotes] = useState('');
   const [understandingConfirmed, setUnderstandingConfirmed] = useState(true);
@@ -76,19 +77,35 @@ const StaffTrainingTaskPage = ({ staffId }) => {
     });
   }, [staff, tasks]);
 
-  const isTaskCompleted = (taskTitle) => {
-    if (!staff) return false;
-    return completedLogs.some(
-      l => l.staff_name.toLowerCase() === staff.name.toLowerCase() && l.task_title.toLowerCase() === taskTitle.toLowerCase()
+  const getTaskLog = (taskTitle) => {
+    if (!staff) return null;
+    return completedLogs.find(
+      l => (l.staff_name || '').toLowerCase() === (staff.name || '').toLowerCase() && (l.task_title || '').toLowerCase() === (taskTitle || '').toLowerCase()
     );
+  };
+
+  const isTaskCompleted = (taskTitle) => {
+    return Boolean(getTaskLog(taskTitle));
   };
 
   const handleOpenModal = (task) => {
     setSelectedTask(task);
+    setEditingLogId(null);
     setTrainerName('');
     setNotes('');
     setUnderstandingConfirmed(true);
     setSignature('');
+    setErrors({});
+    setModalOpen(true);
+  };
+
+  const handleOpenEditModal = (task, existingLog) => {
+    setSelectedTask(task);
+    setEditingLogId(existingLog.id);
+    setTrainerName(existingLog.trainer_name || '');
+    setNotes(existingLog.notes || '');
+    setUnderstandingConfirmed(existingLog.understanding_confirmed !== undefined ? Boolean(existingLog.understanding_confirmed) : true);
+    setSignature(existingLog.signature || '');
     setErrors({});
     setModalOpen(true);
   };
@@ -107,7 +124,7 @@ const StaffTrainingTaskPage = ({ staffId }) => {
 
     setSubmitting(true);
     try {
-      await axios.post('/api/staff-training-logs', {
+      const payload = {
         log_date: today,
         log_time: nowTime,
         staff_name: staff.name,
@@ -120,7 +137,13 @@ const StaffTrainingTaskPage = ({ staffId }) => {
         notes: notes,
         signed_by_staff_name: signedByStaffName || staff.name,
         signature: signature,
-      });
+      };
+
+      if (editingLogId) {
+        await axios.put(`/api/staff-training-logs/${editingLogId}`, payload);
+      } else {
+        await axios.post('/api/staff-training-logs', payload);
+      }
 
       setModalOpen(false);
       fetchData();
@@ -201,9 +224,28 @@ const StaffTrainingTaskPage = ({ staffId }) => {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         {completed ? (
-                          <Button variant="secondary" size="sm" disabled>
-                            Completed
-                          </Button>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => {
+                                const log = getTaskLog(task.title);
+                                if (log) router.visit(`/haccp-logs/staff-training/view/${log.id}`);
+                              }}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const log = getTaskLog(task.title);
+                                if (log) handleOpenEditModal(task, log);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          </div>
                         ) : (
                           <Button variant="primary" size="sm" onClick={() => handleOpenModal(task)}>
                             Start / Complete

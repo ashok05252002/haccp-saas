@@ -24,7 +24,8 @@ const createEmptyItem = (defaultType, defaultSource, defaultReason, defaultMetho
   notes: '',
 });
 
-const FoodWasteFormPage = () => {
+const FoodWasteFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
   const [staffList, setStaffList] = useState([]);
   const [foodItemsList, setFoodItemsList] = useState([]);
   const [typesList, setTypesList] = useState([]);
@@ -129,10 +130,53 @@ const FoodWasteFormPage = () => {
     });
 
     // Initial 1 item row
-    const firstItem = createEmptyItem();
-    firstItem.foodItem = 'Minced Beef';
-    setWasteItems([firstItem]);
+    if (!logId) {
+      const firstItem = createEmptyItem();
+      firstItem.foodItem = 'Minced Beef';
+      setWasteItems([firstItem]);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!logId) return;
+    axios.get(`/api/food-waste-logs/${logId}`).then(res => {
+      const data = res.data;
+      if (data) {
+        if (data.log_date) setLogDate(data.log_date);
+        if (data.log_time) setLogTime(data.log_time);
+        if (data.staff_name) setStaffName(data.staff_name);
+        if (data.general_comments) setGeneralComments(data.general_comments);
+        if (data.prevention_action) setPreventionAction(data.prevention_action);
+        if (data.signed_by_staff_name) setSignedByStaffName(data.signed_by_staff_name);
+        if (data.signature) setSignature(data.signature);
+
+        let itemsData = data.items || [];
+        if (typeof itemsData === 'string') {
+          try { itemsData = JSON.parse(itemsData); } catch (e) { itemsData = []; }
+        }
+
+        if (Array.isArray(itemsData) && itemsData.length > 0) {
+          const loadedItems = itemsData.map(item => ({
+            id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            wasteType: item.wasteType || item.waste_type || 'Organic / Processing Scraps',
+            foodItem: item.foodItem || item.food_item || item.name || '',
+            source: item.source || 'Preparation',
+            reason: item.reason || 'Spoilage',
+            quantity: item.quantity !== null && item.quantity !== undefined ? String(item.quantity) : '',
+            unit: item.unit || 'kg',
+            estimatedCost: item.estimatedCost !== null && item.estimatedCost !== undefined ? String(item.estimatedCost) : (item.cost ? String(item.cost) : ''),
+            batchCode: item.batchCode || item.batch_code || '',
+            expiryDate: item.expiryDate || item.expiry_date || '',
+            disposalMethod: item.disposalMethod || item.disposal_method || 'Food waste bin',
+            notes: item.notes || item.comments || '',
+          }));
+          setWasteItems(loadedItems);
+        }
+      }
+    }).catch(err => {
+      console.error('Failed to load food waste log for edit', err);
+    });
+  }, [logId]);
 
   /* Item Handlers */
   const handleAddItem = () => {
@@ -271,7 +315,7 @@ const FoodWasteFormPage = () => {
 
     setSubmitting(true);
     try {
-      await axios.post('/api/food-waste-logs', {
+      const payload = {
         log_date: logDate,
         log_time: logTime,
         staff_name: staffName,
@@ -280,7 +324,13 @@ const FoodWasteFormPage = () => {
         prevention_action: preventionAction,
         signed_by_staff_name: signedByStaffName,
         signature: signature,
-      });
+      };
+
+      if (logId) {
+        await axios.put(`/api/food-waste-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/food-waste-logs', payload);
+      }
 
       router.visit('/haccp-logs/food-waste');
     } catch (err) {

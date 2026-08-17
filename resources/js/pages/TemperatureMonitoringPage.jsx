@@ -1,28 +1,43 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { Plus, Thermometer, ArrowLeft } from 'lucide-react';
+import { Plus, Thermometer, ArrowLeft, Pencil, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
-import DataTable from '../components/common/DataTable';
 import Modal from '../components/common/Modal';
-import StatusBadge from '../components/common/StatusBadge';
-import TemperatureForm from '../components/haccp/TemperatureForm';
 import axios from 'axios';
 
 const TemperatureMonitoringPage = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Modals state
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
+
+  // Edit Form State
+  const [editTemp, setEditTemp] = useState('');
+  const [editStaff, setEditStaff] = useState('');
+  const [editComment, setEditComment] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState(null);
 
   const openViewModal = (log) => {
     setSelectedLog(log);
     setViewModalOpen(true);
+  };
+
+  const openEditModal = (log) => {
+    setSelectedLog(log);
+    setEditTemp(log.temperature !== null ? String(log.temperature) : '');
+    setEditStaff(log.staff_name || '');
+    setEditComment(log.comment || '');
+    setEditError(null);
+    setViewModalOpen(false);
+    setEditModalOpen(true);
   };
 
   const fetchLogs = useCallback(async () => {
@@ -41,9 +56,41 @@ const TemperatureMonitoringPage = () => {
     fetchLogs();
   }, [fetchLogs]);
 
-  const handleSave = () => {
-    setModalOpen(false);
-    fetchLogs();
+  const handleUpdateLog = async (e) => {
+    e.preventDefault();
+    if (!selectedLog) return;
+    if (editTemp === '' || isNaN(parseFloat(editTemp))) {
+      setEditError('Please enter a valid temperature.');
+      return;
+    }
+
+    try {
+      setSavingEdit(true);
+      setEditError(null);
+      await axios.put(`/api/temperature-logs/${selectedLog.id}`, {
+        temperature: parseFloat(editTemp),
+        staff_name: editStaff,
+        comment: editComment,
+      });
+      setEditModalOpen(false);
+      fetchLogs();
+    } catch (err) {
+      console.error('Failed to update temperature log', err);
+      setEditError(err.response?.data?.message || 'Failed to update temperature log.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteLog = async (id) => {
+    if (!confirm('Are you sure you want to delete this temperature log?')) return;
+    try {
+      await axios.delete(`/api/temperature-logs/${id}`);
+      fetchLogs();
+    } catch (err) {
+      console.error('Failed to delete temperature log', err);
+      alert('Failed to delete temperature log.');
+    }
   };
 
   const filteredLogs = useMemo(() => {
@@ -149,9 +196,14 @@ const TemperatureMonitoringPage = () => {
                     </td>
                     <td>{getThermometerStr(log)}</td>
                     <td style={{ textAlign: 'right' }}>
-                      <Button variant="secondary" size="sm" onClick={() => openViewModal(log)}>
-                        View
-                      </Button>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                        <Button variant="secondary" size="sm" onClick={() => openViewModal(log)}>
+                          View
+                        </Button>
+                        <Button variant="outline" size="sm" icon={Pencil} onClick={() => openEditModal(log)}>
+                          Edit
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -160,13 +212,17 @@ const TemperatureMonitoringPage = () => {
           )}
         </Card>
       </div>
+
       {/* View Log Modal */}
       <Modal
         isOpen={viewModalOpen}
         onClose={() => setViewModalOpen(false)}
         title="View Temperature Log Details"
         footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+            <Button variant="outline" icon={Pencil} onClick={() => openEditModal(selectedLog)}>
+              Edit Entry
+            </Button>
             <Button variant="secondary" onClick={() => setViewModalOpen(false)}>
               Close
             </Button>
@@ -186,7 +242,9 @@ const TemperatureMonitoringPage = () => {
               </div>
               <div>
                 <label style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Temperature</label>
-                <div style={{ fontSize: '15px', fontWeight: 500, marginTop: '4px', color: 'var(--color-text-primary)' }}>{selectedLog.temperature} °C</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, marginTop: '4px', color: selectedLog.is_valid ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                  {selectedLog.temperature} °C
+                </div>
               </div>
               <div>
                 <label style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thermometer</label>
@@ -216,6 +274,91 @@ const TemperatureMonitoringPage = () => {
               </div>
             </div>
           </div>
+        )}
+      </Modal>
+
+      {/* Edit Log Modal */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title={`Edit Temperature Entry - ${selectedLog?.storage_zone?.name || 'Equipment'}`}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', width: '100%' }}>
+            <Button variant="secondary" onClick={() => setEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" loading={savingEdit} onClick={handleUpdateLog}>
+              Save Changes
+            </Button>
+          </div>
+        }
+      >
+        {selectedLog && (
+          <form onSubmit={handleUpdateLog} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {editError && (
+              <div style={{ padding: '10px 14px', backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: '8px', color: '#B91C1C', fontSize: '14px' }}>
+                {editError}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Equipment</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  disabled 
+                  value={selectedLog.storage_zone?.name || 'Unknown'} 
+                  style={{ backgroundColor: '#F3F4F6' }}
+                />
+              </div>
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Date & Time</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  disabled 
+                  value={`${selectedLog.log_date} ${selectedLog.log_time}`} 
+                  style={{ backgroundColor: '#F3F4F6' }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="form-label" style={{ fontWeight: 600 }}>Temperature (°C) *</label>
+              <input 
+                type="number" 
+                step="0.1" 
+                className="form-control" 
+                required 
+                value={editTemp} 
+                onChange={(e) => setEditTemp(e.target.value)} 
+                placeholder="e.g. 3.5"
+              />
+            </div>
+
+            <div>
+              <label className="form-label" style={{ fontWeight: 600 }}>Logged By Staff</label>
+              <input 
+                type="text" 
+                className="form-control" 
+                value={editStaff} 
+                onChange={(e) => setEditStaff(e.target.value)} 
+                placeholder="Staff name"
+              />
+            </div>
+
+            <div>
+              <label className="form-label" style={{ fontWeight: 600 }}>Comments / Corrective Action</label>
+              <textarea 
+                className="form-control" 
+                rows="3" 
+                value={editComment} 
+                onChange={(e) => setEditComment(e.target.value)} 
+                placeholder="Optional notes or corrective actions..."
+              />
+            </div>
+          </form>
         )}
       </Modal>
     </PageLayout>

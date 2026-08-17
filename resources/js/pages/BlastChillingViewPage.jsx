@@ -67,6 +67,9 @@ const BlastChillingViewPage = ({ logId }) => {
               Full CCP-4 compliance audit record for rapid cooling.
             </p>
           </div>
+          <Button variant="primary" onClick={() => router.visit(`/haccp-logs/blast-chilling/edit/${logId}`)}>
+            Edit Entry
+          </Button>
         </div>
 
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>

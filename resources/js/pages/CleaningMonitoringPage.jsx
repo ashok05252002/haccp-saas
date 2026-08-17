@@ -147,9 +147,14 @@ const CleaningMonitoringPage = () => {
                         </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <Button variant="secondary" size="sm" onClick={() => openViewModal(log)}>
-                          View Details
-                        </Button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                          <Button variant="secondary" size="sm" onClick={() => openViewModal(log)}>
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => router.visit(`/haccp-logs/cleaning/edit/${log.id}`)}>
+                            Edit
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -167,10 +172,15 @@ const CleaningMonitoringPage = () => {
         title="View Cleaning & Sanitation Details"
         size="md"
         footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', gap: '10px' }}>
             <Button variant="secondary" onClick={() => setViewModalOpen(false)}>
               Close
             </Button>
+            {selectedLog && (
+              <Button variant="primary" onClick={() => router.visit(`/haccp-logs/cleaning/edit/${selectedLog.id}`)}>
+                Edit Entry
+              </Button>
+            )}
           </div>
         }
       >

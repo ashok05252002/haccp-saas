@@ -106,9 +106,14 @@ const HealthDeclarationViewPage = ({ logId }) => {
             </h1>
           </div>
 
-          <Button variant="secondary" icon={Printer} onClick={handlePrint}>
-            Print Audit Sheet
-          </Button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Button variant="primary" onClick={() => router.visit(`/haccp-logs/health-declaration/edit/${logId}`)}>
+              Edit Entry
+            </Button>
+            <Button variant="secondary" icon={Printer} onClick={handlePrint}>
+              Print Audit Sheet
+            </Button>
+          </div>
         </div>
 
         {loading ? (

@@ -5,9 +5,11 @@ import SignatureCanvas from 'react-signature-canvas';
 import { AlertTriangle, Save, Flame, Snowflake, Snowflake as RefrigeratorIcon, RefreshCw, Soup, CheckCircle, ArrowRight, ArrowLeft, Plus } from 'lucide-react';
 import axios from 'axios';
 
-const CookingTemperatureForm = ({ onSave, onCancel }) => {
+const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [existingSignature, setExistingSignature] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
   // Stepper State (Step 0 to 5 -> 6 steps total)
   const [currentStep, setCurrentStep] = useState(0);
@@ -61,6 +63,71 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
     };
     fetchManagerData();
   }, []);
+
+  useEffect(() => {
+    if (!logId) return;
+    const fetchExisting = async () => {
+      try {
+        setLoadingExisting(true);
+        const res = await axios.get(`/api/cooking-logs/${logId}`);
+        const data = res.data;
+        if (data) {
+          if (data.log_date) setLogDate(data.log_date);
+          if (data.log_time) setLogTime(data.log_time);
+          if (data.staff_name) setStaffName(data.staff_name);
+          if (data.food_item) setFoodItem(data.food_item);
+          if (data.batch_code) setBatchCode(data.batch_code);
+          if (data.probe_id) setProbeId(data.probe_id);
+
+          if (data.cooking_temp !== null && data.cooking_temp !== undefined) setCookingTemp(String(data.cooking_temp));
+          if (data.cooking_target) setCookingTarget(data.cooking_target);
+          if (data.cooking_method) {
+            if (data.cooking_method === 'N/A') setCookingNa(true);
+            else setCookingMethod(data.cooking_method);
+          }
+
+          if (data.chilling_method) {
+            if (data.chilling_method === 'N/A') setChillingNa(true);
+            else setChillingMethod(data.chilling_method);
+          }
+          if (data.chilling_start_time) setChillingStartTime(data.chilling_start_time);
+          if (data.chilling_end_time) setChillingEndTime(data.chilling_end_time);
+          if (data.chilling_start_temp !== null && data.chilling_start_temp !== undefined) setChillingStartTemp(String(data.chilling_start_temp));
+          if (data.chilling_end_temp !== null && data.chilling_end_temp !== undefined) setChillingEndTemp(String(data.chilling_end_temp));
+          if (data.chilling_duration_minutes !== null && data.chilling_duration_minutes !== undefined) setChillingDurationMinutes(String(data.chilling_duration_minutes));
+          if (data.chilling_corrective_action) setChillingCorrectiveAction(data.chilling_corrective_action);
+
+          if (data.chiller_location) {
+            if (data.chiller_location === 'N/A') setChillerNa(true);
+            else setChillerLocation(data.chiller_location);
+          }
+          if (data.chiller_temp !== null && data.chiller_temp !== undefined) setChillerTemp(String(data.chiller_temp));
+
+          if (data.reheating_temp !== null && data.reheating_temp !== undefined) setReheatingTemp(String(data.reheating_temp));
+          if (data.reheating_method) {
+            if (data.reheating_method === 'N/A') setReheatingNa(true);
+            else setReheatingMethod(data.reheating_method);
+          }
+
+          if (data.hot_holding_location) {
+            if (data.hot_holding_location === 'N/A') setHotHoldingNa(true);
+            else setHotHoldingLocation(data.hot_holding_location);
+          }
+          if (data.hot_holding_temp !== null && data.hot_holding_temp !== undefined) setHotHoldingTemp(String(data.hot_holding_temp));
+
+          if (data.corrective_action) setCorrectiveAction(data.corrective_action);
+          if (data.notes) setNotes(data.notes);
+          if (data.signature) setExistingSignature(data.signature);
+        }
+      } catch (err) {
+        console.error('Failed to load existing cooking log for edit', err);
+        setError('Failed to load existing log data.');
+      } finally {
+        setLoadingExisting(false);
+      }
+    };
+    fetchExisting();
+  }, [logId]);
 
   const handleOpenFoodModal = async () => {
     setNewFoodItemForm({ name: '', storage_type_id: '', uom_id: '', status: 'Active' });
@@ -288,14 +355,17 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
     }
 
     // Validate Signature
-    if (!sigPad.current || sigPad.current.isEmpty()) {
+    let signatureData = existingSignature;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    }
+
+    if (!signatureData) {
       setError('Staff Verification Signature is mandatory. Please provide a signature before submitting.');
       return;
     }
 
     setSubmitting(true);
-
-    const signatureData = sigPad.current.getCanvas().toDataURL('image/png');
 
     const payload = {
       log_date: logDate,
@@ -337,7 +407,11 @@ const CookingTemperatureForm = ({ onSave, onCancel }) => {
     };
 
     try {
-      await axios.post('/api/cooking-logs', payload);
+      if (logId) {
+        await axios.put(`/api/cooking-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/cooking-logs', payload);
+      }
       onSave();
     } catch (err) {
       console.error('Failed to save cooking log', err);

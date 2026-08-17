@@ -5,7 +5,7 @@ import axios from 'axios';
 import { Save, AlertCircle, Trash2, Plus, X, Info } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 
-const DeliveryIntakeForm = ({ onSave, onCancel }) => {
+const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
   const [suppliers, setSuppliers] = useState([]);
   const [foodItems, setFoodItems] = useState([]);
   const [staffMembers, setStaffMembers] = useState([]);
@@ -67,6 +67,42 @@ const DeliveryIntakeForm = ({ onSave, onCancel }) => {
     };
     fetchMasterData();
   }, []);
+
+  useEffect(() => {
+    if (!logId) return;
+    const fetchExisting = async () => {
+      try {
+        const res = await axios.get(`/api/delivery-intake/${logId}`);
+        const data = res.data;
+        if (data) {
+          setForm({
+            log_date: data.log_date || new Date().toISOString().split('T')[0],
+            log_time: data.log_time || new Date().toTimeString().slice(0, 5),
+            supplier_id: data.supplier_id ? String(data.supplier_id) : '',
+            staff_name: data.staff_name || '',
+            packaging_intact: data.packaging_intact !== undefined ? Boolean(data.packaging_intact) : true,
+            vehicle_safe: data.vehicle_safe !== undefined ? Boolean(data.vehicle_safe) : true,
+            comment: data.comment || '',
+            signature: data.signature || '',
+          });
+          if (Array.isArray(data.products) && data.products.length > 0) {
+            setProducts(data.products.map(p => ({
+              id: p.id || Date.now() + Math.random(),
+              food_item_id: p.food_item_id ? String(p.food_item_id) : '',
+              batch_number: p.batch_number || '',
+              use_by_date: p.use_by_date || '',
+              quantity: p.quantity ? String(p.quantity) : '',
+              temperature: p.temperature !== null && p.temperature !== undefined ? String(p.temperature) : '',
+            })));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load delivery intake log for edit', err);
+        setError('Failed to load existing delivery intake data.');
+      }
+    };
+    fetchExisting();
+  }, [logId]);
 
   const handleOpenFoodModal = async (productId = null) => {
     setTargetProductId(productId);
@@ -210,7 +246,11 @@ const DeliveryIntakeForm = ({ onSave, onCancel }) => {
         }))
       };
 
-      await axios.post('/api/delivery-intake', payload);
+      if (logId) {
+        await axios.put(`/api/delivery-intake/${logId}`, payload);
+      } else {
+        await axios.post('/api/delivery-intake', payload);
+      }
       
       if (onSave) {
         onSave();

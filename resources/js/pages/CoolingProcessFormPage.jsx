@@ -4,7 +4,9 @@ import { ArrowLeft } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import CoolingProcessForm from '../components/haccp/CoolingProcessForm';
 
-const CoolingProcessFormPage = () => {
+const CoolingProcessFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
+
   const handleSave = () => {
     router.visit('/haccp-logs/cooling-process');
   };
@@ -15,7 +17,7 @@ const CoolingProcessFormPage = () => {
 
   return (
     <PageLayout>
-      <Head title="Add Cooling Process Log" />
+      <Head title={isEdit ? "Edit Cooling Process Entry" : "Add Cooling Process Log"} />
 
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
         <div style={{ flexShrink: 0 }}>
@@ -26,16 +28,16 @@ const CoolingProcessFormPage = () => {
 
           <div className="panel-header-row">
             <div>
-              <h1 className="page-title">Add Cooling Process Entry</h1>
+              <h1 className="page-title">{isEdit ? "Edit Cooling Process Entry" : "Add Cooling Process Entry"}</h1>
               <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                Record ambient cooling parameters for CCP-6 compliance verification (≤8°C within 2 hrs).
+                {isEdit ? "Update ambient cooling parameters for this CCP-6 record." : "Record ambient cooling parameters for CCP-6 compliance verification (≤8°C within 2 hrs)."}
               </p>
             </div>
           </div>
         </div>
 
         <div style={{ flex: 1, paddingBottom: '32px' }}>
-          <CoolingProcessForm onSave={handleSave} onCancel={handleCancel} />
+          <CoolingProcessForm logId={logId} onSave={handleSave} onCancel={handleCancel} />
         </div>
       </div>
     </PageLayout>

@@ -146,9 +146,14 @@ const CoolingProcessMonitoringPage = () => {
                         </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <Button variant="secondary" size="sm" onClick={() => router.visit(`/haccp-logs/cooling-process/view/${log.id}`)}>
-                          View
-                        </Button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                          <Button variant="secondary" size="sm" onClick={() => router.visit(`/haccp-logs/cooling-process/view/${log.id}`)}>
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => router.visit(`/haccp-logs/cooling-process/edit/${log.id}`)}>
+                            Edit
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );

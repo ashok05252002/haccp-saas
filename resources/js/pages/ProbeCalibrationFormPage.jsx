@@ -4,7 +4,9 @@ import { ArrowLeft } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import ProbeCalibrationForm from '../components/haccp/ProbeCalibrationForm';
 
-const ProbeCalibrationFormPage = () => {
+const ProbeCalibrationFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
+
   const handleSave = () => {
     router.visit('/haccp-logs/probe-calibration');
   };
@@ -15,7 +17,7 @@ const ProbeCalibrationFormPage = () => {
 
   return (
     <PageLayout>
-      <Head title="Add Probe Accuracy Check" />
+      <Head title={isEdit ? "Edit Probe Accuracy Check" : "Add Probe Accuracy Check"} />
 
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
         <div style={{ flexShrink: 0 }}>
@@ -26,16 +28,16 @@ const ProbeCalibrationFormPage = () => {
 
           <div className="panel-header-row">
             <div>
-              <h1 className="page-title">Record Probe Accuracy Check</h1>
+              <h1 className="page-title">{isEdit ? "Edit Probe Accuracy Check" : "Record Probe Accuracy Check"}</h1>
               <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                Verify thermometer accuracy using boiling water and ice water calibration tests.
+                {isEdit ? "Update thermometer accuracy test parameters for boiling water and ice water calibration." : "Verify thermometer accuracy using boiling water and ice water calibration tests."}
               </p>
             </div>
           </div>
         </div>
 
         <div style={{ flex: 1, paddingBottom: '32px' }}>
-          <ProbeCalibrationForm onSave={handleSave} onCancel={handleCancel} />
+          <ProbeCalibrationForm logId={logId} onSave={handleSave} onCancel={handleCancel} />
         </div>
       </div>
     </PageLayout>

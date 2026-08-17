@@ -26,9 +26,11 @@ const isTempInRange = (temp, storageType) => {
   return true;
 };
 
-const FoodDispatchForm = ({ onSave, onCancel }) => {
+const FoodDispatchForm = ({ onSave, onCancel, logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [existingSignature, setExistingSignature] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const nowTimeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -93,6 +95,38 @@ const FoodDispatchForm = ({ onSave, onCancel }) => {
     };
     fetchMasterData();
   }, []);
+
+  useEffect(() => {
+    if (!logId) return;
+    const fetchExisting = async () => {
+      try {
+        setLoadingExisting(true);
+        const res = await axios.get(`/api/food-dispatch-logs/${logId}`);
+        const data = res.data;
+        if (data) {
+          if (data.log_date) setLogDate(data.log_date);
+          if (data.log_time) setLogTime(data.log_time);
+          if (data.staff_name) setStaffName(data.staff_name);
+          if (data.food_item) setFoodItem(data.food_item);
+          if (data.food_category) setFoodCategory(data.food_category);
+          if (data.storage_type) setStorageType(data.storage_type);
+          if (data.batch_code) setBatchCode(data.batch_code);
+          if (data.destination) setDestination(data.destination);
+          if (data.use_by_date) setUseByDate(data.use_by_date);
+          if (data.temperature !== null && data.temperature !== undefined) setTemperature(String(data.temperature));
+          if (data.separation !== undefined) setSeparation(Boolean(data.separation));
+          if (data.comments) setComments(data.comments);
+          if (data.signature) setExistingSignature(data.signature);
+        }
+      } catch (err) {
+        console.error('Failed to load food dispatch log for edit', err);
+        setError('Failed to load existing food dispatch data.');
+      } finally {
+        setLoadingExisting(false);
+      }
+    };
+    fetchExisting();
+  }, [logId]);
 
   // Temperature Validation Derived Values
   const tempInRange = isTempInRange(temperature, storageType);
@@ -262,13 +296,17 @@ const FoodDispatchForm = ({ onSave, onCancel }) => {
       setError('Dispatch Temperature is required.');
       return;
     }
-    if (!sigPad.current || sigPad.current.isEmpty()) {
+    let signatureData = existingSignature;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    }
+
+    if (!signatureData) {
       setError('Staff Verification Signature is mandatory.');
       return;
     }
 
     setSubmitting(true);
-    const signatureData = sigPad.current.getCanvas().toDataURL('image/png');
 
     const payload = {
       log_date: logDate,
@@ -287,7 +325,11 @@ const FoodDispatchForm = ({ onSave, onCancel }) => {
     };
 
     try {
-      await axios.post('/api/food-dispatch-logs', payload);
+      if (logId) {
+        await axios.put(`/api/food-dispatch-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/food-dispatch-logs', payload);
+      }
       if (onSave) onSave();
     } catch (err) {
       console.error('Failed to save food dispatch log', err);

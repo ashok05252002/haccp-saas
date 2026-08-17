@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Plus, Search, Calendar, Eye, Trash2, CheckCircle2, AlertTriangle, Droplets, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Plus, Search, Calendar, Eye, Pencil, Trash2, CheckCircle2, AlertTriangle, Droplets, ArrowLeft, RefreshCw } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -240,6 +240,7 @@ const FryerOilMonitoringPage = () => {
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <Button variant="secondary" size="sm" icon={Eye} onClick={() => router.visit(`/haccp-logs/fryer-oil/view/${log.id}`)} />
+                        <Button variant="secondary" size="sm" icon={Pencil} onClick={() => router.visit(`/haccp-logs/fryer-oil/edit/${log.id}`)} />
                         <Button variant="secondary" size="sm" icon={Trash2} onClick={() => handleDelete(log.id)} style={{ color: '#EF4444' }} />
                       </div>
                     </td>

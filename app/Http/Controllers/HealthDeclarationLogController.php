@@ -78,7 +78,7 @@ class HealthDeclarationLogController extends Controller
     {
         $request->validate([
             'log_date'            => 'required|date',
-            'log_time'            => 'required|date_format:H:i',
+            'log_time'            => 'required|string',
             'staff_name'          => 'required|string|max:255',
             'comment'             => 'nullable|string',
             'signature'           => 'nullable|string',
@@ -90,6 +90,7 @@ class HealthDeclarationLogController extends Controller
         ]);
 
         $tenantId = Auth::user()->tenant_id;
+        $branchId = Auth::user()->branch_id ?? session('active_branch_id');
         if (!$tenantId) {
             return response()->json(['message' => 'Unauthorized tenant context.'], 403);
         }
@@ -110,6 +111,7 @@ class HealthDeclarationLogController extends Controller
 
             $log = HealthDeclarationLog::create([
                 'tenant_id'          => $tenantId,
+                'branch_id'          => $branchId,
                 'log_date'           => $request->log_date,
                 'log_time'           => $request->log_time,
                 'staff_name'         => $request->staff_name,
@@ -138,19 +140,75 @@ class HealthDeclarationLogController extends Controller
         }
     }
 
-    /**
-     * Delete a health declaration log.
-     */
+    public function update(Request $request, $id)
+    {
+        $tenantId = Auth::user()->tenant_id;
+        $log = HealthDeclarationLog::where('tenant_id', $tenantId)->findOrFail($id);
+
+        $request->validate([
+            'log_date'            => 'required|date',
+            'log_time'            => 'required|string',
+            'staff_name'          => 'required|string|max:255',
+            'comment'             => 'nullable|string',
+            'signature'           => 'nullable|string',
+            'manager_signature'   => 'nullable|string',
+            'results'             => 'required|array',
+            'results.*.question_id' => 'required|integer|exists:health_declaration_questions,id',
+            'results.*.answer'    => 'required|in:Yes,No',
+            'results.*.notes'     => 'nullable|string',
+        ]);
+
+        $hasYesAnswers = false;
+        foreach ($request->results as $resItem) {
+            if ($resItem['answer'] === 'Yes') {
+                $hasYesAnswers = true;
+                break;
+            }
+        }
+
+        $overallStatus = $hasYesAnswers ? 'Action Required / Unfit' : 'Fit for Work';
+
+        try {
+            DB::beginTransaction();
+
+            $log->update([
+                'log_date'           => $request->log_date,
+                'log_time'           => $request->log_time,
+                'staff_name'         => $request->staff_name,
+                'overall_status'     => $overallStatus,
+                'symptoms_reported'  => $hasYesAnswers,
+                'comment'            => $request->comment,
+                'signature'          => $request->signature ?: $log->signature,
+                'manager_signature'  => $request->manager_signature ?: $log->manager_signature,
+            ]);
+
+            // Sync results
+            HealthDeclarationLogResult::where('health_declaration_log_id', $log->id)->delete();
+            foreach ($request->results as $resultData) {
+                HealthDeclarationLogResult::create([
+                    'health_declaration_log_id' => $log->id,
+                    'question_id'               => $resultData['question_id'],
+                    'answer'                    => $resultData['answer'],
+                    'notes'                     => $resultData['notes'] ?? null,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json($log->load(['results.question.section']));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update health declaration: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function destroy($id)
     {
         $tenantId = Auth::user()->tenant_id;
-        if (!$tenantId) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
         $log = HealthDeclarationLog::where('tenant_id', $tenantId)->findOrFail($id);
+        HealthDeclarationLogResult::where('health_declaration_log_id', $log->id)->delete();
         $log->delete();
 
-        return response()->json(['message' => 'Health declaration log deleted successfully.']);
+        return response()->json(['message' => 'Health declaration deleted successfully']);
     }
 }

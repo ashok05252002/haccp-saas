@@ -10,7 +10,8 @@ import axios from 'axios';
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
 const getCurrentTimeString = () => new Date().toTimeString().slice(0, 5);
 
-const HealthDeclarationFormPage = () => {
+const HealthDeclarationFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
   const employeeSigCanvas = useRef(null);
   const managerSigCanvas = useRef(null);
 
@@ -54,6 +55,35 @@ const HealthDeclarationFormPage = () => {
             initialMap[q.id] = { answer: 'No', notes: '' };
           });
         });
+
+        if (logId) {
+          try {
+            const logRes = await axios.get(`/api/health-declaration-logs/${logId}`);
+            const logData = logRes.data;
+            if (logData) {
+              setForm({
+                log_date: logData.log_date || getTodayDateString(),
+                log_time: logData.log_time || getCurrentTimeString(),
+                staff_name: logData.staff_name || '',
+                comment: logData.comment || '',
+                signature: logData.signature || '',
+                manager_signature: logData.manager_signature || ''
+              });
+
+              if (Array.isArray(logData.results)) {
+                logData.results.forEach(r => {
+                  initialMap[r.question_id] = {
+                    answer: r.answer || 'No',
+                    notes: r.notes || ''
+                  };
+                });
+              }
+            }
+          } catch (fetchErr) {
+            console.error('Failed to load existing health declaration', fetchErr);
+          }
+        }
+
         setResponses(initialMap);
       } catch (err) {
         console.error('Failed to load health declaration dependencies', err);
@@ -64,7 +94,7 @@ const HealthDeclarationFormPage = () => {
     };
 
     fetchData();
-  }, []);
+  }, [logId]);
 
   const handleResponseChange = (qId, field, val) => {
     setResponses(prev => ({
@@ -132,10 +162,16 @@ const HealthDeclarationFormPage = () => {
 
     setSubmitting(true);
     try {
-      await axios.post('/api/health-declaration-logs', {
+      const payload = {
         ...form,
         results: resultsArray
-      });
+      };
+
+      if (logId) {
+        await axios.put(`/api/health-declaration-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/health-declaration-logs', payload);
+      }
       router.visit('/haccp-logs/health-declaration');
     } catch (err) {
       console.error('Failed to submit health declaration log', err);

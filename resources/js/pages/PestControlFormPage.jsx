@@ -7,7 +7,8 @@ import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
 import axios from 'axios';
 
-const PestControlFormPage = () => {
+const PestControlFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
   const [staffList, setStaffList] = useState([]);
   const [masterQuestions, setMasterQuestions] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
@@ -69,6 +70,50 @@ const PestControlFormPage = () => {
     });
   }, []);
 
+  useEffect(() => {
+    if (!logId) return;
+    axios.get(`/api/pest-control-logs/${logId}`).then(res => {
+      const data = res.data;
+      if (data) {
+        if (data.log_date) setLogDate(data.log_date);
+        if (data.log_time) setLogTime(data.log_time);
+        if (data.staff_name) setStaffName(data.staff_name);
+        if (data.pest_activity_observed !== undefined) {
+          setIsPestFree(!Boolean(data.pest_activity_observed));
+        }
+        if (data.action_notes) setRemarks(data.action_notes);
+        if (data.contractor_name) setContractorName(data.contractor_name);
+        if (data.visit_date) setVisitDate(data.visit_date);
+        if (data.report_ref_number) setReportRefNumber(data.report_ref_number);
+        if (data.recommendations) setRecommendations(data.recommendations);
+        if (data.next_visit_due_date) setNextVisitDueDate(data.next_visit_due_date);
+        if (data.general_comments) setGeneralComments(data.general_comments);
+        if (data.signed_by_staff_name) setSignedByStaffName(data.signed_by_staff_name);
+        if (data.signature) setSignature(data.signature);
+
+        let checklist = data.checklist_answers || [];
+        if (typeof checklist === 'string') {
+          try { checklist = JSON.parse(checklist); } catch (e) { checklist = []; }
+        }
+
+        if (Array.isArray(checklist) && checklist.length > 0) {
+          const loadedAnswers = {};
+          checklist.forEach(item => {
+            if (item.id !== undefined) {
+              loadedAnswers[item.id] = {
+                answer: Boolean(item.answer),
+                note: item.note || ''
+              };
+            }
+          });
+          setChecklistAnswers(prev => ({ ...prev, ...loadedAnswers }));
+        }
+      }
+    }).catch(err => {
+      console.error('Failed to load pest control log for edit', err);
+    });
+  }, [logId]);
+
   const handleChecklistToggle = (qId, answer) => {
     setChecklistAnswers(prev => ({
       ...prev,
@@ -124,7 +169,7 @@ const PestControlFormPage = () => {
         note: checklistAnswers[q.id]?.note || '',
       }));
 
-      await axios.post('/api/pest-control-logs', {
+      const payload = {
         log_date: logDate,
         log_time: logTime,
         staff_name: staffName,
@@ -140,7 +185,13 @@ const PestControlFormPage = () => {
         general_comments: generalComments,
         signed_by_staff_name: signedByStaffName,
         signature: signature,
-      });
+      };
+
+      if (logId) {
+        await axios.put(`/api/pest-control-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/pest-control-logs', payload);
+      }
 
       router.visit('/haccp-logs/pest-control');
     } catch (err) {

@@ -65,6 +65,9 @@ const CookingTemperatureViewPage = ({ logId }) => {
               Full breakdown of all 6 process stages.
             </p>
           </div>
+          <Button variant="primary" onClick={() => router.visit(`/haccp-logs/cooking-temperature/edit/${logId}`)}>
+            Edit Entry
+          </Button>
         </div>
 
         <div style={{ maxWidth: '840px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>

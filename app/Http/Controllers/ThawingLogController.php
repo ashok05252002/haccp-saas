@@ -26,7 +26,7 @@ class ThawingLogController extends Controller
     public function store(Request $request)
     {
         $tenantId = Auth::user()->tenant_id;
-        $branchId = Auth::user()->branch_id;
+        $branchId = Auth::user()->branch_id ?? session('active_branch_id');
 
         if (!$tenantId) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -85,6 +85,56 @@ class ThawingLogController extends Controller
         $tenantId = Auth::user()->tenant_id;
         $log = ThawingLog::where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
         return response()->json($log);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $tenantId = Auth::user()->tenant_id;
+        $log = ThawingLog::where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
+
+        $validated = $request->validate([
+            'log_date' => 'required|date',
+            'log_time' => 'required|string',
+            'food_item_name' => 'required|string|max:255',
+            'defrost_method' => 'required|string|max:255',
+            'storage_location' => 'nullable|string|max:255',
+            'start_date' => 'required|date',
+            'start_time' => 'required|string',
+            'completed_date' => 'required|date',
+            'completed_time' => 'required|string',
+            'defrost_temp' => 'required|numeric',
+            'comments' => 'nullable|string',
+            'signed_by_staff_name' => 'required|string|max:255',
+            'signature' => 'nullable|string',
+        ]);
+
+        $defrostTemp = floatval($validated['defrost_temp']);
+        $defrostMethod = $validated['defrost_method'];
+        $isChilledMethod = str_contains(strtolower($defrostMethod), 'refrigerator') ||
+                           str_contains(strtolower($defrostMethod), 'chiller') ||
+                           str_contains(strtolower($defrostMethod), 'water');
+
+        $passed = !($isChilledMethod && $defrostTemp > 5.0);
+        $status = $passed ? 'Passed' : 'Needs Review';
+
+        $log->update([
+            'log_date' => $validated['log_date'],
+            'log_time' => $validated['log_time'],
+            'food_item_name' => $validated['food_item_name'],
+            'defrost_method' => $validated['defrost_method'],
+            'storage_location' => $validated['storage_location'] ?? null,
+            'start_date' => $validated['start_date'],
+            'start_time' => $validated['start_time'],
+            'completed_date' => $validated['completed_date'],
+            'completed_time' => $validated['completed_time'],
+            'defrost_temp' => $defrostTemp,
+            'comments' => $validated['comments'] ?? null,
+            'signed_by_staff_name' => $validated['signed_by_staff_name'],
+            'signature' => $validated['signature'] ?: $log->signature,
+            'status' => $status,
+        ]);
+
+        return response()->json(['message' => 'Thawing log updated successfully', 'log' => $log]);
     }
 
     public function destroy($id)

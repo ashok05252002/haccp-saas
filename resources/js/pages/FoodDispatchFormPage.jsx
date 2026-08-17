@@ -4,7 +4,9 @@ import { ArrowLeft } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import FoodDispatchForm from '../components/haccp/FoodDispatchForm';
 
-const FoodDispatchFormPage = () => {
+const FoodDispatchFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
+
   const handleSave = () => {
     router.visit('/haccp-logs/food-dispatch');
   };
@@ -15,7 +17,7 @@ const FoodDispatchFormPage = () => {
 
   return (
     <PageLayout>
-      <Head title="Add Food Dispatch Log" />
+      <Head title={isEdit ? "Edit Food Dispatch Log" : "Add Food Dispatch Log"} />
 
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
         <div style={{ flexShrink: 0 }}>
@@ -26,16 +28,16 @@ const FoodDispatchFormPage = () => {
 
           <div className="panel-header-row">
             <div>
-              <h1 className="page-title">Record Food Dispatch / Transfer</h1>
+              <h1 className="page-title">{isEdit ? "Edit Food Dispatch Entry" : "Record Food Dispatch / Transfer"}</h1>
               <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                Record safe dispatch parameters, temperatures, and separation checks for food in transit.
+                {isEdit ? "Update dispatch parameters, temperatures, and separation checks for this transfer." : "Record safe dispatch parameters, temperatures, and separation checks for food in transit."}
               </p>
             </div>
           </div>
         </div>
 
         <div style={{ flex: 1, paddingBottom: '32px' }}>
-          <FoodDispatchForm onSave={handleSave} onCancel={handleCancel} />
+          <FoodDispatchForm logId={logId} onSave={handleSave} onCancel={handleCancel} />
         </div>
       </div>
     </PageLayout>

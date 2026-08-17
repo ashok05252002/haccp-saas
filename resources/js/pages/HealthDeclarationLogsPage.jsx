@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Plus, ArrowLeft, HeartPulse, Eye, Trash2, CheckCircle, AlertTriangle, XCircle, Printer } from 'lucide-react';
+import { Plus, ArrowLeft, HeartPulse, Eye, Pencil, Trash2, CheckCircle, AlertTriangle, XCircle, Printer } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -217,6 +217,25 @@ const HealthDeclarationLogsPage = () => {
                             }}
                           >
                             <Eye size={14} /> View
+                          </button>
+                          <button
+                            onClick={() => router.visit(`/haccp-logs/health-declaration/edit/${log.id}`)}
+                            title="Edit Declaration"
+                            style={{
+                              background: 'none',
+                              border: '1px solid var(--color-border-light)',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              color: 'var(--color-text-primary)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '12px',
+                              fontWeight: 600
+                            }}
+                          >
+                            <Pencil size={14} /> Edit
                           </button>
                           <button
                             onClick={() => handleDelete(log.id)}

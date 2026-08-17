@@ -68,9 +68,14 @@ const FryerOilViewPage = ({ logId }) => {
             </p>
           </div>
 
-          <Button variant="secondary" icon={Printer} onClick={handlePrint}>
-            Print Log
-          </Button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Button variant="primary" onClick={() => router.visit(`/haccp-logs/fryer-oil/edit/${logId}`)}>
+              Edit Entry
+            </Button>
+            <Button variant="secondary" icon={Printer} onClick={handlePrint}>
+              Print Log
+            </Button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

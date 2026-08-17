@@ -74,12 +74,14 @@ class CookingLogController extends Controller
         ]);
 
         $tenantId = Auth::user()->tenant_id;
+        $branchId = Auth::user()->branch_id ?? session('active_branch_id');
         if (!$tenantId) {
             return response()->json(['message' => 'Unauthorized tenant context.'], 403);
         }
 
         $log = CookingLog::create([
             'tenant_id' => $tenantId,
+            'branch_id' => $branchId,
             'log_date' => $request->log_date,
             'log_time' => $request->log_time,
             'staff_name' => $request->staff_name,
@@ -113,5 +115,61 @@ class CookingLogController extends Controller
         ]);
 
         return response()->json(['message' => 'Cooking log saved successfully', 'log' => $log], 201);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $tenantId = Auth::user()->tenant_id;
+        if (!$tenantId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $log = CookingLog::where('tenant_id', $tenantId)->findOrFail($id);
+
+        $validated = $request->validate([
+            'log_date' => 'required|date',
+            'log_time' => 'required|string',
+            'food_item' => 'required|string|max:255',
+            'staff_name' => 'nullable|string|max:255',
+            'batch_code' => 'nullable|string|max:255',
+            'probe_id' => 'nullable|string|max:255',
+            'cooking_temp' => 'nullable|numeric',
+            'cooking_target' => 'nullable|string',
+            'cooking_method' => 'nullable|string',
+            'cooking_passed' => 'nullable|boolean',
+            'chilling_method' => 'nullable|string',
+            'chilling_start_time' => 'nullable|string',
+            'chilling_end_time' => 'nullable|string',
+            'chilling_start_temp' => 'nullable|numeric',
+            'chilling_end_temp' => 'nullable|numeric',
+            'chilling_duration_minutes' => 'nullable|integer',
+            'chilling_passed' => 'nullable|boolean',
+            'chilling_corrective_action' => 'nullable|string',
+            'chiller_location' => 'nullable|string',
+            'chiller_temp' => 'nullable|numeric',
+            'chiller_passed' => 'nullable|boolean',
+            'reheating_temp' => 'nullable|numeric',
+            'reheating_method' => 'nullable|string',
+            'reheating_passed' => 'nullable|boolean',
+            'hot_holding_location' => 'nullable|string',
+            'hot_holding_temp' => 'nullable|numeric',
+            'hot_holding_passed' => 'nullable|boolean',
+            'corrective_action' => 'nullable|string',
+            'notes' => 'nullable|string',
+            'signature' => 'nullable|string',
+        ]);
+
+        $log->update($validated);
+
+        return response()->json(['message' => 'Cooking log updated successfully', 'log' => $log]);
+    }
+
+    public function destroy($id)
+    {
+        $tenantId = Auth::user()->tenant_id;
+        $log = CookingLog::where('tenant_id', $tenantId)->findOrFail($id);
+        $log->delete();
+
+        return response()->json(['message' => 'Cooking log deleted successfully']);
     }
 }

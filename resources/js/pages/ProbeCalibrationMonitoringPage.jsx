@@ -119,13 +119,22 @@ const ProbeCalibrationMonitoringPage = () => {
       key: 'actions',
       align: 'right',
       render: (log) => (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => router.visit(`/haccp-logs/probe-calibration/view/${log.id}`)}
-        >
-          View
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => router.visit(`/haccp-logs/probe-calibration/view/${log.id}`)}
+          >
+            View
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.visit(`/haccp-logs/probe-calibration/edit/${log.id}`)}
+          >
+            Edit
+          </Button>
+        </div>
       ),
     },
   ];

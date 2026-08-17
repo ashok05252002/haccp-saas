@@ -193,6 +193,9 @@ const HotHoldingViewPage = ({ logId }) => {
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
+            <Button variant="outline" onClick={() => router.visit(`/haccp-logs/hot-holding/edit/${logId}`)}>
+              Edit Entry
+            </Button>
             {(!hasCheck2 || !hasCheck3 || !hasCheck4) && (
               <Button variant="primary" icon={Plus} onClick={handleOpenCheckModal}>
                 Log Check {nextCheckNum}

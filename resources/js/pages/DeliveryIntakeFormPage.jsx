@@ -6,8 +6,9 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import DeliveryIntakeForm from '../components/haccp/DeliveryIntakeForm';
 
-const DeliveryIntakeFormPage = () => {
-  const [acceptedGuidelines, setAcceptedGuidelines] = useState(false);
+const DeliveryIntakeFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
+  const [acceptedGuidelines, setAcceptedGuidelines] = useState(isEdit);
   const [isChecked, setIsChecked] = useState(false);
 
   const handleSave = () => {
@@ -26,7 +27,7 @@ const DeliveryIntakeFormPage = () => {
 
   return (
     <PageLayout>
-      <Head title="Add Delivery Intake Entry" />
+      <Head title={isEdit ? "Edit Delivery Intake Entry" : "Add Delivery Intake Entry"} />
 
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
         <div style={{ flexShrink: 0 }}>
@@ -37,9 +38,9 @@ const DeliveryIntakeFormPage = () => {
 
           <div className="panel-header-row">
             <div>
-              <h1 className="page-title">Add Delivery Intake Entry</h1>
+              <h1 className="page-title">{isEdit ? "Edit Delivery Intake Entry" : "Add Delivery Intake Entry"}</h1>
               <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                Record new incoming deliveries, check temperatures, and supplier details.
+                {isEdit ? "Update delivery intake details, product temperatures, and supplier verification." : "Record new incoming deliveries, check temperatures, and supplier details."}
               </p>
             </div>
           </div>
@@ -58,74 +59,53 @@ const DeliveryIntakeFormPage = () => {
                   </h2>
                   <div style={{ backgroundColor: '#FAFAFA', border: '1px solid var(--color-border-light)', borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
                     <p style={{ fontSize: '15px', color: 'var(--color-text-primary)', marginBottom: '16px', fontWeight: 500 }}>
-                      Incoming goods must be checked at intake to prevent hazardous materials entering the food chain.
+                      Delivery checks are critical control points (CCP-1). Before logging a delivery intake, confirm:
                     </p>
-                    
-                    <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
-                      Critical Limits
-                    </h4>
-                    
-                    <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
-                      For large deliveries, sample one or two food products from that delivery.
-                    </p>
-
-                    <ul style={{ listStyleType: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', marginTop: '6px' }}></div>
-                        <div>
-                          <strong style={{ color: 'var(--color-text-primary)' }}>Chilled food:</strong> 0°C to 5°C <span style={{ color: 'var(--color-text-muted)' }}>(Minced meat products: 0°C to 2°C)</span>
-                        </div>
-                      </li>
-                      <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', marginTop: '6px' }}></div>
-                        <div>
-                          <strong style={{ color: 'var(--color-text-primary)' }}>Frozen food:</strong> less than or equal to -18°C
-                        </div>
-                      </li>
-                      <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', marginTop: '6px' }}></div>
-                        <div>
-                          <strong style={{ color: 'var(--color-text-primary)' }}>Ambient food:</strong> Food can be safely stored at room temperature
-                        </div>
-                      </li>
-                      <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', marginTop: '6px' }}></div>
-                        <div>
-                          <strong style={{ color: 'var(--color-text-primary)' }}>Hot food:</strong> greater than or equal to 63°C
-                        </div>
-                      </li>
+                    <ul style={{ paddingLeft: '20px', color: 'var(--color-text-secondary)', fontSize: '14px', lineHeight: 1.8 }}>
+                      <li><strong style={{ color: 'var(--color-text-primary)' }}>Chilled Foods:</strong> Must arrive at <strong>≤ 5°C</strong> (or manufacturer specification).</li>
+                      <li><strong style={{ color: 'var(--color-text-primary)' }}>Frozen Foods:</strong> Must arrive at <strong>≤ -18°C</strong> with no signs of thawing/refreezing.</li>
+                      <li><strong style={{ color: 'var(--color-text-primary)' }}>Packaging:</strong> Clean, intact, properly sealed, and undamaged.</li>
+                      <li><strong style={{ color: 'var(--color-text-primary)' }}>Use-by / Best Before:</strong> Dates are within safe shelf-life limits.</li>
+                      <li><strong style={{ color: 'var(--color-text-primary)' }}>Vehicle Cleanliness:</strong> Delivery van/truck must be clean and hygienic.</li>
                     </ul>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', backgroundColor: 'var(--color-page-bg)', padding: '16px', borderRadius: '8px' }}>
-                    <input 
-                      type="checkbox" 
-                      id="accept_guidelines" 
-                      checked={isChecked} 
-                      onChange={(e) => setIsChecked(e.target.checked)}
-                      style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: 'var(--color-primary)' }}
-                    />
-                    <label htmlFor="accept_guidelines" style={{ fontSize: '15px', fontWeight: 500, color: 'var(--color-text-primary)', cursor: 'pointer', userSelect: 'none' }}>
-                      I have read and accepted these guidelines
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => setIsChecked(e.target.checked)}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-primary)' }}
+                      />
+                      <span style={{ fontSize: '14px', color: 'var(--color-text-primary)', fontWeight: 500 }}>
+                        I have inspected the delivery against critical limits and understand acceptance criteria.
+                      </span>
                     </label>
-                  </div>
 
-                  <Button 
-                    variant="primary" 
-                    size="lg" 
-                    icon={Check} 
-                    onClick={handleAccept} 
-                    disabled={!isChecked}
-                    style={{ width: '100%', padding: '14px', fontSize: '16px' }}
-                  >
-                    Proceed to Form
-                  </Button>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                      <Button
+                        variant="secondary"
+                        onClick={handleCancel}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        icon={Check}
+                        disabled={!isChecked}
+                        onClick={handleAccept}
+                      >
+                        Proceed to Intake Form
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </Card>
           ) : (
             <Card padding="0">
-              <DeliveryIntakeForm onSave={handleSave} onCancel={handleCancel} />
+              <DeliveryIntakeForm logId={logId} onSave={handleSave} onCancel={handleCancel} />
             </Card>
           )}
         </div>

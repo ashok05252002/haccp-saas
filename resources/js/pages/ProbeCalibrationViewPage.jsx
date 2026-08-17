@@ -69,6 +69,9 @@ const ProbeCalibrationViewPage = ({ logId }) => {
               Equipment calibration verification audit record (ISO 22000 & Codex HACCP).
             </p>
           </div>
+          <Button variant="primary" onClick={() => router.visit(`/haccp-logs/probe-calibration/edit/${logId}`)}>
+            Edit Entry
+          </Button>
         </div>
 
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>

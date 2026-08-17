@@ -66,9 +66,16 @@ const StaffTrainingViewPage = ({ logId }) => {
             </p>
           </div>
 
-          <Button variant="secondary" icon={Printer} onClick={handlePrint}>
-            Print Log
-          </Button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {log.staff_id && (
+              <Button variant="primary" onClick={() => router.visit(`/haccp-logs/staff-training/task/${log.staff_id}`)}>
+                Manage Staff Tasks
+              </Button>
+            )}
+            <Button variant="secondary" icon={Printer} onClick={handlePrint}>
+              Print Log
+            </Button>
+          </div>
         </div>
 
         <Card style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

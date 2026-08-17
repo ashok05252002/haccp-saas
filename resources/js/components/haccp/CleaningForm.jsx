@@ -4,12 +4,13 @@ import SignatureCanvas from 'react-signature-canvas';
 import { AlertTriangle, Save, CheckCircle, XCircle, MinusCircle, ClipboardCheck, ArrowRight, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 
-const CleaningForm = ({ onSave, onCancel }) => {
+const CleaningForm = ({ onSave, onCancel, logId }) => {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState([]);
   const [staffMembers, setStaffMembers] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [existingSignature, setExistingSignature] = useState(null);
 
   // Stepper State
   const [currentStep, setCurrentStep] = useState(0);
@@ -44,6 +45,32 @@ const CleaningForm = ({ onSave, onCancel }) => {
             initialAnswers[q.id] = { result: '', comment: '' };
           });
         });
+
+        if (logId) {
+          try {
+            const logRes = await axios.get(`/api/cleaning-logs/${logId}`);
+            const logData = logRes.data;
+            if (logData) {
+              if (logData.log_date) setLogDate(logData.log_date);
+              if (logData.log_time) setLogTime(logData.log_time);
+              if (logData.staff_name) setStaffName(logData.staff_name);
+              if (logData.comment) setOverallComment(logData.comment);
+              if (logData.signature) setExistingSignature(logData.signature);
+
+              if (Array.isArray(logData.results)) {
+                logData.results.forEach(r => {
+                  initialAnswers[r.question_id] = {
+                    result: r.result,
+                    comment: r.comment || ''
+                  };
+                });
+              }
+            }
+          } catch (fetchErr) {
+            console.error('Failed to load existing cleaning log', fetchErr);
+          }
+        }
+
         setAnswers(initialAnswers);
 
       } catch (err) {
@@ -54,7 +81,7 @@ const CleaningForm = ({ onSave, onCancel }) => {
       }
     };
     fetchData();
-  }, []);
+  }, [logId]);
 
   const handleAnswerChange = (qId, field, val) => {
     setAnswers(prev => ({
@@ -112,20 +139,26 @@ const CleaningForm = ({ onSave, onCancel }) => {
       });
     });
 
-    let signatureData = null;
+    let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
       signatureData = sigPad.current.getCanvas().toDataURL('image/png');
     }
 
     try {
-      await axios.post('/api/cleaning-logs', {
+      const payload = {
         log_date: logDate,
         log_time: logTime,
         staff_name: staffName,
         comment: overallComment,
         signature: signatureData,
         results: results
-      });
+      };
+
+      if (logId) {
+        await axios.put(`/api/cleaning-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/cleaning-logs', payload);
+      }
       onSave();
     } catch (err) {
       console.error('Failed to save logs', err);

@@ -18,9 +18,11 @@ const isIceInRange = (temp) => {
   return t >= -1.0 && t <= 1.0;
 };
 
-const ProbeCalibrationForm = ({ onSave, onCancel }) => {
+const ProbeCalibrationForm = ({ onSave, onCancel, logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [existingSignature, setExistingSignature] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const nowTimeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -74,6 +76,34 @@ const ProbeCalibrationForm = ({ onSave, onCancel }) => {
     };
     fetchMasterData();
   }, []);
+
+  useEffect(() => {
+    if (!logId) return;
+    const fetchExisting = async () => {
+      try {
+        setLoadingExisting(true);
+        const res = await axios.get(`/api/probe-calibration-logs/${logId}`);
+        const data = res.data;
+        if (data) {
+          if (data.log_date) setLogDate(data.log_date);
+          if (data.log_time) setLogTime(data.log_time);
+          if (data.staff_name) setStaffName(data.staff_name);
+          if (data.probe_name) setProbeName(data.probe_name);
+          if (data.probe_serial_number) setProbeSerialNumber(data.probe_serial_number);
+          if (data.boiling_temp !== null && data.boiling_temp !== undefined) setBoilingTemp(String(data.boiling_temp));
+          if (data.ice_temp !== null && data.ice_temp !== undefined) setIceTemp(String(data.ice_temp));
+          if (data.comments) setComments(data.comments);
+          if (data.signature) setExistingSignature(data.signature);
+        }
+      } catch (err) {
+        console.error('Failed to load probe calibration check for edit', err);
+        setError('Failed to load existing calibration check data.');
+      } finally {
+        setLoadingExisting(false);
+      }
+    };
+    fetchExisting();
+  }, [logId]);
 
   // Validation Evaluations
   const boilingValid = isBoilingInRange(boilingTemp);
@@ -208,13 +238,17 @@ const ProbeCalibrationForm = ({ onSave, onCancel }) => {
       setError('Ice water test reading is required.');
       return;
     }
-    if (!sigPad.current || sigPad.current.isEmpty()) {
+    let signatureData = existingSignature;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    }
+
+    if (!signatureData) {
       setError('Staff Verification Signature is mandatory.');
       return;
     }
 
     setSubmitting(true);
-    const signatureData = sigPad.current.getCanvas().toDataURL('image/png');
 
     const payload = {
       log_date: logDate,
@@ -229,7 +263,11 @@ const ProbeCalibrationForm = ({ onSave, onCancel }) => {
     };
 
     try {
-      await axios.post('/api/probe-calibration-logs', payload);
+      if (logId) {
+        await axios.put(`/api/probe-calibration-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/probe-calibration-logs', payload);
+      }
       if (onSave) onSave();
     } catch (err) {
       console.error('Failed to save probe calibration check', err);

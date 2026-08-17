@@ -68,9 +68,14 @@ const ThawingViewPage = ({ logId }) => {
             </p>
           </div>
 
-          <Button variant="secondary" icon={Printer} onClick={handlePrint}>
-            Print Log
-          </Button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Button variant="primary" onClick={() => router.visit(`/haccp-logs/thawing/edit/${logId}`)}>
+              Edit Entry
+            </Button>
+            <Button variant="secondary" icon={Printer} onClick={handlePrint}>
+              Print Log
+            </Button>
+          </div>
         </div>
 
         <Card style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

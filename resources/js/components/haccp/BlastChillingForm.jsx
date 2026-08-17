@@ -28,9 +28,11 @@ const calculateDurationMins = (startTime, endTime) => {
   return diff;
 };
 
-const BlastChillingForm = ({ onSave, onCancel }) => {
+const BlastChillingForm = ({ onSave, onCancel, logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [existingSignature, setExistingSignature] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
   // Form Fields matching mock schema
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -97,6 +99,38 @@ const BlastChillingForm = ({ onSave, onCancel }) => {
     };
     fetchMasterData();
   }, []);
+
+  useEffect(() => {
+    if (!logId) return;
+    const fetchExisting = async () => {
+      try {
+        setLoadingExisting(true);
+        const res = await axios.get(`/api/blast-chilling-logs/${logId}`);
+        const data = res.data;
+        if (data) {
+          if (data.log_date) setLogDate(data.log_date);
+          if (data.log_time) setLogTime(data.log_time);
+          if (data.staff_name) setStaffName(data.staff_name);
+          if (data.food_item) setFoodItem(data.food_item);
+          if (data.probe_id) setProbeId(data.probe_id);
+          if (data.chilling_start_time) setChillingStartTime(data.chilling_start_time);
+          if (data.chilling_end_time) setChillingEndTime(data.chilling_end_time);
+          if (data.start_temp !== null && data.start_temp !== undefined) setStartTemp(String(data.start_temp));
+          if (data.end_temp !== null && data.end_temp !== undefined) setEndTemp(String(data.end_temp));
+          if (data.duration_minutes !== null && data.duration_minutes !== undefined) setDurationMinutes(String(data.duration_minutes));
+          if (data.corrective_action) setCorrectiveAction(data.corrective_action);
+          if (data.notes) setNotes(data.notes);
+          if (data.signature) setExistingSignature(data.signature);
+        }
+      } catch (err) {
+        console.error('Failed to fetch blast chilling log for edit', err);
+        setError('Failed to load existing log data.');
+      } finally {
+        setLoadingExisting(false);
+      }
+    };
+    fetchExisting();
+  }, [logId]);
 
   // Handler when Start Time changes
   const handleStartTimeChange = (val) => {
@@ -235,13 +269,17 @@ const BlastChillingForm = ({ onSave, onCancel }) => {
       return;
     }
 
-    if (!sigPad.current || sigPad.current.isEmpty()) {
+    let signatureData = existingSignature;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    }
+
+    if (!signatureData) {
       setError('Staff Verification Signature is mandatory.');
       return;
     }
 
     setSubmitting(true);
-    const signatureData = sigPad.current.getCanvas().toDataURL('image/png');
 
     const payload = {
       log_date: logDate,
@@ -260,7 +298,11 @@ const BlastChillingForm = ({ onSave, onCancel }) => {
     };
 
     try {
-      await axios.post('/api/blast-chilling-logs', payload);
+      if (logId) {
+        await axios.put(`/api/blast-chilling-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/blast-chilling-logs', payload);
+      }
       if (onSave) onSave();
     } catch (err) {
       console.error('Failed to save blast chilling log', err);

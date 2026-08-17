@@ -34,7 +34,8 @@ const DISPOSAL_TYPES = [
   'Other',
 ];
 
-const FryerOilFormPage = () => {
+const FryerOilFormPage = ({ logId }) => {
+  const isEdit = Boolean(logId);
   const [staffList, setStaffList] = useState([]);
   const [fryersList, setFryersList] = useState([]);
   const [greaseAreasList, setGreaseAreasList] = useState([]);
@@ -108,6 +109,39 @@ const FryerOilFormPage = () => {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!logId) return;
+    axios.get(`/api/fryer-oil-logs/${logId}`).then(res => {
+      const data = res.data;
+      if (data) {
+        if (data.log_date) setLogDate(data.log_date);
+        if (data.log_time) setLogTime(data.log_time);
+        if (data.staff_name) setStaffName(data.staff_name);
+        if (data.fryer_station) setFryerStation(data.fryer_station);
+        if (data.frying_temp !== null && data.frying_temp !== undefined) setFryingTemp(String(data.frying_temp));
+        if (data.oil_condition) setOilCondition(data.oil_condition);
+        if (data.oil_quality_acceptable !== undefined) setOilQualityAcceptable(Boolean(data.oil_quality_acceptable));
+        if (data.oil_action_taken) setOilActionTaken(data.oil_action_taken);
+        if (data.quantity_removed !== null && data.quantity_removed !== undefined) setQuantityRemoved(String(data.quantity_removed));
+        if (data.step1_comments) setStep1Comments(data.step1_comments);
+
+        if (data.disposal_type) setDisposalType(data.disposal_type);
+        if (data.grease_area) setGreaseArea(data.grease_area);
+        if (data.disposal_quantity !== null && data.disposal_quantity !== undefined) setDisposalQuantity(String(data.disposal_quantity));
+        if (data.disposal_method) setDisposalMethod(data.disposal_method);
+        if (data.waste_contractor) setWasteContractor(data.waste_contractor);
+        if (data.collection_ref_number) setCollectionRefNumber(data.collection_ref_number);
+        if (data.next_cleaning_due_date) setNextCleaningDueDate(data.next_cleaning_due_date);
+        if (data.step2_comments) setStep2Comments(data.step2_comments);
+
+        if (data.signed_by_staff_name) setSignedByStaffName(data.signed_by_staff_name);
+        if (data.signature) setSignature(data.signature);
+      }
+    }).catch(err => {
+      console.error('Failed to load fryer oil log for edit', err);
+    });
+  }, [logId]);
+
   const handleOilConditionChange = (condition) => {
     setOilCondition(condition);
     const degradedConditions = ['Dark / degraded', 'Foaming', 'Smoking', 'Strong smell', 'Food debris present'];
@@ -160,7 +194,7 @@ const FryerOilFormPage = () => {
 
     setSubmitting(true);
     try {
-      await axios.post('/api/fryer-oil-logs', {
+      const payload = {
         log_date: logDate,
         log_time: logTime,
         staff_name: staffName,
@@ -181,7 +215,13 @@ const FryerOilFormPage = () => {
         step2_comments: step2Comments,
         signed_by_staff_name: signedByStaffName,
         signature: signature,
-      });
+      };
+
+      if (logId) {
+        await axios.put(`/api/fryer-oil-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/fryer-oil-logs', payload);
+      }
 
       router.visit('/haccp-logs/fryer-oil');
     } catch (err) {

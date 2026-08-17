@@ -144,9 +144,14 @@ const CookingTemperatureMonitoringPage = () => {
                       </td>
                       <td>{log.staff_name || '-'}</td>
                       <td style={{ textAlign: 'right' }}>
-                        <Button variant="secondary" size="sm" onClick={() => router.visit(`/haccp-logs/cooking-temperature/view/${log.id}`)}>
-                          View Details
-                        </Button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                          <Button variant="secondary" size="sm" onClick={() => router.visit(`/haccp-logs/cooking-temperature/view/${log.id}`)}>
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => router.visit(`/haccp-logs/cooking-temperature/edit/${log.id}`)}>
+                            Edit
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
