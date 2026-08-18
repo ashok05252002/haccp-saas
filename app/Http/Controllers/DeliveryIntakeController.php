@@ -34,17 +34,22 @@ class DeliveryIntakeController extends Controller
             'log_date' => 'required|date',
             'log_time' => 'required',
             'supplier_id' => 'nullable|exists:suppliers,id',
-            'staff_name' => 'nullable|string|max:255',
+            'staff_name' => 'required|string|max:255',
             'packaging_intact' => 'required|boolean',
             'vehicle_safe' => 'required|boolean',
             'comment' => 'nullable|string',
-            'signature' => 'nullable|string',
+            'signature' => 'required|string',
             'products' => 'required|array|min:1',
             'products.*.food_item_id' => 'required|exists:food_items,id',
             'products.*.batch_number' => 'nullable|string|max:255',
             'products.*.use_by_date' => 'nullable|date',
             'products.*.quantity' => 'required|string|max:255',
-            'products.*.temperature' => 'nullable|numeric',
+            'products.*.temperature' => 'required|numeric',
+        ], [
+            'staff_name.required' => 'Please select staff member.',
+            'signature.required' => 'Please add signature before saving.',
+            'products.*.temperature.required' => 'Please enter temperature for all products.',
+            'products.*.temperature.numeric' => 'Temperature must be a valid number.',
         ]);
 
         DB::beginTransaction();
@@ -92,17 +97,22 @@ class DeliveryIntakeController extends Controller
             'log_date' => 'required|date',
             'log_time' => 'required',
             'supplier_id' => 'nullable|exists:suppliers,id',
-            'staff_name' => 'nullable|string|max:255',
+            'staff_name' => 'required|string|max:255',
             'packaging_intact' => 'required|boolean',
             'vehicle_safe' => 'required|boolean',
             'comment' => 'nullable|string',
-            'signature' => 'nullable|string',
+            'signature' => 'required|string',
             'products' => 'required|array|min:1',
             'products.*.food_item_id' => 'required|exists:food_items,id',
             'products.*.batch_number' => 'nullable|string|max:255',
             'products.*.use_by_date' => 'nullable|date',
             'products.*.quantity' => 'required|string|max:255',
-            'products.*.temperature' => 'nullable|numeric',
+            'products.*.temperature' => 'required|numeric',
+        ], [
+            'staff_name.required' => 'Please select staff member.',
+            'signature.required' => 'Please add signature before saving.',
+            'products.*.temperature.required' => 'Please enter temperature for all products.',
+            'products.*.temperature.numeric' => 'Temperature must be a valid number.',
         ]);
 
         DB::beginTransaction();

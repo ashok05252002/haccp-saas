@@ -286,8 +286,8 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
   const clearSignature = () => {
     if (sigCanvas.current) {
       sigCanvas.current.clear();
-      setForm({ ...form, signature: '' });
     }
+    setForm(prev => ({ ...prev, signature: '' }));
   };
 
   const handleSignatureEnd = () => {
@@ -304,9 +304,41 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
     setSaving(true);
     setError(null);
 
-    // Validate products
+    // 1. Staff Member validation
+    if (!form.staff_name || !form.staff_name.trim()) {
+      setError('Please select staff member.');
+      setSaving(false);
+      return;
+    }
+
+    // 2. Signature validation
+    let sigData = form.signature;
+    if (sigCanvas.current) {
+      if (!sigCanvas.current.isEmpty()) {
+        sigData = sigCanvas.current.getCanvas
+          ? sigCanvas.current.getCanvas().toDataURL('image/png')
+          : sigCanvas.current.toDataURL('image/png');
+      } else {
+        sigData = '';
+      }
+    }
+
+    if (!sigData || !sigData.trim()) {
+      setError('Please add signature before saving.');
+      setSaving(false);
+      return;
+    }
+
+    // 3. Products validation
     if (products.some(p => !p.food_item_id || !p.quantity)) {
       setError('All products must have a Food Item and Quantity selected.');
+      setSaving(false);
+      return;
+    }
+
+    const hasEmptyTemp = products.some(p => p.temperature === undefined || p.temperature === null || String(p.temperature).trim() === '');
+    if (hasEmptyTemp) {
+      setError('Please enter temperature for all products.');
       setSaving(false);
       return;
     }
@@ -314,13 +346,14 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
     try {
       const payload = {
         ...form,
+        signature: sigData,
         supplier_id: form.supplier_id ? parseInt(form.supplier_id) : null,
         products: products.map(p => ({
           food_item_id: parseInt(p.food_item_id),
           batch_number: p.batch_number || null,
           use_by_date: p.use_by_date || null,
           quantity: p.quantity,
-          temperature: p.temperature ? parseFloat(p.temperature) : null,
+          temperature: parseFloat(p.temperature),
         }))
       };
 
@@ -335,7 +368,13 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
       }
     } catch (err) {
       console.error(err);
-      setError('Failed to save delivery intake. Please verify all required fields.');
+      const errMsg = err.response?.data?.errors?.staff_name?.[0] ||
+                     err.response?.data?.errors?.signature?.[0] ||
+                     err.response?.data?.errors?.['products.0.temperature']?.[0] ||
+                     err.response?.data?.errors?.products?.[0] ||
+                     err.response?.data?.error ||
+                     'Failed to save delivery intake. Please verify all required fields.';
+      setError(errMsg);
     } finally {
       setSaving(false);
     }
@@ -387,9 +426,9 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Staff Name</label>
-              <select className="form-select" name="staff_name" value={form.staff_name} onChange={handleChange}>
-                <option value="">-- Select Staff Member --</option>
+              <label className="form-label">Staff Name <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+              <select className="form-select" name="staff_name" value={form.staff_name} onChange={handleChange} required>
+                <option value="">-- Select Staff Member * --</option>
                 {staffMembers.map(s => (
                   <option key={s.id} value={s.name}>
                     {s.name} {s.assigned_role ? `(${s.assigned_role.name})` : ''}
@@ -517,7 +556,7 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
                         <input type="date" className="form-input" value={p.use_by_date} onChange={(e) => handleProductChange(p.id, 'use_by_date', e.target.value)} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Temp (°C)</label>
+                        <label className="form-label">Temp (°C) <span style={{ color: 'var(--color-danger)' }}>*</span></label>
                         <input 
                           type="number" 
                           step="0.1" 
@@ -525,6 +564,7 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
                           value={p.temperature} 
                           onChange={(e) => handleProductChange(p.id, 'temperature', e.target.value)} 
                           placeholder="e.g. 4.5" 
+                          required
                           style={isInvalid ? { borderColor: 'var(--color-danger)', color: 'var(--color-danger)' } : {}}
                         />
                         {isInvalid && (
@@ -556,7 +596,7 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
         {/* Signature */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={styles.sectionTitle}>Signature</h4>
+            <h4 style={styles.sectionTitle}>Signature <span style={{ color: 'var(--color-danger)' }}>*</span></h4>
             {form.signature && (
               <button type="button" onClick={clearSignature} style={styles.clearSigBtn}>
                 <Trash2 size={13} /> Clear
