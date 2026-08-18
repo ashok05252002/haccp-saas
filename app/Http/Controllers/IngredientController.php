@@ -33,10 +33,12 @@ class IngredientController extends Controller
     {
         $request->validate([
             'name'                   => 'required|string|max:255',
-            'uom_id'                 => 'nullable|integer|exists:uoms,id',
+            'uom_id'                 => 'required|integer|exists:uoms,id',
             'ingredient_category_id' => 'required|integer|exists:ingredient_categories,id',
             'status'                 => 'required|string|in:Active,Inactive',
         ], [
+            'uom_id.required'                 => 'Please select Default UOM.',
+            'uom_id.exists'                   => 'Selected Default UOM is invalid.',
             'ingredient_category_id.required' => 'Ingredient Category is required.',
             'ingredient_category_id.exists'   => 'Selected Ingredient Category is invalid.',
         ]);
@@ -57,7 +59,7 @@ class IngredientController extends Controller
         $ingredient = Ingredient::create([
             'tenant_id'              => $tenantId,
             'name'                   => $request->name,
-            'uom_id'                 => $request->uom_id ?: null,
+            'uom_id'                 => $request->uom_id,
             'ingredient_category_id' => $request->ingredient_category_id,
             'status'                 => $request->status,
         ]);
@@ -75,10 +77,12 @@ class IngredientController extends Controller
 
         $request->validate([
             'name'                   => 'required|string|max:255',
-            'uom_id'                 => 'nullable|integer|exists:uoms,id',
+            'uom_id'                 => 'required|integer|exists:uoms,id',
             'ingredient_category_id' => 'required|integer|exists:ingredient_categories,id',
             'status'                 => 'required|string|in:Active,Inactive',
         ], [
+            'uom_id.required'                 => 'Please select Default UOM.',
+            'uom_id.exists'                   => 'Selected Default UOM is invalid.',
             'ingredient_category_id.required' => 'Ingredient Category is required.',
             'ingredient_category_id.exists'   => 'Selected Ingredient Category is invalid.',
         ]);
@@ -94,7 +98,7 @@ class IngredientController extends Controller
 
         $ingredient->update([
             'name'                   => $request->name,
-            'uom_id'                 => $request->uom_id ?: null,
+            'uom_id'                 => $request->uom_id,
             'ingredient_category_id' => $request->ingredient_category_id,
             'status'                 => $request->status,
         ]);

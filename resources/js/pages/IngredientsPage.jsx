@@ -99,6 +99,11 @@ const IngredientsPage = () => {
       return;
     }
 
+    if (!ingForm.uom_id) {
+      setIngFormError('Please select Default UOM.');
+      return;
+    }
+
     try {
       if (ingEditId) {
         await axios.put(`/api/ingredients/${ingEditId}`, ingForm);
@@ -115,6 +120,7 @@ const IngredientsPage = () => {
     } catch (err) {
       const errMsg = err.response?.data?.errors?.name?.[0] || 
                      err.response?.data?.errors?.ingredient_category_id?.[0] || 
+                     err.response?.data?.errors?.uom_id?.[0] || 
                      'An error occurred.';
       setIngFormError(errMsg);
     }
@@ -393,7 +399,7 @@ const IngredientsPage = () => {
                             <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{ing.uom.unit_name}</span>
                           </div>
                         ) : (
-                          <span style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic' }}>—</span>
+                          <span style={{ fontSize: '12px', color: '#D97706', fontWeight: 500, fontStyle: 'italic' }}>⚠️ UOM missing</span>
                         )}
                       </td>
                       <td >
@@ -553,14 +559,15 @@ const IngredientsPage = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Default Unit of Measurement (UOM)</label>
+            <label className="form-label">Default Unit of Measurement (UOM) <span style={{ color: 'var(--color-danger)' }}>*</span></label>
             <select
               className="form-select"
               value={ingForm.uom_id}
               onChange={(e) => setIngForm({ ...ingForm, uom_id: e.target.value })}
               style={{ width: '100%', boxSizing: 'border-box' }}
+              required
             >
-              <option value="">-- No UOM (optional) --</option>
+              <option value="">-- Select Default UOM * --</option>
               {uomListForIng.map(u => (
                 <option key={u.id} value={u.id}>
                   {u.unit_code} — {u.unit_name}
