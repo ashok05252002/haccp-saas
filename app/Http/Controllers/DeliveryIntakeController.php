@@ -10,18 +10,23 @@ class DeliveryIntakeController extends Controller
 {
     public function index()
     {
-        $logs = DeliveryIntakeLog::with(['supplier', 'products.foodItem'])
-            ->orderBy('log_date', 'desc')
+        $tenantId = auth()->user() ? auth()->user()->tenant_id : null;
+        $query = DeliveryIntakeLog::with(['supplier', 'products.foodItem.storageType']);
+        if ($tenantId) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        $logs = $query->orderBy('log_date', 'desc')
             ->orderBy('log_time', 'desc')
             ->get();
-            
+
         return response()->json($logs);
     }
 
     public function show($id)
     {
         $tenantId = auth()->user()->tenant_id;
-        $log = DeliveryIntakeLog::with(['supplier', 'products.foodItem'])
+        $log = DeliveryIntakeLog::with(['supplier', 'products.foodItem.storageType'])
             ->where('tenant_id', $tenantId)
             ->findOrFail($id);
 
@@ -81,7 +86,7 @@ class DeliveryIntakeController extends Controller
 
             DB::commit();
 
-            return response()->json($log->load(['supplier', 'products.foodItem']), 201);
+            return response()->json($log->load(['supplier', 'products.foodItem.storageType']), 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Failed to save delivery intake log.'], 500);
@@ -143,7 +148,7 @@ class DeliveryIntakeController extends Controller
 
             DB::commit();
 
-            return response()->json($log->load(['supplier', 'products.foodItem']));
+            return response()->json($log->load(['supplier', 'products.foodItem.storageType']));
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Failed to update delivery intake log.'], 500);

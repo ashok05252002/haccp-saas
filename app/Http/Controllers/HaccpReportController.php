@@ -97,6 +97,8 @@ class HaccpReportController extends Controller
                     $query->with(['results']);
                 } elseif ($modelClass === TemperatureLog::class) {
                     $query->with(['storageZone', 'thermometer']);
+                } elseif ($modelClass === DeliveryIntakeLog::class) {
+                    $query->with(['supplier', 'products.foodItem.storageType']);
                 }
 
                 if ($fromDate && $toDate) {
@@ -200,6 +202,90 @@ class HaccpReportController extends Controller
                         }
 
                         if ($hasFailedTemp) {
+                            $statusStr = 'Needs Review';
+                            $passed = false;
+                        } else {
+                            $statusStr = 'Passed';
+                            $passed = true;
+                        }
+                    } elseif ($modelClass === DeliveryIntakeLog::class) {
+                        $hasFailedCheck = false;
+
+                        // Check 1: Packaging Intact
+                        $pkgVal = $log->packaging_intact ?? $log->packagingIntact ?? null;
+                        if ($pkgVal === false || $pkgVal === 0 || $pkgVal === 'false' || $pkgVal === '0' || $pkgVal === 'no' || $pkgVal === 'No') {
+                            $hasFailedCheck = true;
+                        }
+
+                        // Check 2: Vehicle Safe
+                        $vehVal = $log->vehicle_safe ?? $log->isVehicleSafe ?? $log->vehicleSafe ?? null;
+                        if ($vehVal === false || $vehVal === 0 || $vehVal === 'false' || $vehVal === '0' || $vehVal === 'no' || $vehVal === 'No') {
+                            $hasFailedCheck = true;
+                        }
+
+                        // Check 3: Log level status/result strings
+                        $statusVal = strtolower(trim(strval($log->status ?? $log->result ?? '')));
+                        if (in_array($statusVal, ['failed', 'failed_check', 'needs_review', 'need_review', 'fail', 'out_of_bounds'])) {
+                            $hasFailedCheck = true;
+                        }
+                        if (isset($log->isPassed) && $log->isPassed === false) $hasFailedCheck = true;
+                        if (isset($log->passed) && $log->passed === false) $hasFailedCheck = true;
+
+                        // Check 4: Products temperature bounds
+                        $products = $log->products ?? [];
+                        if (!$hasFailedCheck && !empty($products)) {
+                            foreach ($products as $p) {
+                                $pObj = is_array($p) ? (object)$p : $p;
+                                if (!isset($pObj->temperature) || $pObj->temperature === null || $pObj->temperature === '') {
+                                    continue;
+                                }
+
+                                $temp = floatval($pObj->temperature);
+                                $foodItem = $pObj->foodItem ?? $pObj->food_item ?? null;
+                                $foodItemObj = is_array($foodItem) ? (object)$foodItem : $foodItem;
+
+                                $storageType = $foodItemObj->storageType ?? $foodItemObj->storage_type ?? null;
+                                $storageTypeObj = is_array($storageType) ? (object)$storageType : $storageType;
+
+                                $isTempFailed = false;
+
+                                if ($storageTypeObj) {
+                                    $nameLower = strtolower(trim(strval($storageTypeObj->name ?? '')));
+                                    if (strpos($nameLower, 'chilled') !== false) {
+                                        $min = isset($storageTypeObj->min_temp) && $storageTypeObj->min_temp !== null ? floatval($storageTypeObj->min_temp) : 0;
+                                        $max = isset($storageTypeObj->max_temp) && $storageTypeObj->max_temp !== null ? floatval($storageTypeObj->max_temp) : 5;
+                                        if ($temp < $min || $temp > $max) $isTempFailed = true;
+                                    } elseif (strpos($nameLower, 'frozen') !== false) {
+                                        $max = isset($storageTypeObj->max_temp) && $storageTypeObj->max_temp !== null ? floatval($storageTypeObj->max_temp) : -18;
+                                        if ($temp > $max) $isTempFailed = true;
+                                    } elseif (strpos($nameLower, 'hot') !== false) {
+                                        $min = isset($storageTypeObj->min_temp) && $storageTypeObj->min_temp !== null ? floatval($storageTypeObj->min_temp) : 63;
+                                        if ($temp < $min) $isTempFailed = true;
+                                    } elseif (strpos($nameLower, 'ambient') !== false) {
+                                        $isTempFailed = false;
+                                    } else {
+                                        if (isset($storageTypeObj->min_temp) && $storageTypeObj->min_temp !== null && $temp < floatval($storageTypeObj->min_temp)) $isTempFailed = true;
+                                        if (isset($storageTypeObj->max_temp) && $storageTypeObj->max_temp !== null && $temp > floatval($storageTypeObj->max_temp)) $isTempFailed = true;
+                                    }
+                                } else {
+                                    $itemName = strtolower(trim(strval($foodItemObj->name ?? $pObj->name ?? '')));
+                                    if (strpos($itemName, 'chilled') !== false || strpos($itemName, 'milk') !== false || strpos($itemName, 'dairy') !== false || strpos($itemName, 'cheese') !== false || strpos($itemName, 'meat') !== false || strpos($itemName, 'fish') !== false || strpos($itemName, 'chicken') !== false) {
+                                        if ($temp < 0 || $temp > 5) $isTempFailed = true;
+                                    } elseif (strpos($itemName, 'frozen') !== false || strpos($itemName, 'ice cream') !== false) {
+                                        if ($temp > -18) $isTempFailed = true;
+                                    } elseif (strpos($itemName, 'hot') !== false) {
+                                        if ($temp < 63) $isTempFailed = true;
+                                    }
+                                }
+
+                                if ($isTempFailed) {
+                                    $hasFailedCheck = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if ($hasFailedCheck) {
                             $statusStr = 'Needs Review';
                             $passed = false;
                         } else {
