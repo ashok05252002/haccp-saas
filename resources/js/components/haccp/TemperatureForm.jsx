@@ -37,7 +37,7 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
         
         const activeZones = (zonesRes.data || []).filter(z => z.status === 'Active');
         setStorageZones(activeZones);
-        setThermometers(thermoRes.data || []);
+        setThermometers((thermoRes.data || []).filter(t => t.status === 'Active'));
         setStaffMembers((staffRes.data || []).filter(s => s.status !== 'Inactive'));
 
         // Initialize readings
@@ -109,11 +109,34 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
     setSubmitting(true);
     setError(null);
 
+    // 1. Staff Member validation
+    if (!staffName || !staffName.trim()) {
+      setError("Please select staff member.");
+      setSubmitting(false);
+      return;
+    }
+
+    // 2. Thermometer Used validation
+    if (!thermometerId) {
+      setError("Please select thermometer used.");
+      setSubmitting(false);
+      return;
+    }
+
+    // 3. Signature validation
     let signatureData = null;
     if (sigPad.current && !sigPad.current.isEmpty()) {
-      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
-    } else if (existingSignature) {
-      signatureData = existingSignature;
+      signatureData = sigPad.current.getCanvas
+        ? sigPad.current.getCanvas().toDataURL('image/png')
+        : sigPad.current.toDataURL('image/png');
+    } else if (existingSignature && typeof existingSignature === 'string' && existingSignature.trim()) {
+      signatureData = existingSignature.trim();
+    }
+
+    if (!signatureData || !signatureData.trim()) {
+      setError("Please add signature before saving.");
+      setSubmitting(false);
+      return;
     }
 
     if (isEdit) {
@@ -135,7 +158,7 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
           log_date: logDate,
           log_time: logTime,
           staff_name: staffName,
-          thermometer_id: thermometerId ? parseInt(thermometerId) : null,
+          thermometer_id: parseInt(thermometerId),
           storage_zone_id: targetZone ? targetZone.id : undefined,
           temperature: parseFloat(reading.temperature),
           is_valid: isValid,
@@ -145,7 +168,11 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
         if (onSave) onSave();
       } catch (err) {
         console.error('Failed to update log', err);
-        setError(err.response?.data?.message || 'Failed to update temperature log.');
+        const errMsg = err.response?.data?.errors?.staff_name?.[0] ||
+                       err.response?.data?.errors?.thermometer_id?.[0] ||
+                       err.response?.data?.errors?.signature?.[0] ||
+                       err.response?.data?.message || 'Failed to update temperature log.';
+        setError(errMsg);
         setSubmitting(false);
       }
       return;
@@ -177,14 +204,18 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
         log_date: logDate,
         log_time: logTime,
         staff_name: staffName,
-        thermometer_id: thermometerId ? parseInt(thermometerId) : null,
+        thermometer_id: parseInt(thermometerId),
         readings: validReadings,
         signature: signatureData
       });
       if (onSave) onSave();
     } catch (err) {
       console.error('Failed to save logs', err);
-      setError(err.response?.data?.message || 'Failed to save logs.');
+      const errMsg = err.response?.data?.errors?.staff_name?.[0] ||
+                     err.response?.data?.errors?.thermometer_id?.[0] ||
+                     err.response?.data?.errors?.signature?.[0] ||
+                     err.response?.data?.message || 'Failed to save logs.';
+      setError(errMsg);
       setSubmitting(false);
     }
   };
@@ -339,13 +370,16 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
               />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ color: '#4B5563' }}>Staff Name</label>
+              <label className="form-label" style={{ color: '#4B5563' }}>
+                Staff Name <span style={{ color: 'var(--color-danger)' }}>*</span>
+              </label>
               <select 
                 className="form-input" 
                 value={staffName}
                 onChange={e => setStaffName(e.target.value)}
+                required
               >
-                <option value="">-- Select Staff Member --</option>
+                <option value="">-- Select Staff Member * --</option>
                 {staffMembers.map(s => (
                   <option key={s.id} value={s.name}>
                     {s.name} {s.assigned_role ? `(${s.assigned_role.name})` : ''}
@@ -354,13 +388,16 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ color: '#4B5563' }}>Thermometer Used</label>
+              <label className="form-label" style={{ color: '#4B5563' }}>
+                Thermometer Used <span style={{ color: 'var(--color-danger)' }}>*</span>
+              </label>
               <select 
                 className="form-input"
                 value={thermometerId}
                 onChange={e => setThermometerId(e.target.value)}
+                required
               >
-                <option value="">-- Select Thermometer --</option>
+                <option value="">-- Select Thermometer * --</option>
                 {thermometers.map(t => (
                   <option key={t.id} value={t.id}>{t.name} {t.serial_number ? `(${t.serial_number})` : ''}</option>
                 ))}
@@ -411,14 +448,16 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
         {/* Signature Pad */}
         <div style={{ marginTop: '36px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={{ ...styles.sectionTitle, color: 'var(--color-text-primary)' }}>Signature</h4>
+            <h4 style={{ ...styles.sectionTitle, color: 'var(--color-text-primary)' }}>
+              Signature <span style={{ color: 'var(--color-danger)' }}>*</span>
+            </h4>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {existingSignature && (
                 <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
                   (Existing signature preserved unless redrawn)
                 </span>
               )}
-              <button variant="secondary" size="sm" onClick={() => { sigPad.current?.clear(); setExistingSignature(null); }} type="button" style={styles.clearBtn}>
+              <button onClick={() => { if (sigPad.current) sigPad.current.clear(); setExistingSignature(null); }} type="button" style={styles.clearBtn}>
                 Clear Signature
               </button>
             </div>

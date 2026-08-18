@@ -95,6 +95,8 @@ class HaccpReportController extends Controller
                 
                 if ($modelClass === CleaningLog::class) {
                     $query->with(['results']);
+                } elseif ($modelClass === TemperatureLog::class) {
+                    $query->with(['storageZone', 'thermometer']);
                 }
 
                 if ($fromDate && $toDate) {
@@ -136,6 +138,68 @@ class HaccpReportController extends Controller
                         }
 
                         if ($hasFailedCheck) {
+                            $statusStr = 'Needs Review';
+                            $passed = false;
+                        } else {
+                            $statusStr = 'Passed';
+                            $passed = true;
+                        }
+                    } elseif ($modelClass === TemperatureLog::class) {
+                        $hasFailedTemp = false;
+
+                        // Check 1: is_valid boolean flag
+                        if (isset($log->is_valid) && ($log->is_valid === false || $log->is_valid === 0 || $log->is_valid === '0' || $log->is_valid === 'false')) {
+                            $hasFailedTemp = true;
+                        }
+
+                        // Check 2: status or result field
+                        $statusVal = strtolower(trim(strval($log->status ?? $log->result ?? $log->verification_status ?? '')));
+                        if (in_array($statusVal, ['failed', 'fail', 'needs_review', 'need_review', 'out_of_bounds', 'out_of_range'])) {
+                            $hasFailedTemp = true;
+                        }
+
+                        // Check 3: boolean properties
+                        if (isset($log->isPassed) && $log->isPassed === false) $hasFailedTemp = true;
+                        if (isset($log->passed) && $log->passed === false) $hasFailedTemp = true;
+                        if (isset($log->isWithinRange) && $log->isWithinRange === false) $hasFailedTemp = true;
+                        if (isset($log->outOfBounds) && ($log->outOfBounds === true || $log->outOfBounds === 'true' || $log->outOfBounds === 1)) $hasFailedTemp = true;
+
+                        // Check 4: Temperature value against storage zone rules
+                        if (!$hasFailedTemp && isset($log->temperature) && $log->temperature !== null && $log->temperature !== '') {
+                            $temp = floatval($log->temperature);
+                            $zone = $log->storageZone ?? null;
+
+                            if ($zone) {
+                                $zType = strtolower(trim(strval($zone->type ?? $zone->storage_type ?? $zone->name ?? '')));
+                                if (strpos($zType, 'fridge') !== false || strpos($zType, 'chilled') !== false) {
+                                    if ($temp < 0 || $temp > 5) {
+                                        $hasFailedTemp = true;
+                                    }
+                                } elseif (strpos($zType, 'freezer') !== false || strpos($zType, 'frozen') !== false) {
+                                    if ($temp > -18) {
+                                        $hasFailedTemp = true;
+                                    }
+                                } elseif (strpos($zType, 'hot') !== false || strpos($zType, 'cabinet') !== false || strpos($zType, 'bain') !== false) {
+                                    if ($temp < 63) {
+                                        $hasFailedTemp = true;
+                                    }
+                                }
+
+                                if (!$hasFailedTemp) {
+                                    $minTemp = $zone->min_temp ?? $zone->target_temp_min ?? null;
+                                    $maxTemp = $zone->max_temp ?? $zone->target_temp_max ?? null;
+
+                                    if ($minTemp !== null && $minTemp !== '' && $temp < floatval($minTemp)) {
+                                        $hasFailedTemp = true;
+                                    }
+                                    if ($maxTemp !== null && $maxTemp !== '' && $temp > floatval($maxTemp)) {
+                                        $hasFailedTemp = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if ($hasFailedTemp) {
                             $statusStr = 'Needs Review';
                             $passed = false;
                         } else {

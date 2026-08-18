@@ -41,14 +41,19 @@ class TemperatureLogController extends Controller
         $request->validate([
             'log_date' => 'required|date',
             'log_time' => 'required|string',
-            'staff_name' => 'nullable|string|max:255',
-            'thermometer_id' => 'nullable|integer|exists:thermometers,id',
+            'staff_name' => 'required|string|max:255',
+            'thermometer_id' => 'required|integer|exists:thermometers,id',
+            'signature' => 'required|string',
             'readings' => 'required|array',
             'readings.*.storage_zone_id' => 'required|integer|exists:storage_zones,id',
             'readings.*.temperature' => 'required|numeric',
             'readings.*.is_valid' => 'required|boolean',
             'readings.*.comment' => 'nullable|string',
-            'signature' => 'nullable|string',
+        ], [
+            'staff_name.required' => 'Please select staff member.',
+            'thermometer_id.required' => 'Please select thermometer used.',
+            'thermometer_id.exists' => 'Selected thermometer is invalid.',
+            'signature.required' => 'Please add signature before saving.',
         ]);
 
         $tenantId = Auth::user()->tenant_id;
@@ -85,13 +90,18 @@ class TemperatureLogController extends Controller
         $validated = $request->validate([
             'log_date' => 'nullable|date',
             'log_time' => 'nullable|string',
-            'staff_name' => 'nullable|string|max:255',
-            'thermometer_id' => 'nullable|integer|exists:thermometers,id',
+            'staff_name' => 'required|string|max:255',
+            'thermometer_id' => 'required|integer|exists:thermometers,id',
+            'signature' => 'required|string',
             'storage_zone_id' => 'nullable|integer|exists:storage_zones,id',
             'temperature' => 'required|numeric',
             'is_valid' => 'nullable|boolean',
             'comment' => 'nullable|string',
-            'signature' => 'nullable|string',
+        ], [
+            'staff_name.required' => 'Please select staff member.',
+            'thermometer_id.required' => 'Please select thermometer used.',
+            'thermometer_id.exists' => 'Selected thermometer is invalid.',
+            'signature.required' => 'Please add signature before saving.',
         ]);
 
         // If storage zone is present, evaluate is_valid
