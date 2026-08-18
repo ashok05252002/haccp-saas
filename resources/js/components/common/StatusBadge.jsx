@@ -1,6 +1,22 @@
 import React from 'react';
 
-const StatusBadge = ({ label, type = 'default' }) => {
+const StatusBadge = ({ label, status, type }) => {
+  const displayLabel = label || status || 'Default';
+  let badgeType = type;
+
+  if (!type && (status || label)) {
+    const s = (status || label).toLowerCase();
+    if (s.includes('fail') || s.includes('review') || s.includes('no')) {
+      badgeType = 'failed';
+    } else if (s.includes('pass') || s.includes('yes') || s.includes('ok') || s.includes('active')) {
+      badgeType = 'passed';
+    } else if (s.includes('pend')) {
+      badgeType = 'pending';
+    } else {
+      badgeType = 'default';
+    }
+  }
+
   const styles = {
     display: 'inline-flex',
     alignItems: 'center',
@@ -68,11 +84,11 @@ const StatusBadge = ({ label, type = 'default' }) => {
   };
 
   return (
-    <span style={{ ...styles, ...(typeStyles[type] || typeStyles.default) }}>
-      {(type === 'ccp' || type === 'pr' || type === 'codex') && (
+    <span style={{ ...styles, ...(typeStyles[badgeType] || typeStyles.default) }}>
+      {(badgeType === 'ccp' || badgeType === 'pr' || badgeType === 'codex') && (
         <span style={{ fontSize: '10px' }}>📋</span>
       )}
-      {label}
+      {displayLabel}
     </span>
   );
 };

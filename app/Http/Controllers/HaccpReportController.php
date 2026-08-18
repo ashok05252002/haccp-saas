@@ -93,6 +93,10 @@ class HaccpReportController extends Controller
             try {
                 $query = $modelClass::where('tenant_id', $tenantId);
                 
+                if ($modelClass === CleaningLog::class) {
+                    $query->with(['results']);
+                }
+
                 if ($fromDate && $toDate) {
                     if ($fromDate === $toDate) {
                         $query->whereDate('log_date', $fromDate);
@@ -108,8 +112,40 @@ class HaccpReportController extends Controller
                 }
 
                 foreach ($logs as $log) {
-                    $statusStr = $log->status ?? 'Passed';
-                    $passed = (strtolower($statusStr) === 'passed');
+                    $statusStr = 'Passed';
+                    $passed = true;
+
+                    if ($modelClass === CleaningLog::class) {
+                        $hasFailedCheck = false;
+                        $resultsList = [];
+                        if ($log->relationLoaded('results') && $log->results) {
+                            $resultsList = $log->results;
+                        } elseif (isset($log->results) && is_array($log->results)) {
+                            $resultsList = $log->results;
+                        }
+
+                        foreach ($resultsList as $res) {
+                            $resObj = is_array($res) ? (object)$res : $res;
+                            $val = strtolower(trim(strval($resObj->result ?? $resObj->value ?? $resObj->status ?? '')));
+                            $isPassedBool = isset($resObj->passed) ? boolval($resObj->passed) : null;
+
+                            if (in_array($val, ['no', 'fail', 'failed', 'false', 'not_passed', 'needs_review', 'need_review']) || $isPassedBool === false) {
+                                $hasFailedCheck = true;
+                                break;
+                            }
+                        }
+
+                        if ($hasFailedCheck) {
+                            $statusStr = 'Needs Review';
+                            $passed = false;
+                        } else {
+                            $statusStr = 'Passed';
+                            $passed = true;
+                        }
+                    } else {
+                        $statusStr = $log->status ?? 'Passed';
+                        $passed = (strtolower($statusStr) === 'passed');
+                    }
 
                     $allLogs[] = [
                         'id' => $log->id,

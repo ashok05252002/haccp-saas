@@ -72,14 +72,17 @@ class CleaningLogController extends Controller
         $request->validate([
             'log_date' => 'required|date',
             'log_time' => 'required|string',
-            'staff_name' => 'nullable|string|max:255',
+            'staff_name' => 'required|string|max:255',
+            'signature' => 'required|string',
             'cleaning_area_id' => 'nullable|integer|exists:cleaning_areas,id',
             'comment' => 'nullable|string',
-            'signature' => 'nullable|string',
             'results' => 'required|array',
             'results.*.question_id' => 'required|integer|exists:cleaning_checklist_questions,id',
             'results.*.result' => 'required|in:Yes,No,N/A',
             'results.*.comment' => 'nullable|string',
+        ], [
+            'staff_name.required' => 'Please select staff member.',
+            'signature.required' => 'Please add signature before saving.',
         ]);
 
         $tenantId = Auth::user()->tenant_id;
@@ -127,14 +130,17 @@ class CleaningLogController extends Controller
         $request->validate([
             'log_date' => 'required|date',
             'log_time' => 'required|string',
-            'staff_name' => 'nullable|string|max:255',
+            'staff_name' => 'required|string|max:255',
+            'signature' => 'required|string',
             'cleaning_area_id' => 'nullable|integer|exists:cleaning_areas,id',
             'comment' => 'nullable|string',
-            'signature' => 'nullable|string',
             'results' => 'required|array',
             'results.*.question_id' => 'required|integer|exists:cleaning_checklist_questions,id',
             'results.*.result' => 'required|in:Yes,No,N/A',
             'results.*.comment' => 'nullable|string',
+        ], [
+            'staff_name.required' => 'Please select staff member.',
+            'signature.required' => 'Please add signature before saving.',
         ]);
 
         try {

@@ -100,6 +100,10 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
         setError("Date and Time are required.");
         return;
       }
+      if (!staffName || !staffName.trim()) {
+        setError("Please select staff member.");
+        return;
+      }
     } else if (currentStep > 0 && currentStep <= sections.length) {
       const currentSection = sections[currentStep - 1];
       const hasMissing = (currentSection.questions || []).some(q => {
@@ -124,6 +128,12 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
     setSubmitting(true);
     setError(null);
 
+    if (!staffName || !staffName.trim()) {
+      setError("Please select staff member.");
+      setSubmitting(false);
+      return;
+    }
+
     // Format results
     const results = [];
     sections.forEach(section => {
@@ -139,9 +149,19 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
       });
     });
 
-    let signatureData = existingSignature;
+    let signatureData = null;
     if (sigPad.current && !sigPad.current.isEmpty()) {
-      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+      signatureData = sigPad.current.getCanvas
+        ? sigPad.current.getCanvas().toDataURL('image/png')
+        : sigPad.current.toDataURL('image/png');
+    } else if (existingSignature && typeof existingSignature === 'string' && existingSignature.trim()) {
+      signatureData = existingSignature.trim();
+    }
+
+    if (!signatureData || !signatureData.trim()) {
+      setError("Please add signature before saving.");
+      setSubmitting(false);
+      return;
     }
 
     try {
@@ -162,7 +182,8 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
       onSave();
     } catch (err) {
       console.error('Failed to save logs', err);
-      setError(err.response?.data?.message || 'Failed to save logs.');
+      const errMsg = err.response?.data?.errors?.signature?.[0] || err.response?.data?.errors?.staff_name?.[0] || err.response?.data?.message || 'Failed to save logs.';
+      setError(errMsg);
       setSubmitting(false);
     }
   };
@@ -294,13 +315,16 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ color: '#4B5563' }}>Staff Name</label>
+                <label className="form-label" style={{ color: '#4B5563' }}>
+                  Staff Name <span style={{ color: 'var(--color-danger)' }}>*</span>
+                </label>
                 <select 
                   className="form-input" 
                   value={staffName}
                   onChange={e => setStaffName(e.target.value)}
+                  required
                 >
-                  <option value="">-- Select Staff Member --</option>
+                  <option value="">-- Select Staff Member * --</option>
                   {staffMembers.map(s => (
                     <option key={s.id} value={s.name}>
                       {s.name} {s.assigned_role ? `(${s.assigned_role.name})` : ''}
@@ -425,8 +449,10 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h4 style={{ fontSize: '17px', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>Signature</h4>
-                <button variant="secondary" size="sm" onClick={() => sigPad.current.clear()} type="button" style={styles.clearBtn}>
+                <h4 style={{ fontSize: '17px', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>
+                  Signature <span style={{ color: 'var(--color-danger)' }}>*</span>
+                </h4>
+                <button onClick={() => { if (sigPad.current) sigPad.current.clear(); setExistingSignature(null); }} type="button" style={styles.clearBtn}>
                   Clear Signature
                 </button>
               </div>
