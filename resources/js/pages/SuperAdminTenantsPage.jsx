@@ -266,7 +266,6 @@ const SuperAdminTenantsPage = () => {
                           <button onClick={() => handleToggleStatus(Tenant)} style={styles.actionBtn} title={Tenant.status === 'Active' ? 'Suspend' : 'Activate'}>
                             {Tenant.status === 'Active' ? <ToggleRight size={14} color="var(--color-primary)" /> : <ToggleLeft size={14} color="var(--color-warning)" />}
                           </button>
-                          <button onClick={() => handleDelete(Tenant)} style={{ ...styles.actionBtn, color: 'var(--color-danger)' }} title="Delete"><Trash2 size={14} /></button>
                         </div>
                       </td>
                     </tr>
