@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class TenantController extends Controller
 {
@@ -42,12 +43,13 @@ class TenantController extends Controller
             'TenantName' => 'required|string',
             'businessName' => 'required|string',
             'email' => 'required|email|unique:users,email',
-            'phone' => 'nullable|string|max:50|regex:/^\+?[0-9\s\-\(\)]+$/',
+            'phone' => ['nullable', 'string', 'max:50', 'regex:/^\+?[0-9\s\-\(\)]+$/', 'unique:tenants,phone'],
             'password' => 'required|string|min:6',
             'restaurantLimit' => 'required|integer|min:1',
             'status' => 'required|string',
         ], [
             'phone.regex' => 'Please enter a valid phone number.',
+            'phone.unique' => 'This phone number is already used by another tenant.',
             'restaurantLimit.required' => 'Restaurant limit is required.',
             'restaurantLimit.integer'  => 'Restaurant limit must be a whole number.',
             'restaurantLimit.min'      => 'Restaurant limit must be at least 1.',
@@ -87,11 +89,12 @@ class TenantController extends Controller
             'TenantName' => 'required|string',
             'businessName' => 'required|string',
             'email' => 'required|email',
-            'phone' => 'nullable|string|max:50|regex:/^\+?[0-9\s\-\(\)]+$/',
+            'phone' => ['nullable', 'string', 'max:50', 'regex:/^\+?[0-9\s\-\(\)]+$/', Rule::unique('tenants', 'phone')->ignore($tenant->id)],
             'restaurantLimit' => 'required|integer|min:1',
             'status' => 'required|string',
         ], [
             'phone.regex' => 'Please enter a valid phone number.',
+            'phone.unique' => 'This phone number is already used by another tenant.',
             'restaurantLimit.required' => 'Restaurant limit is required.',
             'restaurantLimit.integer'  => 'Restaurant limit must be a whole number.',
             'restaurantLimit.min'      => 'Restaurant limit must be at least 1.',
