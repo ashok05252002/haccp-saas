@@ -120,8 +120,8 @@ const CookingTemperatureViewPage = ({ logId }) => {
                   <div style={{ fontWeight: 600, color: '#9A3412', marginTop: '2px' }}>{log.cooking_target || '≥ 75°C'}</div>
                 </div>
                 <div>
-                  <span style={{ color: '#C2410C', fontWeight: 500 }}>Method:</span>
-                  <div style={{ fontWeight: 600, color: '#9A3412', marginTop: '2px' }}>{log.cooking_method || 'N/A'}</div>
+                  <span style={{ color: '#C2410C', fontWeight: 500 }}>Time Finished:</span>
+                  <div style={{ fontWeight: 600, color: '#9A3412', marginTop: '2px' }}>{log.time_finished_cooking || 'N/A'}</div>
                 </div>
               </div>
             </div>

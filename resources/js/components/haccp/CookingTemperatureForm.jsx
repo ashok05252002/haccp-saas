@@ -81,9 +81,11 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
           if (data.cooking_temp !== null && data.cooking_temp !== undefined) setCookingTemp(String(data.cooking_temp));
           if (data.cooking_target) setCookingTarget(data.cooking_target);
-          if (data.cooking_method) {
-            if (data.cooking_method === 'N/A') setCookingNa(true);
-            else setCookingMethod(data.cooking_method);
+          if (data.cooking_method === 'N/A' && !data.time_finished_cooking) {
+            setCookingNa(true);
+          }
+          if (data.time_finished_cooking) {
+            setTimeFinishedCooking(data.time_finished_cooking);
           }
 
           if (data.chilling_method) {
@@ -213,7 +215,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
   // Step 2: Cooking Process (CCP-3)
   const [cookingTemp, setCookingTemp] = useState('');
-  const [cookingMethod, setCookingMethod] = useState('Oven');
+  const [timeFinishedCooking, setTimeFinishedCooking] = useState('');
   const [cookingTarget, setCookingTarget] = useState('≥ 75°C');
 
   // Step 3: Blast Chilling (CCP-4)
@@ -377,7 +379,8 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
       cooking_temp: !cookingNa && cookingTemp !== '' ? parseFloat(cookingTemp) : null,
       cooking_target: cookingTarget,
-      cooking_method: cookingNa ? 'N/A' : cookingMethod,
+      cooking_method: cookingNa ? 'N/A' : null,
+      time_finished_cooking: cookingNa ? null : (timeFinishedCooking || null),
       cooking_passed: validateCooking() ?? true,
 
       chilling_method: chillingNa ? 'N/A' : chillingMethod,
@@ -632,15 +635,14 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                       />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label" style={{ color: '#9A3412' }}>Cooking Method</label>
-                      <select className="form-input" value={cookingMethod} onChange={e => setCookingMethod(e.target.value)}>
-                        <option value="Oven">Combi / Convection Oven</option>
-                        <option value="Grill">Grill / Griddle</option>
-                        <option value="Stove">Stove / Pan Fry</option>
-                        <option value="Deep Fryer">Deep Fryer</option>
-                        <option value="Steamer">Steamer</option>
-                        <option value="Sous Vide">Sous Vide</option>
-                      </select>
+                      <label className="form-label" style={{ color: '#9A3412' }}>Time Finished Cooking</label>
+                      <input 
+                        type="time" 
+                        className="form-input" 
+                        value={timeFinishedCooking} 
+                        onChange={e => setTimeFinishedCooking(e.target.value)} 
+                        style={{ fontWeight: 600 }}
+                      />
                     </div>
                   </div>
 

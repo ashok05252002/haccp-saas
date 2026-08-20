@@ -21,6 +21,7 @@ class CookingLog extends Model
         'cooking_temp',
         'cooking_target',
         'cooking_method',
+        'time_finished_cooking',
         'cooking_passed',
         'chilling_method',
         'chilling_start_time',
