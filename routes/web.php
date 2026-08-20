@@ -121,10 +121,32 @@ Route::middleware(['auth', 'role:client'])->group(function () {
     Route::patch('/api/branches/{id}/toggle-status', [BranchController::class, 'toggleStatus']);
 });
 
-Route::middleware(['auth', 'role:client,restaurant'])->group(function () {
+Route::middleware(['auth', 'role:super_admin'])->group(function () {
+    Route::get('/tenants', function () {
+        return Inertia::render('SuperAdminTenantsPage');
+    })->name('super-admin.tenants');
+
+    Route::get('/tenants/{tenant}', function (\App\Models\Tenant $tenant) {
+        return Inertia::render('SuperAdminTenantViewPage', [
+            'tenant' => $tenant->load('users'),
+        ]);
+    })->name('super-admin.tenants.view');
+
+    // Tenant API routes
+    Route::get('/api/tenants', [TenantController::class, 'index']);
+    Route::post('/api/tenants', [TenantController::class, 'store']);
+    Route::put('/api/tenants/{tenant}', [TenantController::class, 'update']);
+    Route::delete('/api/tenants/{tenant}', [TenantController::class, 'destroy']);
+    Route::patch('/api/tenants/{tenant}/toggle-status', [TenantController::class, 'toggleStatus']);
+});
+
+Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(function () {
     Route::post('/api/switch-branch', [BranchContextController::class, 'switchBranch']);
 
     Route::get('/dashboard', function () {
+        if (Auth::user() && Auth::user()->role === 'super_admin') {
+            return Inertia::render('SuperAdminDashboardPage');
+        }
         return Inertia::render('DashboardPage');
     })->name('dashboard');
 
