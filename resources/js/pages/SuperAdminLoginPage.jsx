@@ -11,6 +11,7 @@ const SuperAdminLoginPage = () => {
   const { data, setData, errors, setError, clearErrors } = useForm({
     email: '',
     password: '',
+    remember: false,
   });
 
   const handleSubmit = (e) => {
@@ -21,6 +22,7 @@ const SuperAdminLoginPage = () => {
     axios.post('/login', {
       email: data.email,
       password: data.password,
+      remember: data.remember,
     })
     .then(response => {
       window.location.href = response.data.redirectUrl || '/dashboard';
@@ -99,11 +101,26 @@ const SuperAdminLoginPage = () => {
             )}
           </div>
 
+          <div style={styles.optionsRow}>
+            <label style={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={data.remember}
+                onChange={(e) => setData('remember', e.target.checked)}
+                style={styles.checkbox}
+              />
+              <span>Remember me</span>
+            </label>
+            <a href="#" style={styles.forgotLink}>
+              Forgot password?
+            </a>
+          </div>
+
           <button
             type="submit"
             className="btn btn-primary"
             disabled={submitting}
-            style={{ width: '100%', justifyContent: 'center', height: '42px', marginTop: '12px', boxSizing: 'border-box' }}
+            style={{ width: '100%', justifyContent: 'center', height: '42px', marginTop: '4px', boxSizing: 'border-box' }}
           >
             {submitting ? 'Signing in...' : 'Sign In'}
           </button>
@@ -174,6 +191,30 @@ const styles = {
     top: '50%',
     transform: 'translateY(-50%)',
     pointerEvents: 'none',
+  },
+  optionsRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '20px',
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '13px',
+    color: 'var(--color-text-secondary)',
+    cursor: 'pointer',
+  },
+  checkbox: {
+    width: 16,
+    height: 16,
+    accentColor: 'var(--color-primary)',
+  },
+  forgotLink: {
+    fontSize: '13px',
+    color: 'var(--color-primary)',
+    textDecoration: 'none',
   },
   demoBox: {
     marginTop: '24px',
