@@ -97,7 +97,12 @@ const SuperAdminTenantsPage = () => {
     if (!form.email.trim()) { setError('Email is required.'); return; }
     if (!editId && !form.password) { setError('Password is required.'); return; }
     if (form.password && form.password !== form.confirmPassword) { setError('Passwords do not match.'); return; }
-    if (!form.restaurantLimit || form.restaurantLimit < 1) { setError('Restaurant limit must be at least 1.'); return; }
+    
+    const limitNum = Number(form.restaurantLimit);
+    if (!form.restaurantLimit || isNaN(limitNum) || !Number.isInteger(limitNum) || limitNum < 1) {
+      setError('Restaurant limit must be at least 1.');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -106,7 +111,7 @@ const SuperAdminTenantsPage = () => {
         businessName: form.businessName,
         email: form.email,
         phone: form.phone,
-        restaurantLimit: parseInt(form.restaurantLimit),
+        restaurantLimit: parseInt(form.restaurantLimit, 10),
         subscriptionPlan: form.subscriptionPlan,
         status: form.status,
       };
@@ -123,7 +128,9 @@ const SuperAdminTenantsPage = () => {
       setTimeout(() => setSuccess(''), 3000);
       fetchTenants();
     } catch (err) {
-      setError(err.message);
+      const serverMsg = err.response?.data?.errors?.restaurantLimit?.[0] ||
+                        err.response?.data?.message || err.message || 'Failed to save tenant.';
+      setError(serverMsg);
     } finally {
       setSaving(false);
     }
@@ -325,7 +332,19 @@ const SuperAdminTenantsPage = () => {
         )}
         <div className="form-group">
           <label className="form-label">Restaurant Limit <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-          <input className="form-input" type="number" min="1" value={form.restaurantLimit} onChange={(e) => setForm({ ...form, restaurantLimit: e.target.value })} />
+          <input 
+            className="form-input" 
+            type="number" 
+            min="1" 
+            step="1"
+            value={form.restaurantLimit} 
+            onChange={(e) => setForm({ ...form, restaurantLimit: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '.') {
+                e.preventDefault();
+              }
+            }}
+          />
         </div>
         <div className="form-group">
           <label className="form-label">Status</label>

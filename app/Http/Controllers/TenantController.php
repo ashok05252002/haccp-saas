@@ -45,6 +45,10 @@ class TenantController extends Controller
             'password' => 'required|string|min:6',
             'restaurantLimit' => 'required|integer|min:1',
             'status' => 'required|string',
+        ], [
+            'restaurantLimit.required' => 'Restaurant limit is required.',
+            'restaurantLimit.integer'  => 'Restaurant limit must be a whole number.',
+            'restaurantLimit.min'      => 'Restaurant limit must be at least 1.',
         ]);
 
         DB::beginTransaction();
@@ -82,6 +86,10 @@ class TenantController extends Controller
             'email' => 'required|email',
             'restaurantLimit' => 'required|integer|min:1',
             'status' => 'required|string',
+        ], [
+            'restaurantLimit.required' => 'Restaurant limit is required.',
+            'restaurantLimit.integer'  => 'Restaurant limit must be a whole number.',
+            'restaurantLimit.min'      => 'Restaurant limit must be at least 1.',
         ]);
 
         DB::beginTransaction();
