@@ -11,6 +11,7 @@ class Tenant extends Model
         'restaurant_limit',
         'subscription_plan',
         'status',
+        'phone',
     ];
 
     public function branches()

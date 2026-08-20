@@ -24,7 +24,7 @@ class TenantController extends Controller
                 'TenantName' => $owner ? $owner->name : 'N/A',
                 'businessName' => $tenant->name,
                 'email' => $owner ? $owner->email : 'N/A',
-                'phone' => null,
+                'phone' => $tenant->phone,
                 'restaurantLimit' => $tenant->restaurant_limit,
                 'subscriptionPlan' => $tenant->subscription_plan,
                 'status' => $tenant->status,
@@ -42,10 +42,12 @@ class TenantController extends Controller
             'TenantName' => 'required|string',
             'businessName' => 'required|string',
             'email' => 'required|email|unique:users,email',
+            'phone' => 'nullable|string|max:50|regex:/^\+?[0-9\s\-\(\)]+$/',
             'password' => 'required|string|min:6',
             'restaurantLimit' => 'required|integer|min:1',
             'status' => 'required|string',
         ], [
+            'phone.regex' => 'Please enter a valid phone number.',
             'restaurantLimit.required' => 'Restaurant limit is required.',
             'restaurantLimit.integer'  => 'Restaurant limit must be a whole number.',
             'restaurantLimit.min'      => 'Restaurant limit must be at least 1.',
@@ -55,6 +57,7 @@ class TenantController extends Controller
         try {
             $tenant = Tenant::create([
                 'name' => $request->businessName,
+                'phone' => $request->phone ? trim($request->phone) : null,
                 'restaurant_limit' => $request->restaurantLimit,
                 'subscription_plan' => 'Standard',
                 'status' => $request->status,
@@ -84,9 +87,11 @@ class TenantController extends Controller
             'TenantName' => 'required|string',
             'businessName' => 'required|string',
             'email' => 'required|email',
+            'phone' => 'nullable|string|max:50|regex:/^\+?[0-9\s\-\(\)]+$/',
             'restaurantLimit' => 'required|integer|min:1',
             'status' => 'required|string',
         ], [
+            'phone.regex' => 'Please enter a valid phone number.',
             'restaurantLimit.required' => 'Restaurant limit is required.',
             'restaurantLimit.integer'  => 'Restaurant limit must be a whole number.',
             'restaurantLimit.min'      => 'Restaurant limit must be at least 1.',
@@ -96,6 +101,7 @@ class TenantController extends Controller
         try {
             $tenant->update([
                 'name' => $request->businessName,
+                'phone' => $request->phone ? trim($request->phone) : null,
                 'restaurant_limit' => $request->restaurantLimit,
                 'status' => $request->status,
             ]);

@@ -104,13 +104,22 @@ const SuperAdminTenantsPage = () => {
       return;
     }
 
+    if (form.phone && form.phone.trim()) {
+      const phoneClean = form.phone.trim();
+      const phoneRegex = /^\+?[0-9\s\-\(\)]+$/;
+      if (!phoneRegex.test(phoneClean) || phoneClean.includes('.')) {
+        setError('Please enter a valid phone number.');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const payload = {
         TenantName: form.TenantName,
         businessName: form.businessName,
         email: form.email,
-        phone: form.phone,
+        phone: form.phone ? form.phone.trim() : null,
         restaurantLimit: parseInt(form.restaurantLimit, 10),
         subscriptionPlan: form.subscriptionPlan,
         status: form.status,
@@ -128,7 +137,8 @@ const SuperAdminTenantsPage = () => {
       setTimeout(() => setSuccess(''), 3000);
       fetchTenants();
     } catch (err) {
-      const serverMsg = err.response?.data?.errors?.restaurantLimit?.[0] ||
+      const serverMsg = err.response?.data?.errors?.phone?.[0] ||
+                        err.response?.data?.errors?.restaurantLimit?.[0] ||
                         err.response?.data?.message || err.message || 'Failed to save tenant.';
       setError(serverMsg);
     } finally {
@@ -310,7 +320,26 @@ const SuperAdminTenantsPage = () => {
         </div>
         <div className="form-group">
           <label className="form-label">Phone</label>
-          <input className="form-input" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+353 123456789" />
+          <input 
+            className="form-input" 
+            type="tel" 
+            value={form.phone} 
+            onChange={(e) => {
+              let val = e.target.value;
+              let cleaned = val.replace(/[^0-9\s\-\(\)\+]/g, '');
+              if (cleaned.includes('+')) {
+                const startsWithPlus = cleaned.startsWith('+');
+                cleaned = (startsWithPlus ? '+' : '') + cleaned.replace(/\+/g, '');
+              }
+              setForm({ ...form, phone: cleaned });
+            }}
+            onKeyDown={(e) => {
+              if (e.key === '.' || e.key === ',' || e.key === 'e' || e.key === 'E') {
+                e.preventDefault();
+              }
+            }}
+            placeholder="+353 123456789" 
+          />
         </div>
         {!editId && (
           <div style={{ display: 'flex', gap: '12px' }}>
