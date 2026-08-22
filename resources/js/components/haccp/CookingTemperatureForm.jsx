@@ -318,6 +318,26 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
         setError('Date, Time, and Food Item are mandatory.');
         return;
       }
+    } else if (currentStep === 1) {
+      if (!cookingNa && (cookingTemp === '' || cookingTemp === null)) {
+        setError('Core Cooking Temperature is mandatory. If cooking was not performed, check "Stage Not Applicable / Skip Stage".');
+        return;
+      }
+    } else if (currentStep === 2) {
+      if (!chillingNa && (chillingEndTemp === '' || chillingEndTemp === null)) {
+        setError('Blast Chilling End Temperature is mandatory. If blast chilling was not performed, check "Stage Not Applicable / Skip Stage".');
+        return;
+      }
+    } else if (currentStep === 3) {
+      if (!chillerNa && (chillerTemp === '' || chillerTemp === null)) {
+        setError('Storage Temperature is mandatory. If cold storage was not performed, check "Stage Not Applicable / Skip Stage".');
+        return;
+      }
+    } else if (currentStep === 4) {
+      if (!reheatingNa && (reheatingTemp === '' || reheatingTemp === null)) {
+        setError('Reheating Core Temperature is mandatory. If reheating was not performed, check "Stage Not Applicable / Skip Stage".');
+        return;
+      }
     }
     setCurrentStep(prev => Math.min(prev + 1, stepsList.length - 1));
   };
@@ -329,6 +349,12 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
   const handleSubmit = async () => {
     setError(null);
+
+    // Validate Step 6 before submitting
+    if (!hotHoldingNa && (hotHoldingTemp === '' || hotHoldingTemp === null)) {
+      setError('Hot Holding Temperature is mandatory. If hot holding was not performed, check "Stage Not Applicable / Skip Stage".');
+      return;
+    }
 
     // Validate Signature
     let signatureData = existingSignature;
