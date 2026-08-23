@@ -124,13 +124,13 @@ Route::middleware(['auth', 'role:client'])->group(function () {
 Route::middleware(['auth', 'role:super_admin'])->group(function () {
     Route::get('/tenants', function () {
         return Inertia::render('SuperAdminTenantsPage');
-    })->name('super-admin.tenants');
+    });
 
     Route::get('/tenants/{tenant}', function (\App\Models\Tenant $tenant) {
         return Inertia::render('SuperAdminTenantViewPage', [
             'tenant' => $tenant->load('users'),
         ]);
-    })->name('super-admin.tenants.view');
+    });
 
     // Tenant API routes
     Route::get('/api/tenants', [TenantController::class, 'index']);
