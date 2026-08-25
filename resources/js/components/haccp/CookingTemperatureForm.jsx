@@ -357,6 +357,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
     }
 
     // Validate Signature
+
     let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
       signatureData = sigPad.current.getCanvas().toDataURL('image/png');
@@ -427,7 +428,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff', borderRadius: '12px' }}>
-      
+
       {/* 1 - 2 - 3 - 4 - 5 - 6 Stepper Progress Header */}
       <div style={{ padding: '24px 28px', borderBottom: '1px solid var(--color-border-light)', backgroundColor: '#FAFAFA', borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -455,7 +456,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
             const isActive = idx === currentStep;
             const isCompleted = idx < currentStep;
             return (
-              <div 
+              <div
                 key={idx}
                 onClick={() => { if (idx < currentStep) setCurrentStep(idx); }}
                 style={{
@@ -540,10 +541,10 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                       <Plus size={13} /> Add to Master
                     </button>
                   </div>
-                  <select 
-                    className="form-input" 
-                    value={foodItem} 
-                    onChange={e => setFoodItem(e.target.value)} 
+                  <select
+                    className="form-input"
+                    value={foodItem}
+                    onChange={e => setFoodItem(e.target.value)}
                     required
                   >
                     <option value="">-- Select Food Item from Manager Hub --</option>
@@ -556,9 +557,9 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Staff Name</label>
-                  <select 
-                    className="form-input" 
-                    value={staffName} 
+                  <select
+                    className="form-input"
+                    value={staffName}
                     onChange={e => setStaffName(e.target.value)}
                   >
                     <option value="">-- Select Staff Member --</option>
@@ -575,9 +576,9 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Probe / Thermometer Used</label>
-                  <select 
-                    className="form-input" 
-                    value={probeId} 
+                  <select
+                    className="form-input"
+                    value={probeId}
                     onChange={e => setProbeId(e.target.value)}
                   >
                     <option value="">-- Select Thermometer from Master --</option>
@@ -602,7 +603,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                   <Flame size={24} color="#EA580C" />
                   <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#9A3412' }}>Cooking Core Temperature (CCP-3)</h3>
                 </div>
-                
+
                 {/* N/A Checkbox */}
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', backgroundColor: '#ffffff', padding: '6px 12px', borderRadius: '8px', border: '1px solid #FDBA74', fontSize: '13px', fontWeight: 700, color: '#9A3412' }}>
                   <input type="checkbox" checked={cookingNa} onChange={e => setCookingNa(e.target.checked)} style={{ accentColor: '#EA580C' }} />
@@ -619,13 +620,13 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" style={{ color: '#9A3412' }}>Core Temperature (°C) *</label>
-                      <input 
-                        type="number" 
-                        step="0.1" 
-                        className="form-input" 
-                        placeholder="e.g. 78.5" 
-                        value={cookingTemp} 
-                        onChange={e => setCookingTemp(e.target.value)} 
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="form-input"
+                        placeholder="e.g. 78.5"
+                        value={cookingTemp}
+                        onChange={e => setCookingTemp(e.target.value)}
                         style={{
                           borderColor: validateCooking() === false ? '#EF4444' : validateCooking() === true ? '#10B981' : undefined,
                           backgroundColor: validateCooking() === false ? '#FEF2F2' : validateCooking() === true ? '#ECFDF5' : '#ffffff',
@@ -636,11 +637,11 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" style={{ color: '#9A3412' }}>Time Finished Cooking</label>
-                      <input 
-                        type="time" 
-                        className="form-input" 
-                        value={timeFinishedCooking} 
-                        onChange={e => setTimeFinishedCooking(e.target.value)} 
+                      <input
+                        type="time"
+                        className="form-input"
+                        value={timeFinishedCooking}
+                        onChange={e => setTimeFinishedCooking(e.target.value)}
                         style={{ fontWeight: 600 }}
                       />
                     </div>
@@ -712,8 +713,8 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                     <div style={{ marginTop: '16px', padding: '12px 16px', borderRadius: '8px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: validateChilling() ? '#ECFDF5' : '#FEF2F2', color: validateChilling() ? '#047857' : '#B91C1C', border: validateChilling() ? '1px solid #A7F3D0' : '1px solid #FECACA' }}>
                       {validateChilling() ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
                       <span>
-                        {validateChilling() 
-                          ? `CCP-4 Limit Passed (End Temp ${chillingEndTemp}°C ≤ 3°C, Duration ${chillingDurationMinutes ? chillingDurationMinutes + ' mins' : '< 90 mins'})` 
+                        {validateChilling()
+                          ? `CCP-4 Limit Passed (End Temp ${chillingEndTemp}°C ≤ 3°C, Duration ${chillingDurationMinutes ? chillingDurationMinutes + ' mins' : '< 90 mins'})`
                           : `FAILED: Blast chilling limit exceeded! (End Temp > 3°C or Duration > 90 mins)`}
                       </span>
                     </div>
@@ -929,9 +930,9 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                 </button>
               </div>
               <div style={{ border: '1px solid var(--color-border-light)', borderRadius: '10px', overflow: 'hidden' }}>
-                <SignatureCanvas 
+                <SignatureCanvas
                   penColor="black"
-                  canvasProps={{ width: 800, height: 140, className: 'sigCanvas' }} 
+                  canvasProps={{ width: 800, height: 140, className: 'sigCanvas' }}
                   ref={sigPad}
                   backgroundColor="#FAFAFA"
                 />
