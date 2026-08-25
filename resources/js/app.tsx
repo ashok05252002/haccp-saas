@@ -15,7 +15,7 @@ declare global {
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    title: (title) => title ? `${title} - ${appName}` : appName,
     resolve: async (name) => {
         const pages = import.meta.glob('./pages/**/*.{js,jsx,ts,tsx}');
         const page = pages[`./pages/${name}.tsx`] || pages[`./pages/${name}.jsx`] || pages[`./pages/${name}.ts`] || pages[`./pages/${name}.js`] || pages[`./pages/${name}/index.tsx`] || pages[`./pages/${name}/index.jsx`] as any;
