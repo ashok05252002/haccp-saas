@@ -3,9 +3,12 @@ import { Head, router } from '@inertiajs/react';
 import { ArrowLeft, Wind, CheckCircle, AlertTriangle } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Button from '../components/common/Button';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const CoolingProcessViewPage = ({ logId }) => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -67,7 +70,7 @@ const CoolingProcessViewPage = ({ logId }) => {
               Full CCP-6 compliance audit record for natural / ambient cooling.
             </p>
           </div>
-          <Button variant="primary" onClick={() => router.visit(`/haccp-logs/cooling-process/edit/${logId}`)}>
+          <Button variant="primary" onClick={() => requestEdit(`/haccp-logs/cooling-process/edit/${logId}`)}>
             Edit Entry
           </Button>
         </div>
@@ -191,6 +194,12 @@ const CoolingProcessViewPage = ({ logId }) => {
           </div>
         </div>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

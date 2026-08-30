@@ -3,9 +3,12 @@ import { Head, router } from '@inertiajs/react';
 import { ArrowLeft, Snowflake, CheckCircle, AlertTriangle } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Button from '../components/common/Button';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const BlastChillingViewPage = ({ logId }) => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -67,7 +70,7 @@ const BlastChillingViewPage = ({ logId }) => {
               Full CCP-4 compliance audit record for rapid cooling.
             </p>
           </div>
-          <Button variant="primary" onClick={() => router.visit(`/haccp-logs/blast-chilling/edit/${logId}`)}>
+          <Button variant="primary" onClick={() => requestEdit(`/haccp-logs/blast-chilling/edit/${logId}`)}>
             Edit Entry
           </Button>
         </div>
@@ -188,6 +191,12 @@ const BlastChillingViewPage = ({ logId }) => {
           </div>
         </div>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

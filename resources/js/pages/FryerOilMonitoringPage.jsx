@@ -6,9 +6,12 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
 import StatusBadge from '../components/common/StatusBadge';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const FryerOilMonitoringPage = () => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -240,7 +243,7 @@ const FryerOilMonitoringPage = () => {
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <Button variant="secondary" size="sm" icon={Eye} onClick={() => router.visit(`/haccp-logs/fryer-oil/view/${log.id}`)} />
-                        <Button variant="secondary" size="sm" icon={Pencil} onClick={() => router.visit(`/haccp-logs/fryer-oil/edit/${log.id}`)} />
+                        <Button variant="secondary" size="sm" icon={Pencil} onClick={() => requestEdit(`/haccp-logs/fryer-oil/edit/${log.id}`)} />
                         <Button variant="secondary" size="sm" icon={Trash2} onClick={() => handleDelete(log.id)} style={{ color: '#EF4444' }} />
                       </div>
                     </td>
@@ -251,6 +254,12 @@ const FryerOilMonitoringPage = () => {
           )}
         </Card>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

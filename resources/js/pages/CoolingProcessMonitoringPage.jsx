@@ -5,9 +5,12 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const CoolingProcessMonitoringPage = () => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -150,7 +153,7 @@ const CoolingProcessMonitoringPage = () => {
                           <Button variant="secondary" size="sm" onClick={() => router.visit(`/haccp-logs/cooling-process/view/${log.id}`)}>
                             View
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => router.visit(`/haccp-logs/cooling-process/edit/${log.id}`)}>
+                          <Button variant="outline" size="sm" onClick={() => requestEdit(`/haccp-logs/cooling-process/edit/${log.id}`)}>
                             Edit
                           </Button>
                         </div>
@@ -163,6 +166,12 @@ const CoolingProcessMonitoringPage = () => {
           )}
         </Card>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

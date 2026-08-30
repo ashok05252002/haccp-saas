@@ -6,6 +6,8 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import StatusBadge from '../components/common/StatusBadge';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const getItemCheckVal = (item, checkKey) => {
@@ -55,6 +57,7 @@ const isBelowLimit = (val) => {
 };
 
 const HotHoldingViewPage = ({ logId }) => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -193,7 +196,7 @@ const HotHoldingViewPage = ({ logId }) => {
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button variant="outline" onClick={() => router.visit(`/haccp-logs/hot-holding/edit/${logId}`)}>
+            <Button variant="outline" onClick={() => requestEdit(`/haccp-logs/hot-holding/edit/${logId}`)}>
               Edit Entry
             </Button>
             {(!hasCheck2 || !hasCheck3 || !hasCheck4) && (
@@ -373,6 +376,12 @@ const HotHoldingViewPage = ({ logId }) => {
             </div>
           </form>
         </Modal>
+
+        <ManagerPinModal
+          isOpen={pinModalOpen}
+          onClose={handlePinClose}
+          onSuccess={handlePinSuccess}
+        />
       </div>
     </PageLayout>
   );

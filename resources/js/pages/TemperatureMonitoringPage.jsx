@@ -6,9 +6,12 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
 import Modal from '../components/common/Modal';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const TemperatureMonitoringPage = () => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,7 +188,7 @@ const TemperatureMonitoringPage = () => {
               <Button 
                 variant="outline" 
                 icon={Pencil} 
-                onClick={() => router.visit(`/haccp-logs/temperature/edit/${selectedLog.id}`)}
+                onClick={() => requestEdit(`/haccp-logs/temperature/edit/${selectedLog.id}`)}
               >
                 Edit Entry
               </Button>
@@ -243,6 +246,12 @@ const TemperatureMonitoringPage = () => {
           </div>
         )}
       </Modal>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

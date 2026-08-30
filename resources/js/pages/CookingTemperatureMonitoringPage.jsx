@@ -5,9 +5,12 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const CookingTemperatureMonitoringPage = () => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,7 +151,7 @@ const CookingTemperatureMonitoringPage = () => {
                           <Button variant="secondary" size="sm" onClick={() => router.visit(`/haccp-logs/cooking-temperature/view/${log.id}`)}>
                             View
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => router.visit(`/haccp-logs/cooking-temperature/edit/${log.id}`)}>
+                          <Button variant="outline" size="sm" onClick={() => requestEdit(`/haccp-logs/cooking-temperature/edit/${log.id}`)}>
                             Edit
                           </Button>
                         </div>
@@ -161,6 +164,12 @@ const CookingTemperatureMonitoringPage = () => {
           )}
         </Card>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

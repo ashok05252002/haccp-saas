@@ -5,9 +5,12 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import StatusBadge from '../components/common/StatusBadge';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const ThawingViewPage = ({ logId }) => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,7 +72,7 @@ const ThawingViewPage = ({ logId }) => {
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button variant="primary" onClick={() => router.visit(`/haccp-logs/thawing/edit/${logId}`)}>
+            <Button variant="primary" onClick={() => requestEdit(`/haccp-logs/thawing/edit/${logId}`)}>
               Edit Entry
             </Button>
             <Button variant="secondary" icon={Printer} onClick={handlePrint}>
@@ -152,6 +155,12 @@ const ThawingViewPage = ({ logId }) => {
           </div>
         </Card>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

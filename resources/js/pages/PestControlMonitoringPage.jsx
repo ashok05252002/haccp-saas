@@ -7,9 +7,12 @@ import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
 import StatusBadge from '../components/common/StatusBadge';
 import Modal from '../components/common/Modal';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const PestControlMonitoringPage = () => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -264,7 +267,7 @@ const PestControlMonitoringPage = () => {
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <Button variant="secondary" size="sm" icon={Eye} onClick={() => router.visit(`/haccp-logs/pest-control/view/${log.id}`)} />
-                        <Button variant="secondary" size="sm" icon={Pencil} onClick={() => router.visit(`/haccp-logs/pest-control/edit/${log.id}`)} />
+                        <Button variant="secondary" size="sm" icon={Pencil} onClick={() => requestEdit(`/haccp-logs/pest-control/edit/${log.id}`)} />
                         <Button variant="secondary" size="sm" icon={Trash2} onClick={() => confirmDelete(log.id)} style={{ color: '#EF4444' }} />
                       </div>
                     </td>
@@ -295,6 +298,12 @@ const PestControlMonitoringPage = () => {
             </div>
           </div>
         </Modal>
+
+        <ManagerPinModal
+          isOpen={pinModalOpen}
+          onClose={handlePinClose}
+          onSuccess={handlePinSuccess}
+        />
       </div>
     </PageLayout>
   );

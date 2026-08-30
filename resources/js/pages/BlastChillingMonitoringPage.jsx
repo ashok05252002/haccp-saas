@@ -5,9 +5,12 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const BlastChillingMonitoringPage = () => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -154,7 +157,7 @@ const BlastChillingMonitoringPage = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => router.visit(`/haccp-logs/blast-chilling/edit/${log.id}`)}
+                            onClick={() => requestEdit(`/haccp-logs/blast-chilling/edit/${log.id}`)}
                           >
                             Edit
                           </Button>
@@ -168,6 +171,12 @@ const BlastChillingMonitoringPage = () => {
           )}
         </Card>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

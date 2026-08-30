@@ -6,9 +6,12 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
 import Modal from '../components/common/Modal';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const HealthDeclarationLogsPage = () => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -219,7 +222,7 @@ const HealthDeclarationLogsPage = () => {
                             <Eye size={14} /> View
                           </button>
                           <button
-                            onClick={() => router.visit(`/haccp-logs/health-declaration/edit/${log.id}`)}
+                            onClick={() => requestEdit(`/haccp-logs/health-declaration/edit/${log.id}`)}
                             title="Edit Declaration"
                             style={{
                               background: 'none',
@@ -265,6 +268,12 @@ const HealthDeclarationLogsPage = () => {
           )}
         </Card>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

@@ -3,9 +3,12 @@ import { Head, router } from '@inertiajs/react';
 import { ArrowLeft, Flame, Snowflake, Refrigerator as RefrigeratorIcon, RefreshCw, Soup, CheckCircle, AlertTriangle } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Button from '../components/common/Button';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const CookingTemperatureViewPage = ({ logId }) => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -65,7 +68,7 @@ const CookingTemperatureViewPage = ({ logId }) => {
               Full breakdown of all 6 process stages.
             </p>
           </div>
-          <Button variant="primary" onClick={() => router.visit(`/haccp-logs/cooking-temperature/edit/${logId}`)}>
+          <Button variant="primary" onClick={() => requestEdit(`/haccp-logs/cooking-temperature/edit/${logId}`)}>
             Edit Entry
           </Button>
         </div>
@@ -277,6 +280,12 @@ const CookingTemperatureViewPage = ({ logId }) => {
 
         </div>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

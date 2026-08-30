@@ -3,9 +3,12 @@ import { Head, router } from '@inertiajs/react';
 import { ArrowLeft, Truck, CheckCircle, AlertTriangle } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Button from '../components/common/Button';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const FoodDispatchViewPage = ({ logId }) => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,7 +72,7 @@ const FoodDispatchViewPage = ({ logId }) => {
               Full transport audit record for food dispatch & transfer.
             </p>
           </div>
-          <Button variant="primary" onClick={() => router.visit(`/haccp-logs/food-dispatch/edit/${logId}`)}>
+          <Button variant="primary" onClick={() => requestEdit(`/haccp-logs/food-dispatch/edit/${logId}`)}>
             Edit Entry
           </Button>
         </div>
@@ -179,6 +182,12 @@ const FoodDispatchViewPage = ({ logId }) => {
           </div>
         </div>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

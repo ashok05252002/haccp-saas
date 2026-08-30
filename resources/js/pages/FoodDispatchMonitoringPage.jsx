@@ -6,9 +6,12 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
 import DataTable from '../components/common/DataTable';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const FoodDispatchMonitoringPage = () => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -137,7 +140,7 @@ const FoodDispatchMonitoringPage = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => router.visit(`/haccp-logs/food-dispatch/edit/${log.id}`)}
+            onClick={() => requestEdit(`/haccp-logs/food-dispatch/edit/${log.id}`)}
           >
             Edit
           </Button>
@@ -204,6 +207,12 @@ const FoodDispatchMonitoringPage = () => {
           )}
         </Card>
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

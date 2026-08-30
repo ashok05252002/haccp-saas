@@ -7,6 +7,8 @@ import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
 import Modal from '../components/common/Modal';
 import StatusBadge from '../components/common/StatusBadge';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const isProductTempInvalid = (product) => {
@@ -92,6 +94,7 @@ const getDeliveryIntakeLogStatus = (log) => {
 };
 
 const DeliveryIntakeMonitoringPage = () => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -268,7 +271,7 @@ const DeliveryIntakeMonitoringPage = () => {
               Close
             </Button>
             {selectedLog && (
-              <Button variant="primary" onClick={() => router.visit(`/haccp-logs/delivery-intake/edit/${selectedLog.id}`)}>
+              <Button variant="primary" onClick={() => requestEdit(`/haccp-logs/delivery-intake/edit/${selectedLog.id}`)}>
                 Edit Entry
               </Button>
             )}
@@ -388,6 +391,12 @@ const DeliveryIntakeMonitoringPage = () => {
         );
       })()}
       </Modal>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

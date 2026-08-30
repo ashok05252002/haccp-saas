@@ -4,9 +4,12 @@ import { HeartPulse, ArrowLeft, Printer, CheckCircle, AlertTriangle, XCircle, Sh
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const HealthDeclarationViewPage = ({ logId }) => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -107,7 +110,7 @@ const HealthDeclarationViewPage = ({ logId }) => {
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button variant="primary" onClick={() => router.visit(`/haccp-logs/health-declaration/edit/${logId}`)}>
+            <Button variant="primary" onClick={() => requestEdit(`/haccp-logs/health-declaration/edit/${logId}`)}>
               Edit Entry
             </Button>
             <Button variant="secondary" icon={Printer} onClick={handlePrint}>
@@ -272,6 +275,12 @@ const HealthDeclarationViewPage = ({ logId }) => {
           </div>
         )}
       </div>
+
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

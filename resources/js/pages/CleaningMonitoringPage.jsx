@@ -6,9 +6,12 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SearchBar from '../components/common/SearchBar';
 import Modal from '../components/common/Modal';
+import ManagerPinModal from '../components/common/ManagerPinModal';
+import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const CleaningMonitoringPage = () => {
+  const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -177,7 +180,7 @@ const CleaningMonitoringPage = () => {
               Close
             </Button>
             {selectedLog && (
-              <Button variant="primary" onClick={() => router.visit(`/haccp-logs/cleaning/edit/${selectedLog.id}`)}>
+              <Button variant="primary" onClick={() => requestEdit(`/haccp-logs/cleaning/edit/${selectedLog.id}`)}>
                 Edit Entry
               </Button>
             )}
@@ -268,6 +271,11 @@ const CleaningMonitoringPage = () => {
         })()}
       </Modal>
 
+      <ManagerPinModal
+        isOpen={pinModalOpen}
+        onClose={handlePinClose}
+        onSuccess={handlePinSuccess}
+      />
     </PageLayout>
   );
 };

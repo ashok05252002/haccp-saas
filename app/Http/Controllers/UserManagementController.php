@@ -206,4 +206,74 @@ class UserManagementController extends Controller
 
         return response()->json(['message' => 'Restaurant user deleted successfully']);
     }
+
+    public function verifyManagerPin(Request $request)
+    {
+        $request->validate([
+            'pin' => 'required|string',
+        ]);
+
+        $authUser = Auth::user();
+        if (!$authUser || !$authUser->tenant_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized context.'], 403);
+        }
+
+        $tenantId = $authUser->tenant_id;
+        $activeBranchId = session('active_branch_id') ?? $authUser->branch_id;
+
+        // Query active restaurant users for current tenant matching the pin
+        $query = RestaurantUser::with('assignedRole')
+            ->where('tenant_id', $tenantId)
+            ->where('status', 'Active')
+            ->where('pin_code', $request->pin);
+
+        if ($activeBranchId) {
+            $query->where(function ($q) use ($activeBranchId) {
+                $q->where('branch_id', $activeBranchId)
+                  ->orWhereNull('branch_id');
+            });
+        }
+
+        $matchingUsers = $query->get();
+
+        if ($matchingUsers->isEmpty()) {
+            $matchingUsers = RestaurantUser::with('assignedRole')
+                ->where('tenant_id', $tenantId)
+                ->where('status', 'Active')
+                ->where('pin_code', $request->pin)
+                ->get();
+        }
+
+        $manager = $matchingUsers->first(function ($u) {
+            $perms = $u->assignedRole->permissions ?? null;
+            if (is_array($perms) && in_array('haccp.edit-submitted-logs', $perms)) {
+                return true;
+            }
+            $roleName = strtolower($u->assignedRole->name ?? '');
+            if ($roleName && (
+                str_contains($roleName, 'manager') ||
+                str_contains($roleName, 'admin') ||
+                str_contains($roleName, 'head chef') ||
+                str_contains($roleName, 'supervisor') ||
+                str_contains($roleName, 'owner')
+            )) {
+                return true;
+            }
+            return $perms === null;
+        });
+
+        if ($manager) {
+            return response()->json([
+                'success' => true,
+                'manager_name' => $manager->name,
+                'manager_id' => $manager->id,
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid Manager PIN.',
+        ], 422);
+    }
 }
+

@@ -800,6 +800,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::post('/api/tenant-users/{id}/enable-login', [\App\Http\Controllers\UserManagementController::class, 'enableLogin']);
     Route::put('/api/tenant-users/{id}', [\App\Http\Controllers\UserManagementController::class, 'update']);
     Route::delete('/api/tenant-users/{id}', [\App\Http\Controllers\UserManagementController::class, 'destroy']);
+    Route::post('/api/verify-manager-pin', [\App\Http\Controllers\UserManagementController::class, 'verifyManagerPin']);
 
     // Recipes Frontend & API
     Route::get('/recipes', function () {
