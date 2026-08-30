@@ -27,6 +27,7 @@ const HACCP_MODULE_PERMISSIONS = [
   { key: 'haccp.health-declaration', label: 'Staff Health Declaration' },
   { key: 'haccp.thawing', label: 'Thawing / Defrosting Record' },
   { key: 'haccp.reports', label: 'HACCP Reports & Audits' },
+  { key: 'haccp.edit-submitted-logs', label: 'Allow Editing Submitted HACCP Logs' },
 ];
 
 const MANAGER_PANEL_PERMISSIONS = [
