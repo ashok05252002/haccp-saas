@@ -5,6 +5,7 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
+import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
 import SignaturePad from '../components/common/SignaturePad';
 import axios from 'axios';
 
@@ -25,6 +26,7 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
   const [signature, setSignature] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
   const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -139,18 +141,7 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
     setModalOpen(true);
   };
 
-  const handleSaveCompletion = async (e) => {
-    e.preventDefault();
-    const newErrors = {};
-
-    if (!trainerName.trim()) newErrors.trainerName = 'Trainer / Supervisor name is required.';
-    if (!signature) newErrors.signature = 'Staff signature is required.';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
+  const handleFinalSaveCompletion = async (amendmentReason = '') => {
     setSubmitting(true);
     try {
       const payload = {
@@ -169,6 +160,7 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
       };
 
       if (editingLogId) {
+        payload.amendment_reason = amendmentReason;
         await axios.put(`/api/staff-training-logs/${editingLogId}`, payload);
       } else {
         await axios.post('/api/staff-training-logs', payload);
@@ -181,6 +173,26 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
       alert(err.response?.data?.message || 'Failed to complete training task.');
     } finally {
       setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
+  const handleSaveCompletion = async (e) => {
+    e.preventDefault();
+    const newErrors = {};
+
+    if (!trainerName.trim()) newErrors.trainerName = 'Trainer / Supervisor name is required.';
+    if (!signature) newErrors.signature = 'Staff signature is required.';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    if (editingLogId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSaveCompletion();
     }
   };
 
@@ -383,6 +395,13 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
             </div>
           </form>
         </Modal>
+
+        <AmendmentReasonModal
+          isOpen={showReasonModal}
+          onClose={() => setShowReasonModal(false)}
+          onConfirm={handleFinalSaveCompletion}
+          loading={submitting}
+        />
       </div>
     </PageLayout>
   );

@@ -96,28 +96,55 @@ class StaffTrainingLogController extends Controller
             'notes' => 'nullable|string',
             'signed_by_staff_name' => 'required|string',
             'signature' => 'nullable|string',
+            'amendment_reason' => 'required|string|min:3',
         ]);
 
-        $passed = $validated['understanding_confirmed'] && (!empty($validated['signature']) || !empty($log->signature));
-        $status = $passed ? 'Passed' : 'Requires Attention';
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $originalData = $log->toArray();
 
-        $log->update([
-            'log_date' => $validated['log_date'],
-            'log_time' => $validated['log_time'],
-            'staff_name' => $validated['staff_name'],
-            'staff_position' => $validated['staff_position'] ?? null,
-            'task_id' => $validated['task_id'] ?? null,
-            'task_title' => $validated['task_title'],
-            'task_description' => $validated['task_description'] ?? null,
-            'trainer_name' => $validated['trainer_name'],
-            'understanding_confirmed' => $validated['understanding_confirmed'],
-            'notes' => $validated['notes'] ?? null,
-            'signed_by_staff_name' => $validated['signed_by_staff_name'],
-            'signature' => $validated['signature'] ?: $log->signature,
-            'status' => $status,
-        ]);
+            $passed = $validated['understanding_confirmed'] && (!empty($validated['signature']) || !empty($log->signature));
+            $status = $passed ? 'Passed' : 'Requires Attention';
 
-        return response()->json(['message' => 'Staff training log updated successfully', 'log' => $log]);
+            $log->update([
+                'log_date' => $validated['log_date'],
+                'log_time' => $validated['log_time'],
+                'staff_name' => $validated['staff_name'],
+                'staff_position' => $validated['staff_position'] ?? null,
+                'task_id' => $validated['task_id'] ?? null,
+                'task_title' => $validated['task_title'],
+                'task_description' => $validated['task_description'] ?? null,
+                'trainer_name' => $validated['trainer_name'],
+                'understanding_confirmed' => $validated['understanding_confirmed'],
+                'notes' => $validated['notes'] ?? null,
+                'signed_by_staff_name' => $validated['signed_by_staff_name'],
+                'signature' => $validated['signature'] ?: $log->signature,
+                'status' => $status,
+            ]);
+
+            $newData = $log->fresh()->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'staff_training',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json(['message' => 'Staff training log updated successfully', 'log' => $log]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['message' => 'Failed to update staff training log: ' . $e->getMessage()], 500);
+        }
     }
 
     public function destroy($id)
