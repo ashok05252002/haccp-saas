@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
+import AmendmentReasonModal from '../common/AmendmentReasonModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { AlertTriangle, Save, Flame, Snowflake, Snowflake as RefrigeratorIcon, RefreshCw, Soup, CheckCircle, ArrowRight, ArrowLeft, Plus } from 'lucide-react';
 import axios from 'axios';
@@ -10,6 +11,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
   const [error, setError] = useState(null);
   const [existingSignature, setExistingSignature] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(false);
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   // Stepper State (Step 0 to 5 -> 6 steps total)
   const [currentStep, setCurrentStep] = useState(0);
@@ -327,19 +329,10 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
     setCurrentStep(prev => Math.max(prev - 1, 0));
   };
 
-  const handleSubmit = async () => {
-    setError(null);
-
-    // Validate Signature
-
+  const handleFinalSubmit = async (amendmentReason = '') => {
     let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
       signatureData = sigPad.current.getCanvas().toDataURL('image/png');
-    }
-
-    if (!signatureData) {
-      setError('Staff Verification Signature is mandatory. Please provide a signature before submitting.');
-      return;
     }
 
     setSubmitting(true);
@@ -386,6 +379,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
     try {
       if (logId) {
+        payload.amendment_reason = amendmentReason;
         await axios.put(`/api/cooking-logs/${logId}`, payload);
       } else {
         await axios.post('/api/cooking-logs', payload);
@@ -394,7 +388,30 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
     } catch (err) {
       console.error('Failed to save cooking log', err);
       setError(err.response?.data?.message || 'Failed to save log.');
+    } finally {
       setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setError(null);
+
+    // Validate Signature
+    let signatureData = existingSignature;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    }
+
+    if (!signatureData) {
+      setError('Staff Verification Signature is mandatory. Please provide a signature before submitting.');
+      return;
+    }
+
+    if (logId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSubmit();
     }
   };
 
@@ -1027,6 +1044,13 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
           </form>
         )}
       </Modal>
+
+      <AmendmentReasonModal
+        isOpen={showReasonModal}
+        onClose={() => setShowReasonModal(false)}
+        onConfirm={handleFinalSubmit}
+        loading={submitting}
+      />
     </div>
   );
 };

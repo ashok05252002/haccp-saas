@@ -160,11 +160,41 @@ class CookingLogController extends Controller
             'corrective_action' => 'nullable|string',
             'notes' => 'nullable|string',
             'signature' => 'nullable|string',
+            'amendment_reason' => 'required|string|min:3',
         ]);
 
-        $log->update($validated);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $originalData = $log->toArray();
 
-        return response()->json(['message' => 'Cooking log updated successfully', 'log' => $log]);
+            $updateData = $validated;
+            unset($updateData['amendment_reason']);
+
+            $log->update($updateData);
+
+            $newData = $log->fresh()->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'cooking_temperature',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json(['message' => 'Cooking log updated successfully', 'log' => $log]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['message' => 'Failed to update cooking log: ' . $e->getMessage()], 500);
+        }
     }
 
     public function destroy($id)
