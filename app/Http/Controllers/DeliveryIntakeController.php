@@ -113,6 +113,7 @@ class DeliveryIntakeController extends Controller
             'products.*.use_by_date' => 'nullable|date',
             'products.*.quantity' => 'required|string|max:255',
             'products.*.temperature' => 'required|numeric',
+            'amendment_reason' => 'nullable|string',
         ], [
             'staff_name.required' => 'Please select staff member.',
             'signature.required' => 'Please add signature before saving.',

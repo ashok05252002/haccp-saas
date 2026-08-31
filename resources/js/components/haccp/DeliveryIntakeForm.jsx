@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
+import AmendmentReasonModal from '../common/AmendmentReasonModal';
 import axios from 'axios';
 import { Save, AlertCircle, Trash2, Plus, X, Info } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
@@ -90,6 +91,7 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [reasonModalOpen, setReasonModalOpen] = useState(false);
 
   // Quick Add Food Item Modal State
   const [foodModalOpen, setFoodModalOpen] = useState(false);
@@ -299,15 +301,59 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
     }
   };
 
+  const handleConfirmAmendment = async (amendmentReason) => {
+    setSaving(true);
+    setError(null);
+
+    let sigData = form.signature;
+    if (sigCanvas.current) {
+      if (!sigCanvas.current.isEmpty()) {
+        sigData = sigCanvas.current.getCanvas
+          ? sigCanvas.current.getCanvas().toDataURL('image/png')
+          : sigCanvas.current.toDataURL('image/png');
+      }
+    }
+
+    try {
+      const payload = {
+        ...form,
+        signature: sigData,
+        supplier_id: form.supplier_id ? parseInt(form.supplier_id) : null,
+        products: products.map(p => ({
+          food_item_id: parseInt(p.food_item_id),
+          batch_number: p.batch_number || null,
+          use_by_date: p.use_by_date || null,
+          quantity: p.quantity,
+          temperature: parseFloat(p.temperature),
+        })),
+        amendment_reason: amendmentReason
+      };
+
+      await axios.put(`/api/delivery-intake/${logId}`, payload);
+      setReasonModalOpen(false);
+      if (onSave) onSave();
+    } catch (err) {
+      console.error(err);
+      const errMsg = err.response?.data?.errors?.staff_name?.[0] ||
+                     err.response?.data?.errors?.signature?.[0] ||
+                     err.response?.data?.errors?.['products.0.temperature']?.[0] ||
+                     err.response?.data?.errors?.products?.[0] ||
+                     err.response?.data?.error ||
+                     'Failed to update delivery intake. Please verify all required fields.';
+      setError(errMsg);
+      setReasonModalOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
     setError(null);
 
     // 1. Staff Member validation
     if (!form.staff_name || !form.staff_name.trim()) {
       setError('Please select staff member.');
-      setSaving(false);
       return;
     }
 
@@ -325,23 +371,27 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
 
     if (!sigData || !sigData.trim()) {
       setError('Please add signature before saving.');
-      setSaving(false);
       return;
     }
 
     // 3. Products validation
     if (products.some(p => !p.food_item_id || !p.quantity)) {
       setError('All products must have a Food Item and Quantity selected.');
-      setSaving(false);
       return;
     }
 
     const hasEmptyTemp = products.some(p => p.temperature === undefined || p.temperature === null || String(p.temperature).trim() === '');
     if (hasEmptyTemp) {
       setError('Please enter temperature for all products.');
-      setSaving(false);
       return;
     }
+
+    if (logId) {
+      setReasonModalOpen(true);
+      return;
+    }
+
+    setSaving(true);
 
     try {
       const payload = {
@@ -357,11 +407,7 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
         }))
       };
 
-      if (logId) {
-        await axios.put(`/api/delivery-intake/${logId}`, payload);
-      } else {
-        await axios.post('/api/delivery-intake', payload);
-      }
+      await axios.post('/api/delivery-intake', payload);
       
       if (onSave) {
         onSave();
@@ -621,9 +667,16 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
           Cancel
         </Button>
         <Button type="submit" variant="primary" icon={Save} loading={saving}>
-          Save Intake Log
+          {saving ? 'Saving...' : (logId ? 'Update Intake Log' : 'Save Intake Log')}
         </Button>
       </div>
+
+      <AmendmentReasonModal
+        isOpen={reasonModalOpen}
+        onClose={() => setReasonModalOpen(false)}
+        onConfirm={handleConfirmAmendment}
+        loading={saving}
+      />
 
       {/* Quick Add Food Item Modal */}
       <Modal
