@@ -111,7 +111,7 @@ class BlastChillingLogController extends Controller
         $tenantId = Auth::user()->tenant_id;
         $log = BlastChillingLog::where('tenant_id', $tenantId)->findOrFail($id);
 
-        $request->validate([
+        $validated = $request->validate([
             'log_date'          => 'required|date',
             'log_time'          => 'required|string',
             'food_item'         => 'required|string|max:255',
@@ -127,32 +127,59 @@ class BlastChillingLogController extends Controller
             'corrective_action' => 'nullable|string',
             'notes'             => 'nullable|string',
             'signature'         => 'nullable|string',
+            'amendment_reason'  => 'required|string|min:3',
         ]);
 
-        $endTemp = (float) $request->end_temp;
-        $duration = $request->duration_minutes ? (int) $request->duration_minutes : 0;
-        $checkPassed = ($endTemp <= 3.0) && ($duration === 0 || $duration <= 90);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $originalData = $log->toArray();
 
-        $log->update([
-            'log_date'            => $request->log_date,
-            'log_time'            => $request->log_time,
-            'staff_name'          => $request->staff_name,
-            'food_item'           => $request->food_item,
-            'batch_code'          => $request->batch_code,
-            'probe_id'            => $request->probe_id,
-            'chiller_location'    => $request->chiller_location,
-            'chilling_start_time' => $request->chilling_start_time,
-            'chilling_end_time'   => $request->chilling_end_time,
-            'start_temp'          => $request->start_temp !== null ? (float)$request->start_temp : null,
-            'end_temp'            => $endTemp,
-            'duration_minutes'    => $request->duration_minutes !== null ? (int)$request->duration_minutes : null,
-            'check_passed'        => $checkPassed,
-            'corrective_action'   => $request->corrective_action,
-            'notes'               => $request->notes,
-            'signature'           => $request->signature ?: $log->signature,
-        ]);
+            $endTemp = (float) $request->end_temp;
+            $duration = $request->duration_minutes ? (int) $request->duration_minutes : 0;
+            $checkPassed = ($endTemp <= 3.0) && ($duration === 0 || $duration <= 90);
 
-        return response()->json(['message' => 'Blast chilling log updated successfully', 'log' => $log]);
+            $log->update([
+                'log_date'            => $request->log_date,
+                'log_time'            => $request->log_time,
+                'staff_name'          => $request->staff_name,
+                'food_item'           => $request->food_item,
+                'batch_code'          => $request->batch_code,
+                'probe_id'            => $request->probe_id,
+                'chiller_location'    => $request->chiller_location,
+                'chilling_start_time' => $request->chilling_start_time,
+                'chilling_end_time'   => $request->chilling_end_time,
+                'start_temp'          => $request->start_temp !== null ? (float)$request->start_temp : null,
+                'end_temp'            => $endTemp,
+                'duration_minutes'    => $request->duration_minutes !== null ? (int)$request->duration_minutes : null,
+                'check_passed'        => $checkPassed,
+                'corrective_action'   => $request->corrective_action,
+                'notes'               => $request->notes,
+                'signature'           => $request->signature ?: $log->signature,
+            ]);
+
+            $newData = $log->fresh()->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'blast_chilling',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json(['message' => 'Blast chilling log updated successfully', 'log' => $log]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['message' => 'Failed to update blast chilling log'], 500);
+        }
     }
 
     public function destroy($id)

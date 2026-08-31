@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
+import AmendmentReasonModal from '../common/AmendmentReasonModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { Info, AlertTriangle, Plus, RotateCcw } from 'lucide-react';
 import axios from 'axios';
@@ -10,6 +11,7 @@ const CoolingProcessForm = ({ onSave, onCancel, logId }) => {
   const [error, setError] = useState(null);
   const [existingSignature, setExistingSignature] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(false);
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const nowTimeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -214,8 +216,54 @@ const CoolingProcessForm = ({ onSave, onCancel, logId }) => {
     }
   };
 
+  const handleFinalSubmit = async (amendmentReason = '') => {
+    let signatureData = existingSignature;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    }
+
+    setSubmitting(true);
+
+    const payload = {
+      food_item: foodItem,
+      cooling_method: coolingMethod,
+      storage_location: storageLocation || null,
+      start_date: startDate,
+      start_time: startTime,
+      start_temp: parseFloat(startTemp),
+      end_date: endDate,
+      end_time: endTime,
+      end_temp: parseFloat(endTemp),
+      duration_minutes: durationMinutes,
+      comments: comments || null,
+      staff_name: staffName,
+      signature: signatureData,
+    };
+
+    try {
+      if (logId) {
+        payload.amendment_reason = amendmentReason;
+        await axios.put(`/api/cooling-process-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/cooling-process-logs', payload);
+      }
+      if (onSave) onSave();
+    } catch (err) {
+      console.error('Failed to save cooling process log', err);
+      if (err.response?.data?.errors) {
+        const firstErr = Object.values(err.response.data.errors)[0];
+        setError(Array.isArray(firstErr) ? firstErr[0] : firstErr);
+      } else {
+        setError(err.response?.data?.message || 'Failed to save log.');
+      }
+    } finally {
+      setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError(null);
 
     if (!foodItem.trim()) {
@@ -255,41 +303,10 @@ const CoolingProcessForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
-    setSubmitting(true);
-
-    const payload = {
-      food_item: foodItem,
-      cooling_method: coolingMethod,
-      storage_location: storageLocation || null,
-      start_date: startDate,
-      start_time: startTime,
-      start_temp: parseFloat(startTemp),
-      end_date: endDate,
-      end_time: endTime,
-      end_temp: parseFloat(endTemp),
-      duration_minutes: durationMinutes,
-      comments: comments || null,
-      staff_name: staffName,
-      signature: signatureData,
-    };
-
-    try {
-      if (logId) {
-        await axios.put(`/api/cooling-process-logs/${logId}`, payload);
-      } else {
-        await axios.post('/api/cooling-process-logs', payload);
-      }
-      if (onSave) onSave();
-    } catch (err) {
-      console.error('Failed to save cooling process log', err);
-      if (err.response?.data?.errors) {
-        const firstErr = Object.values(err.response.data.errors)[0];
-        setError(Array.isArray(firstErr) ? firstErr[0] : firstErr);
-      } else {
-        setError(err.response?.data?.message || 'Failed to save log.');
-      }
-    } finally {
-      setSubmitting(false);
+    if (logId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSubmit();
     }
   };
 
@@ -740,6 +757,13 @@ const CoolingProcessForm = ({ onSave, onCancel, logId }) => {
           </form>
         )}
       </Modal>
+
+      <AmendmentReasonModal
+        isOpen={showReasonModal}
+        onClose={() => setShowReasonModal(false)}
+        onConfirm={handleFinalSubmit}
+        loading={submitting}
+      />
     </div>
   );
 };

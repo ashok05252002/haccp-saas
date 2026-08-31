@@ -143,9 +143,9 @@ class HealthDeclarationLogController extends Controller
     public function update(Request $request, $id)
     {
         $tenantId = Auth::user()->tenant_id;
-        $log = HealthDeclarationLog::where('tenant_id', $tenantId)->findOrFail($id);
+        $log = HealthDeclarationLog::with(['results'])->where('tenant_id', $tenantId)->findOrFail($id);
 
-        $request->validate([
+        $validated = $request->validate([
             'log_date'            => 'required|date',
             'log_time'            => 'required|string',
             'staff_name'          => 'required|string|max:255',
@@ -156,6 +156,7 @@ class HealthDeclarationLogController extends Controller
             'results.*.question_id' => 'required|integer|exists:health_declaration_questions,id',
             'results.*.answer'    => 'required|in:Yes,No',
             'results.*.notes'     => 'nullable|string',
+            'amendment_reason'    => 'required|string|min:3',
         ]);
 
         $hasYesAnswers = false;
@@ -170,6 +171,8 @@ class HealthDeclarationLogController extends Controller
 
         try {
             DB::beginTransaction();
+
+            $originalData = $log->toArray();
 
             $log->update([
                 'log_date'           => $request->log_date,
@@ -192,6 +195,22 @@ class HealthDeclarationLogController extends Controller
                     'notes'                     => $resultData['notes'] ?? null,
                 ]);
             }
+
+            $newData = $log->fresh(['results'])->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'health_declaration',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
 
             DB::commit();
 

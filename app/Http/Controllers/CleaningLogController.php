@@ -125,9 +125,9 @@ class CleaningLogController extends Controller
     public function update(Request $request, $id)
     {
         $tenantId = Auth::user()->tenant_id;
-        $log = CleaningLog::where('tenant_id', $tenantId)->findOrFail($id);
+        $log = CleaningLog::with(['results'])->where('tenant_id', $tenantId)->findOrFail($id);
 
-        $request->validate([
+        $validated = $request->validate([
             'log_date' => 'required|date',
             'log_time' => 'required|string',
             'staff_name' => 'required|string|max:255',
@@ -138,6 +138,7 @@ class CleaningLogController extends Controller
             'results.*.question_id' => 'required|integer|exists:cleaning_checklist_questions,id',
             'results.*.result' => 'required|in:Yes,No,N/A',
             'results.*.comment' => 'nullable|string',
+            'amendment_reason' => 'required|string|min:3',
         ], [
             'staff_name.required' => 'Please select staff member.',
             'signature.required' => 'Please add signature before saving.',
@@ -145,6 +146,8 @@ class CleaningLogController extends Controller
 
         try {
             DB::beginTransaction();
+
+            $originalData = $log->toArray();
 
             $log->update([
                 'log_date' => $request->log_date,
@@ -164,6 +167,22 @@ class CleaningLogController extends Controller
                     'comment' => $result['comment'] ?? null,
                 ]);
             }
+
+            $newData = $log->fresh(['results'])->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'cleaning_sanitation',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
 
             DB::commit();
 

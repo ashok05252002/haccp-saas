@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
+import AmendmentReasonModal from '../common/AmendmentReasonModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { AlertTriangle, CheckCircle, Plus, UserPlus, RotateCcw, Truck } from 'lucide-react';
 import axios from 'axios';
@@ -31,6 +32,7 @@ const FoodDispatchForm = ({ onSave, onCancel, logId }) => {
   const [error, setError] = useState(null);
   const [existingSignature, setExistingSignature] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(false);
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const nowTimeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -272,8 +274,54 @@ const FoodDispatchForm = ({ onSave, onCancel, logId }) => {
     }
   };
 
+  const handleFinalSubmit = async (amendmentReason = '') => {
+    let signatureData = existingSignature;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    }
+
+    setSubmitting(true);
+
+    const payload = {
+      log_date: logDate,
+      log_time: logTime,
+      staff_name: staffName,
+      food_item: foodItem,
+      food_category: foodCategory || null,
+      storage_type: storageType || null,
+      batch_code: batchCode || null,
+      destination: destination,
+      use_by_date: useByDate,
+      temperature: parseFloat(temperature),
+      separation: separation,
+      comments: comments || null,
+      signature: signatureData,
+    };
+
+    try {
+      if (logId) {
+        payload.amendment_reason = amendmentReason;
+        await axios.put(`/api/food-dispatch-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/food-dispatch-logs', payload);
+      }
+      if (onSave) onSave();
+    } catch (err) {
+      console.error('Failed to save food dispatch log', err);
+      if (err.response?.data?.errors) {
+        const firstErr = Object.values(err.response.data.errors)[0];
+        setError(Array.isArray(firstErr) ? firstErr[0] : firstErr);
+      } else {
+        setError(err.response?.data?.message || 'Failed to save dispatch log.');
+      }
+    } finally {
+      setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError(null);
 
     if (!staffName.trim()) {
@@ -306,41 +354,10 @@ const FoodDispatchForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
-    setSubmitting(true);
-
-    const payload = {
-      log_date: logDate,
-      log_time: logTime,
-      staff_name: staffName,
-      food_item: foodItem,
-      food_category: foodCategory || null,
-      storage_type: storageType || null,
-      batch_code: batchCode || null,
-      destination: destination,
-      use_by_date: useByDate,
-      temperature: parseFloat(temperature),
-      separation: separation,
-      comments: comments || null,
-      signature: signatureData,
-    };
-
-    try {
-      if (logId) {
-        await axios.put(`/api/food-dispatch-logs/${logId}`, payload);
-      } else {
-        await axios.post('/api/food-dispatch-logs', payload);
-      }
-      if (onSave) onSave();
-    } catch (err) {
-      console.error('Failed to save food dispatch log', err);
-      if (err.response?.data?.errors) {
-        const firstErr = Object.values(err.response.data.errors)[0];
-        setError(Array.isArray(firstErr) ? firstErr[0] : firstErr);
-      } else {
-        setError(err.response?.data?.message || 'Failed to save dispatch log.');
-      }
-    } finally {
-      setSubmitting(false);
+    if (logId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSubmit();
     }
   };
 
@@ -843,6 +860,13 @@ const FoodDispatchForm = ({ onSave, onCancel, logId }) => {
           </div>
         </form>
       </Modal>
+
+      <AmendmentReasonModal
+        isOpen={showReasonModal}
+        onClose={() => setShowReasonModal(false)}
+        onConfirm={handleFinalSubmit}
+        loading={submitting}
+      />
     </div>
   );
 };

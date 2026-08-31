@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
+import AmendmentReasonModal from '../common/AmendmentReasonModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { Snowflake, AlertTriangle, CheckCircle, Plus, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
@@ -33,6 +34,7 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
   const [error, setError] = useState(null);
   const [existingSignature, setExistingSignature] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(false);
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   // Form Fields matching mock schema
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -249,8 +251,54 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
     }
   };
 
+  const handleFinalSubmit = async (amendmentReason = '') => {
+    let signatureData = existingSignature;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    }
+
+    setSubmitting(true);
+
+    const payload = {
+      log_date: logDate,
+      log_time: logTime,
+      staff_name: staffName || null,
+      food_item: foodItem,
+      probe_id: probeId || null,
+      chilling_start_time: chillingStartTime || null,
+      chilling_end_time: chillingEndTime || null,
+      start_temp: startTemp !== '' ? parseFloat(startTemp) : null,
+      end_temp: parseFloat(endTemp),
+      duration_minutes: durationMinutes !== '' ? parseInt(durationMinutes, 10) : null,
+      corrective_action: correctiveAction || null,
+      notes: notes || null,
+      signature: signatureData,
+    };
+
+    try {
+      if (logId) {
+        payload.amendment_reason = amendmentReason;
+        await axios.put(`/api/blast-chilling-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/blast-chilling-logs', payload);
+      }
+      if (onSave) onSave();
+    } catch (err) {
+      console.error('Failed to save blast chilling log', err);
+      if (err.response?.data?.errors) {
+        const firstErr = Object.values(err.response.data.errors)[0];
+        setError(Array.isArray(firstErr) ? firstErr[0] : firstErr);
+      } else {
+        setError(err.response?.data?.message || 'Failed to save log.');
+      }
+    } finally {
+      setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError(null);
 
     if (!logDate || !logTime || !foodItem.trim()) {
@@ -279,41 +327,10 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
-    setSubmitting(true);
-
-    const payload = {
-      log_date: logDate,
-      log_time: logTime,
-      staff_name: staffName || null,
-      food_item: foodItem,
-      probe_id: probeId || null,
-      chilling_start_time: chillingStartTime || null,
-      chilling_end_time: chillingEndTime || null,
-      start_temp: startTemp !== '' ? parseFloat(startTemp) : null,
-      end_temp: parseFloat(endTemp),
-      duration_minutes: durationMinutes !== '' ? parseInt(durationMinutes, 10) : null,
-      corrective_action: correctiveAction || null,
-      notes: notes || null,
-      signature: signatureData,
-    };
-
-    try {
-      if (logId) {
-        await axios.put(`/api/blast-chilling-logs/${logId}`, payload);
-      } else {
-        await axios.post('/api/blast-chilling-logs', payload);
-      }
-      if (onSave) onSave();
-    } catch (err) {
-      console.error('Failed to save blast chilling log', err);
-      if (err.response?.data?.errors) {
-        const firstErr = Object.values(err.response.data.errors)[0];
-        setError(Array.isArray(firstErr) ? firstErr[0] : firstErr);
-      } else {
-        setError(err.response?.data?.message || 'Failed to save log.');
-      }
-    } finally {
-      setSubmitting(false);
+    if (logId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSubmit();
     }
   };
 
@@ -776,6 +793,13 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
           </form>
         )}
       </Modal>
+
+      <AmendmentReasonModal
+        isOpen={showReasonModal}
+        onClose={() => setShowReasonModal(false)}
+        onConfirm={handleFinalSubmit}
+        loading={submitting}
+      />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
+import AmendmentReasonModal from '../common/AmendmentReasonModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { AlertTriangle, Save, CheckCircle, XCircle, MinusCircle, ClipboardCheck, ArrowRight, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
@@ -11,6 +12,7 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [existingSignature, setExistingSignature] = useState(null);
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   // Stepper State
   const [currentStep, setCurrentStep] = useState(0);
@@ -123,17 +125,7 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
     setCurrentStep(prev => prev - 1);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-
-    if (!staffName || !staffName.trim()) {
-      setError("Please select staff member.");
-      setSubmitting(false);
-      return;
-    }
-
+  const handleFinalSubmit = async (amendmentReason = '') => {
     // Format results
     const results = [];
     sections.forEach(section => {
@@ -158,12 +150,7 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
       signatureData = existingSignature.trim();
     }
 
-    if (!signatureData || !signatureData.trim()) {
-      setError("Please add signature before saving.");
-      setSubmitting(false);
-      return;
-    }
-
+    setSubmitting(true);
     try {
       const payload = {
         log_date: logDate,
@@ -175,6 +162,7 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
       };
 
       if (logId) {
+        payload.amendment_reason = amendmentReason;
         await axios.put(`/api/cleaning-logs/${logId}`, payload);
       } else {
         await axios.post('/api/cleaning-logs', payload);
@@ -184,7 +172,39 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
       console.error('Failed to save logs', err);
       const errMsg = err.response?.data?.errors?.signature?.[0] || err.response?.data?.errors?.staff_name?.[0] || err.response?.data?.message || 'Failed to save logs.';
       setError(errMsg);
+    } finally {
       setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setError(null);
+
+    if (!staffName || !staffName.trim()) {
+      setError("Please select staff member.");
+      return;
+    }
+
+    let signatureData = null;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas
+        ? sigPad.current.getCanvas().toDataURL('image/png')
+        : sigPad.current.toDataURL('image/png');
+    } else if (existingSignature && typeof existingSignature === 'string' && existingSignature.trim()) {
+      signatureData = existingSignature.trim();
+    }
+
+    if (!signatureData || !signatureData.trim()) {
+      setError("Please add signature before saving.");
+      return;
+    }
+
+    if (logId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSubmit();
     }
   };
 
@@ -495,6 +515,13 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
           )}
         </div>
       </div>
+
+      <AmendmentReasonModal
+        isOpen={showReasonModal}
+        onClose={() => setShowReasonModal(false)}
+        onConfirm={handleFinalSubmit}
+        loading={submitting}
+      />
     </div>
   );
 };

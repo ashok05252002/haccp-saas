@@ -4,6 +4,7 @@ import { HeartPulse, ArrowLeft, Save, AlertCircle, CheckCircle, XCircle, ShieldA
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
 import SignatureCanvas from 'react-signature-canvas';
 import axios from 'axios';
 
@@ -20,6 +21,7 @@ const HealthDeclarationFormPage = ({ logId }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   const [form, setForm] = useState({
     log_date: getTodayDateString(),
@@ -144,15 +146,7 @@ const HealthDeclarationFormPage = ({ logId }) => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setFormError(null);
-
-    if (!form.staff_name.trim()) {
-      setFormError('Please select or enter Staff Member Name.');
-      return;
-    }
-
+  const handleFinalSubmit = async (amendmentReason = '') => {
     // Build results array
     const resultsArray = Object.keys(responses).map(qId => ({
       question_id: isNaN(Number(qId)) ? null : Number(qId),
@@ -168,6 +162,7 @@ const HealthDeclarationFormPage = ({ logId }) => {
       };
 
       if (logId) {
+        payload.amendment_reason = amendmentReason;
         await axios.put(`/api/health-declaration-logs/${logId}`, payload);
       } else {
         await axios.post('/api/health-declaration-logs', payload);
@@ -178,6 +173,23 @@ const HealthDeclarationFormPage = ({ logId }) => {
       setFormError(err.response?.data?.message || 'Failed to save health declaration log.');
     } finally {
       setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setFormError(null);
+
+    if (!form.staff_name.trim()) {
+      setFormError('Please select or enter Staff Member Name.');
+      return;
+    }
+
+    if (logId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSubmit();
     }
   };
 
@@ -533,6 +545,13 @@ const HealthDeclarationFormPage = ({ logId }) => {
             </div>
           </form>
         )}
+
+        <AmendmentReasonModal
+          isOpen={showReasonModal}
+          onClose={() => setShowReasonModal(false)}
+          onConfirm={handleFinalSubmit}
+          loading={submitting}
+        />
       </div>
     </PageLayout>
   );

@@ -116,7 +116,7 @@ class CoolingProcessLogController extends Controller
         $tenantId = Auth::user()->tenant_id;
         $log = CoolingProcessLog::where('tenant_id', $tenantId)->findOrFail($id);
 
-        $request->validate([
+        $validated = $request->validate([
             'food_item'        => 'required|string|max:255',
             'cooling_method'   => 'required|string|max:255',
             'storage_location' => 'nullable|string|max:255',
@@ -130,32 +130,59 @@ class CoolingProcessLogController extends Controller
             'comments'         => 'nullable|string',
             'staff_name'       => 'required|string|max:255',
             'signature'        => 'nullable|string',
+            'amendment_reason' => 'required|string|min:3',
         ]);
 
-        $endTemp = (float) $request->end_temp;
-        $duration = (int) ($request->duration_minutes ?? 0);
-        $checkPassed = ($endTemp <= 8.0) && ($duration <= 120);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $originalData = $log->toArray();
 
-        $log->update([
-            'log_date'         => $request->end_date ?? $log->log_date,
-            'log_time'         => $request->end_time ?? $log->log_time,
-            'food_item'        => $request->food_item,
-            'cooling_method'   => $request->cooling_method,
-            'storage_location' => $request->storage_location,
-            'start_date'       => $request->start_date,
-            'start_time'       => $request->start_time,
-            'end_date'         => $request->end_date,
-            'end_time'         => $request->end_time,
-            'start_temp'       => (float) $request->start_temp,
-            'end_temp'         => $endTemp,
-            'duration_minutes' => $duration,
-            'check_passed'     => $checkPassed,
-            'comments'         => $request->comments,
-            'staff_name'       => $request->staff_name,
-            'signature'        => $request->signature ?: $log->signature,
-        ]);
+            $endTemp = (float) $request->end_temp;
+            $duration = (int) ($request->duration_minutes ?? 0);
+            $checkPassed = ($endTemp <= 8.0) && ($duration <= 120);
 
-        return response()->json(['message' => 'Cooling process log updated successfully', 'log' => $log]);
+            $log->update([
+                'log_date'         => $request->end_date ?? $log->log_date,
+                'log_time'         => $request->end_time ?? $log->log_time,
+                'food_item'        => $request->food_item,
+                'cooling_method'   => $request->cooling_method,
+                'storage_location' => $request->storage_location,
+                'start_date'       => $request->start_date,
+                'start_time'       => $request->start_time,
+                'end_date'         => $request->end_date,
+                'end_time'         => $request->end_time,
+                'start_temp'       => (float) $request->start_temp,
+                'end_temp'         => $endTemp,
+                'duration_minutes' => $duration,
+                'check_passed'     => $checkPassed,
+                'comments'         => $request->comments,
+                'staff_name'       => $request->staff_name,
+                'signature'        => $request->signature ?: $log->signature,
+            ]);
+
+            $newData = $log->fresh()->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'cooling_process',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json(['message' => 'Cooling process log updated successfully', 'log' => $log]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['message' => 'Failed to update cooling process log'], 500);
+        }
     }
 
     public function destroy($id)
