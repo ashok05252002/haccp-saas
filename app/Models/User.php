@@ -63,6 +63,6 @@ class User extends Authenticatable
 
     public function assignedRole()
     {
-        return $this->belongsTo(Role::class, 'role_id');
+        return $this->belongsTo(Role::class, 'role_id')->withoutGlobalScopes();
     }
 }

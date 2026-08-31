@@ -246,7 +246,7 @@ const DeliveryIntakeMonitoringPage = () => {
                           <Button variant="secondary" size="sm" onClick={() => openViewModal(log)}>
                             View
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => router.visit(`/haccp-logs/delivery-intake/edit/${log.id}`)}>
+                          <Button variant="outline" size="sm" onClick={() => requestEdit(`/haccp-logs/delivery-intake/edit/${log.id}`)}>
                             Edit
                           </Button>
                         </div>

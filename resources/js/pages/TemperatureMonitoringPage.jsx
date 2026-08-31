@@ -163,7 +163,7 @@ const TemperatureMonitoringPage = () => {
                           variant="outline" 
                           size="sm" 
                           icon={Pencil} 
-                          onClick={() => router.visit(`/haccp-logs/temperature/edit/${log.id}`)}
+                          onClick={() => requestEdit(`/haccp-logs/temperature/edit/${log.id}`)}
                         >
                           Edit
                         </Button>

@@ -164,7 +164,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/temperature/edit/{id}', function ($id) {
         return Inertia::render('TemperatureFormPage', ['logId' => $id]);
-    })->name('haccp-logs.temperature.edit');
+    })->name('haccp-logs.temperature.edit')->middleware('can.edit.haccp');
 
     Route::get('/manager-hub', function () {
         return Inertia::render('ManagerHubPage');
@@ -430,7 +430,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/temperature-logs', [\App\Http\Controllers\TemperatureLogController::class, 'index']);
     Route::get('/api/temperature-logs/{id}', [\App\Http\Controllers\TemperatureLogController::class, 'show']);
     Route::post('/api/temperature-logs', [\App\Http\Controllers\TemperatureLogController::class, 'store']);
-    Route::put('/api/temperature-logs/{id}', [\App\Http\Controllers\TemperatureLogController::class, 'update']);
+    Route::put('/api/temperature-logs/{id}', [\App\Http\Controllers\TemperatureLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/temperature-logs/{id}', [\App\Http\Controllers\TemperatureLogController::class, 'destroy']);
 
     // Delivery Intake Routes (Frontend)
@@ -444,13 +444,13 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/delivery-intake/edit/{id}', function ($id) {
         return Inertia::render('DeliveryIntakeFormPage', ['logId' => $id]);
-    })->name('haccp-logs.delivery-intake.edit');
+    })->name('haccp-logs.delivery-intake.edit')->middleware('can.edit.haccp');
 
     // Delivery Intake API Routes
     Route::get('/api/delivery-intake', [\App\Http\Controllers\DeliveryIntakeController::class, 'index']);
     Route::get('/api/delivery-intake/{id}', [\App\Http\Controllers\DeliveryIntakeController::class, 'show']);
     Route::post('/api/delivery-intake', [\App\Http\Controllers\DeliveryIntakeController::class, 'store']);
-    Route::put('/api/delivery-intake/{id}', [\App\Http\Controllers\DeliveryIntakeController::class, 'update']);
+    Route::put('/api/delivery-intake/{id}', [\App\Http\Controllers\DeliveryIntakeController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/delivery-intake/{id}', [\App\Http\Controllers\DeliveryIntakeController::class, 'destroy']);
 
     // Cleaning & Sanitation Logs (Frontend)
@@ -464,7 +464,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/cleaning/edit/{id}', function ($id) {
         return Inertia::render('CleaningFormPage', ['logId' => $id]);
-    })->name('haccp-logs.cleaning.edit');
+    })->name('haccp-logs.cleaning.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/cleaning/view/{id}', function ($id) {
         return Inertia::render('CleaningViewPage', ['logId' => $id]);
@@ -475,7 +475,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/cleaning-logs', [\App\Http\Controllers\CleaningLogController::class, 'index']);
     Route::get('/api/cleaning-logs/{id}', [\App\Http\Controllers\CleaningLogController::class, 'show']);
     Route::post('/api/cleaning-logs', [\App\Http\Controllers\CleaningLogController::class, 'store']);
-    Route::put('/api/cleaning-logs/{id}', [\App\Http\Controllers\CleaningLogController::class, 'update']);
+    Route::put('/api/cleaning-logs/{id}', [\App\Http\Controllers\CleaningLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/cleaning-logs/{id}', [\App\Http\Controllers\CleaningLogController::class, 'destroy']);
 
     // Cooking Temperature Logs (Frontend)
@@ -489,7 +489,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/cooking-temperature/edit/{id}', function ($id) {
         return Inertia::render('CookingTemperatureFormPage', ['logId' => $id]);
-    })->name('haccp-logs.cooking-temperature.edit');
+    })->name('haccp-logs.cooking-temperature.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/cooking-temperature/view/{id}', function ($id) {
         return Inertia::render('CookingTemperatureViewPage', ['logId' => $id]);
@@ -499,7 +499,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/cooking-logs', [\App\Http\Controllers\CookingLogController::class, 'index']);
     Route::get('/api/cooking-logs/{id}', [\App\Http\Controllers\CookingLogController::class, 'show']);
     Route::post('/api/cooking-logs', [\App\Http\Controllers\CookingLogController::class, 'store']);
-    Route::put('/api/cooking-logs/{id}', [\App\Http\Controllers\CookingLogController::class, 'update']);
+    Route::put('/api/cooking-logs/{id}', [\App\Http\Controllers\CookingLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/cooking-logs/{id}', [\App\Http\Controllers\CookingLogController::class, 'destroy']);
 
     // Blast Chilling Logs (Frontend)
@@ -513,7 +513,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/blast-chilling/edit/{id}', function ($id) {
         return Inertia::render('BlastChillingFormPage', ['logId' => $id]);
-    })->name('haccp-logs.blast-chilling.edit');
+    })->name('haccp-logs.blast-chilling.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/blast-chilling/view/{id}', function ($id) {
         return Inertia::render('BlastChillingViewPage', ['logId' => $id]);
@@ -523,7 +523,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/blast-chilling-logs', [\App\Http\Controllers\BlastChillingLogController::class, 'index']);
     Route::get('/api/blast-chilling-logs/{id}', [\App\Http\Controllers\BlastChillingLogController::class, 'show']);
     Route::post('/api/blast-chilling-logs', [\App\Http\Controllers\BlastChillingLogController::class, 'store']);
-    Route::put('/api/blast-chilling-logs/{id}', [\App\Http\Controllers\BlastChillingLogController::class, 'update']);
+    Route::put('/api/blast-chilling-logs/{id}', [\App\Http\Controllers\BlastChillingLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/blast-chilling-logs/{id}', [\App\Http\Controllers\BlastChillingLogController::class, 'destroy']);
 
     // Cooling Process Logs (Frontend)
@@ -537,7 +537,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/cooling-process/edit/{id}', function ($id) {
         return Inertia::render('CoolingProcessFormPage', ['logId' => $id]);
-    })->name('haccp-logs.cooling-process.edit');
+    })->name('haccp-logs.cooling-process.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/cooling-process/view/{id}', function ($id) {
         return Inertia::render('CoolingProcessViewPage', ['logId' => $id]);
@@ -547,7 +547,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/cooling-process-logs', [\App\Http\Controllers\CoolingProcessLogController::class, 'index']);
     Route::get('/api/cooling-process-logs/{id}', [\App\Http\Controllers\CoolingProcessLogController::class, 'show']);
     Route::post('/api/cooling-process-logs', [\App\Http\Controllers\CoolingProcessLogController::class, 'store']);
-    Route::put('/api/cooling-process-logs/{id}', [\App\Http\Controllers\CoolingProcessLogController::class, 'update']);
+    Route::put('/api/cooling-process-logs/{id}', [\App\Http\Controllers\CoolingProcessLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/cooling-process-logs/{id}', [\App\Http\Controllers\CoolingProcessLogController::class, 'destroy']);
 
     // Probe Calibration Logs (Frontend)
@@ -561,7 +561,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/probe-calibration/edit/{id}', function ($id) {
         return Inertia::render('ProbeCalibrationFormPage', ['logId' => $id]);
-    })->name('haccp-logs.probe-calibration.edit');
+    })->name('haccp-logs.probe-calibration.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/probe-calibration/view/{id}', function ($id) {
         return Inertia::render('ProbeCalibrationViewPage', ['logId' => $id]);
@@ -571,7 +571,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/probe-calibration-logs', [\App\Http\Controllers\ProbeCalibrationLogController::class, 'index']);
     Route::get('/api/probe-calibration-logs/{id}', [\App\Http\Controllers\ProbeCalibrationLogController::class, 'show']);
     Route::post('/api/probe-calibration-logs', [\App\Http\Controllers\ProbeCalibrationLogController::class, 'store']);
-    Route::put('/api/probe-calibration-logs/{id}', [\App\Http\Controllers\ProbeCalibrationLogController::class, 'update']);
+    Route::put('/api/probe-calibration-logs/{id}', [\App\Http\Controllers\ProbeCalibrationLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/probe-calibration-logs/{id}', [\App\Http\Controllers\ProbeCalibrationLogController::class, 'destroy']);
 
     // Food Dispatch Logs (Frontend)
@@ -585,7 +585,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/food-dispatch/edit/{id}', function ($id) {
         return Inertia::render('FoodDispatchFormPage', ['logId' => $id]);
-    })->name('haccp-logs.food-dispatch.edit');
+    })->name('haccp-logs.food-dispatch.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/food-dispatch/view/{id}', function ($id) {
         return Inertia::render('FoodDispatchViewPage', ['logId' => $id]);
@@ -595,7 +595,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/food-dispatch-logs', [\App\Http\Controllers\FoodDispatchLogController::class, 'index']);
     Route::get('/api/food-dispatch-logs/{id}', [\App\Http\Controllers\FoodDispatchLogController::class, 'show']);
     Route::post('/api/food-dispatch-logs', [\App\Http\Controllers\FoodDispatchLogController::class, 'store']);
-    Route::put('/api/food-dispatch-logs/{id}', [\App\Http\Controllers\FoodDispatchLogController::class, 'update']);
+    Route::put('/api/food-dispatch-logs/{id}', [\App\Http\Controllers\FoodDispatchLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/food-dispatch-logs/{id}', [\App\Http\Controllers\FoodDispatchLogController::class, 'destroy']);
 
     // Fryer Oil Logs (Frontend)
@@ -609,7 +609,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/fryer-oil/edit/{id}', function ($id) {
         return Inertia::render('FryerOilFormPage', ['logId' => $id]);
-    })->name('haccp-logs.fryer-oil.edit');
+    })->name('haccp-logs.fryer-oil.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/fryer-oil/view/{id}', function ($id) {
         return Inertia::render('FryerOilViewPage', ['logId' => $id]);
@@ -619,7 +619,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/fryer-oil-logs', [\App\Http\Controllers\FryerOilLogController::class, 'index']);
     Route::get('/api/fryer-oil-logs/{id}', [\App\Http\Controllers\FryerOilLogController::class, 'show']);
     Route::post('/api/fryer-oil-logs', [\App\Http\Controllers\FryerOilLogController::class, 'store']);
-    Route::put('/api/fryer-oil-logs/{id}', [\App\Http\Controllers\FryerOilLogController::class, 'update']);
+    Route::put('/api/fryer-oil-logs/{id}', [\App\Http\Controllers\FryerOilLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/fryer-oil-logs/{id}', [\App\Http\Controllers\FryerOilLogController::class, 'destroy']);
 
     // Pest Control Logs (Frontend)
@@ -633,7 +633,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/pest-control/edit/{id}', function ($id) {
         return Inertia::render('PestControlFormPage', ['logId' => $id]);
-    })->name('haccp-logs.pest-control.edit');
+    })->name('haccp-logs.pest-control.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/pest-control/view/{id}', function ($id) {
         return Inertia::render('PestControlViewPage', ['logId' => $id]);
@@ -643,7 +643,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/pest-control-logs', [\App\Http\Controllers\PestControlLogController::class, 'index']);
     Route::get('/api/pest-control-logs/{id}', [\App\Http\Controllers\PestControlLogController::class, 'show']);
     Route::post('/api/pest-control-logs', [\App\Http\Controllers\PestControlLogController::class, 'store']);
-    Route::put('/api/pest-control-logs/{id}', [\App\Http\Controllers\PestControlLogController::class, 'update']);
+    Route::put('/api/pest-control-logs/{id}', [\App\Http\Controllers\PestControlLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/pest-control-logs/{id}', [\App\Http\Controllers\PestControlLogController::class, 'destroy']);
 
     // Food Waste Logs (Frontend)
@@ -657,7 +657,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/food-waste/edit/{id}', function ($id) {
         return Inertia::render('FoodWasteFormPage', ['logId' => $id]);
-    })->name('haccp-logs.food-waste.edit');
+    })->name('haccp-logs.food-waste.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/food-waste/view/{id}', function ($id) {
         return Inertia::render('FoodWasteViewPage', ['logId' => $id]);
@@ -667,7 +667,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/food-waste-logs', [\App\Http\Controllers\FoodWasteLogController::class, 'index']);
     Route::get('/api/food-waste-logs/{id}', [\App\Http\Controllers\FoodWasteLogController::class, 'show']);
     Route::post('/api/food-waste-logs', [\App\Http\Controllers\FoodWasteLogController::class, 'store']);
-    Route::put('/api/food-waste-logs/{id}', [\App\Http\Controllers\FoodWasteLogController::class, 'update']);
+    Route::put('/api/food-waste-logs/{id}', [\App\Http\Controllers\FoodWasteLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/food-waste-logs/{id}', [\App\Http\Controllers\FoodWasteLogController::class, 'destroy']);
 
     // Staff Training & Hygiene Logs (Frontend)
@@ -681,7 +681,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/staff-training/edit/{id}', function ($id) {
         return Inertia::render('StaffTrainingTaskPage', ['logId' => $id]);
-    })->name('haccp-logs.staff-training.edit');
+    })->name('haccp-logs.staff-training.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/staff-training/view/{id}', function ($id) {
         return Inertia::render('StaffTrainingViewPage', ['logId' => $id]);
@@ -691,7 +691,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/staff-training-logs', [\App\Http\Controllers\StaffTrainingLogController::class, 'index']);
     Route::get('/api/staff-training-logs/{id}', [\App\Http\Controllers\StaffTrainingLogController::class, 'show']);
     Route::post('/api/staff-training-logs', [\App\Http\Controllers\StaffTrainingLogController::class, 'store']);
-    Route::put('/api/staff-training-logs/{id}', [\App\Http\Controllers\StaffTrainingLogController::class, 'update']);
+    Route::put('/api/staff-training-logs/{id}', [\App\Http\Controllers\StaffTrainingLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/staff-training-logs/{id}', [\App\Http\Controllers\StaffTrainingLogController::class, 'destroy']);
 
     // Hot Holding / Bain Marie Logs (Frontend)
@@ -705,7 +705,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/hot-holding/edit/{id}', function ($id) {
         return Inertia::render('HotHoldingFormPage', ['logId' => $id]);
-    })->name('haccp-logs.hot-holding.edit');
+    })->name('haccp-logs.hot-holding.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/hot-holding/view/{id}', function ($id) {
         return Inertia::render('HotHoldingViewPage', ['logId' => $id]);
@@ -715,7 +715,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/hot-holding-logs', [\App\Http\Controllers\HotHoldingLogController::class, 'index']);
     Route::get('/api/hot-holding-logs/{id}', [\App\Http\Controllers\HotHoldingLogController::class, 'show']);
     Route::post('/api/hot-holding-logs', [\App\Http\Controllers\HotHoldingLogController::class, 'store']);
-    Route::put('/api/hot-holding-logs/{id}', [\App\Http\Controllers\HotHoldingLogController::class, 'update']);
+    Route::put('/api/hot-holding-logs/{id}', [\App\Http\Controllers\HotHoldingLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/hot-holding-logs/{id}', [\App\Http\Controllers\HotHoldingLogController::class, 'destroy']);
 
     // Staff Health Declaration Logs (Frontend)
@@ -729,7 +729,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/health-declaration/edit/{id}', function ($id) {
         return Inertia::render('HealthDeclarationFormPage', ['logId' => $id]);
-    })->name('haccp-logs.health-declaration.edit');
+    })->name('haccp-logs.health-declaration.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/health-declaration/view/{id}', function ($id) {
         return Inertia::render('HealthDeclarationViewPage', ['logId' => $id]);
@@ -740,7 +740,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/health-declaration-logs', [\App\Http\Controllers\HealthDeclarationLogController::class, 'index']);
     Route::get('/api/health-declaration-logs/{id}', [\App\Http\Controllers\HealthDeclarationLogController::class, 'show']);
     Route::post('/api/health-declaration-logs', [\App\Http\Controllers\HealthDeclarationLogController::class, 'store']);
-    Route::put('/api/health-declaration-logs/{id}', [\App\Http\Controllers\HealthDeclarationLogController::class, 'update']);
+    Route::put('/api/health-declaration-logs/{id}', [\App\Http\Controllers\HealthDeclarationLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/health-declaration-logs/{id}', [\App\Http\Controllers\HealthDeclarationLogController::class, 'destroy']);
 
     // HACCP Reports & Historical Audits (Frontend & API)
@@ -762,7 +762,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
 
     Route::get('/haccp-logs/thawing/edit/{id}', function ($id) {
         return Inertia::render('ThawingFormPage', ['logId' => $id]);
-    })->name('haccp-logs.thawing.edit');
+    })->name('haccp-logs.thawing.edit')->middleware('can.edit.haccp');
 
     Route::get('/haccp-logs/thawing/view/{id}', function ($id) {
         return Inertia::render('ThawingViewPage', ['logId' => $id]);
@@ -772,7 +772,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     Route::get('/api/thawing-logs', [\App\Http\Controllers\ThawingLogController::class, 'index']);
     Route::get('/api/thawing-logs/{id}', [\App\Http\Controllers\ThawingLogController::class, 'show']);
     Route::post('/api/thawing-logs', [\App\Http\Controllers\ThawingLogController::class, 'store']);
-    Route::put('/api/thawing-logs/{id}', [\App\Http\Controllers\ThawingLogController::class, 'update']);
+    Route::put('/api/thawing-logs/{id}', [\App\Http\Controllers\ThawingLogController::class, 'update'])->middleware('can.edit.haccp');
     Route::delete('/api/thawing-logs/{id}', [\App\Http\Controllers\ThawingLogController::class, 'destroy']);
 
     // Supervision Review Module (Frontend & API)

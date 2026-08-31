@@ -12,10 +12,31 @@ export const useHaccpEditGate = () => {
     if (auth.user.role === 'client' || auth.user.role === 'super_admin') {
       return true;
     }
-    const permissions = auth.user.assigned_role?.permissions ?? auth.user.role?.permissions ?? null;
-    if (!permissions) return true;
-    return Array.isArray(permissions) && permissions.includes('haccp.edit-submitted-logs');
+
+    let permissions = auth.user.assigned_role?.permissions ?? 
+                      auth.user.assignedRole?.permissions ?? 
+                      auth.user.role?.permissions ?? 
+                      auth.user.permissions ?? 
+                      null;
+
+    // null means legacy full access / unrestricted role
+    if (permissions === null) {
+      return true;
+    }
+
+    if (typeof permissions === 'string') {
+      try {
+        permissions = JSON.parse(permissions);
+      } catch (e) {
+        permissions = [];
+      }
+    }
+
+    if (!Array.isArray(permissions)) return false;
+    return permissions.includes('haccp.edit-submitted-logs');
   }, [auth]);
+
+  const canEdit = hasEditPermission();
 
   const requestEdit = useCallback((targetUrlOrCallback) => {
     const execute = () => {
@@ -29,8 +50,7 @@ export const useHaccpEditGate = () => {
     if (hasEditPermission()) {
       execute();
     } else {
-      setPendingAction(() => execute);
-      setPinModalOpen(true);
+      alert('You do not have permission to edit submitted HACCP logs.');
     }
   }, [hasEditPermission]);
 
@@ -53,6 +73,7 @@ export const useHaccpEditGate = () => {
     handlePinSuccess,
     handlePinClose,
     hasEditPermission,
+    canEdit,
   };
 };
 

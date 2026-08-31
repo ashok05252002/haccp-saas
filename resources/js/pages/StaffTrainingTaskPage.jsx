@@ -7,6 +7,7 @@ import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
 import SignaturePad from '../components/common/SignaturePad';
+import { useHaccpEditGate } from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
 const StaffTrainingTaskPage = ({ staffId, logId }) => {
@@ -14,6 +15,7 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
   const [tasks, setTasks] = useState([]);
   const [completedLogs, setCompletedLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { requestEdit } = useHaccpEditGate();
 
   // Modal Completion Form
   const [modalOpen, setModalOpen] = useState(false);
@@ -281,7 +283,7 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
                               size="sm"
                               onClick={() => {
                                 const log = getTaskLog(task.title);
-                                if (log) handleOpenEditModal(task, log);
+                                if (log) requestEdit(() => handleOpenEditModal(task, log));
                               }}
                             >
                               Edit
