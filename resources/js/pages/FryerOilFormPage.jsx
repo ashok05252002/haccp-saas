@@ -5,6 +5,7 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
+import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
 import axios from 'axios';
 
 const OIL_CONDITIONS = [
@@ -75,6 +76,7 @@ const FryerOilFormPage = ({ logId }) => {
 
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   useEffect(() => {
     // Load staff & master data options from API
@@ -168,30 +170,7 @@ const FryerOilFormPage = ({ logId }) => {
   const isTempSafe = !isNaN(tempNum) && tempNum >= 160 && tempNum <= 175;
   const passed = oilQualityAcceptable && !isTempHigh;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = {};
-
-    if (!staffName) newErrors.staffName = 'Staff member is required.';
-    if (!fryerStation) newErrors.fryerStation = 'Fryer station is required.';
-    if (!fryingTemp && fryingTemp !== '0') newErrors.fryingTemp = 'Frying temperature is required.';
-    if (!oilCondition) newErrors.oilCondition = 'Oil condition is required.';
-    if (!oilActionTaken) newErrors.oilActionTaken = 'Oil action taken is required.';
-    if (!disposalType) newErrors.disposalType = 'Disposal type is required.';
-    if (!greaseArea) newErrors.greaseArea = 'Grease trap area is required.';
-    if (!disposalMethod) newErrors.disposalMethod = 'Disposal method is required.';
-    if (!signedByStaffName) newErrors.signedBy = 'Signed by staff member is required.';
-    if (!signature) newErrors.signature = 'Signature is required.';
-
-    if (!oilQualityAcceptable && oilActionTaken === 'Continued use') {
-      newErrors.oilActionTaken = 'Continued use is not allowed when oil quality is Not Acceptable.';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
+  const handleFinalSubmit = async (amendmentReason = '') => {
     setSubmitting(true);
     try {
       const payload = {
@@ -218,6 +197,7 @@ const FryerOilFormPage = ({ logId }) => {
       };
 
       if (logId) {
+        payload.amendment_reason = amendmentReason;
         await axios.put(`/api/fryer-oil-logs/${logId}`, payload);
       } else {
         await axios.post('/api/fryer-oil-logs', payload);
@@ -229,6 +209,38 @@ const FryerOilFormPage = ({ logId }) => {
       alert(err.response?.data?.message || 'Failed to submit fryer oil log.');
     } finally {
       setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    const newErrors = {};
+
+    if (!staffName) newErrors.staffName = 'Staff member is required.';
+    if (!fryerStation) newErrors.fryerStation = 'Fryer station is required.';
+    if (!fryingTemp && fryingTemp !== '0') newErrors.fryingTemp = 'Frying temperature is required.';
+    if (!oilCondition) newErrors.oilCondition = 'Oil condition is required.';
+    if (!oilActionTaken) newErrors.oilActionTaken = 'Oil action taken is required.';
+    if (!disposalType) newErrors.disposalType = 'Disposal type is required.';
+    if (!greaseArea) newErrors.greaseArea = 'Grease trap area is required.';
+    if (!disposalMethod) newErrors.disposalMethod = 'Disposal method is required.';
+    if (!signedByStaffName) newErrors.signedBy = 'Signed by staff member is required.';
+    if (!signature) newErrors.signature = 'Signature is required.';
+
+    if (!oilQualityAcceptable && oilActionTaken === 'Continued use') {
+      newErrors.oilActionTaken = 'Continued use is not allowed when oil quality is Not Acceptable.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    if (logId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSubmit();
     }
   };
 
@@ -547,6 +559,13 @@ const FryerOilFormPage = ({ logId }) => {
             </Button>
           </div>
         </form>
+
+        <AmendmentReasonModal
+          isOpen={showReasonModal}
+          onClose={() => setShowReasonModal(false)}
+          onConfirm={handleFinalSubmit}
+          loading={submitting}
+        />
       </div>
     </PageLayout>
   );

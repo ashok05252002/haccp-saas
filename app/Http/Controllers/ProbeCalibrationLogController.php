@@ -104,7 +104,7 @@ class ProbeCalibrationLogController extends Controller
         $tenantId = Auth::user()->tenant_id;
         $log = ProbeCalibrationLog::where('tenant_id', $tenantId)->findOrFail($id);
 
-        $request->validate([
+        $validated = $request->validate([
             'log_date'            => 'required|date',
             'log_time'            => 'required|string',
             'staff_name'          => 'required|string|max:255',
@@ -115,35 +115,62 @@ class ProbeCalibrationLogController extends Controller
             'ice_temp'            => 'required|numeric',
             'comments'            => 'nullable|string',
             'signature'           => 'nullable|string',
+            'amendment_reason'    => 'required|string|min:3',
         ]);
 
-        $boilingTemp = (float) $request->boiling_temp;
-        $boilingValid = ($boilingTemp >= 99.0 && $boilingTemp <= 101.0);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $originalData = $log->toArray();
 
-        $iceTemp = (float) $request->ice_temp;
-        $iceValid = ($iceTemp >= -1.0 && $iceTemp <= 1.0);
+            $boilingTemp = (float) $request->boiling_temp;
+            $boilingValid = ($boilingTemp >= 99.0 && $boilingTemp <= 101.0);
 
-        $passed = $boilingValid && $iceValid;
-        $status = $passed ? 'Passed' : 'Needs Review';
+            $iceTemp = (float) $request->ice_temp;
+            $iceValid = ($iceTemp >= -1.0 && $iceTemp <= 1.0);
 
-        $log->update([
-            'log_date'            => $request->log_date,
-            'log_time'            => $request->log_time,
-            'staff_name'          => $request->staff_name,
-            'probe_id'            => $request->probe_id,
-            'probe_name'          => $request->probe_name,
-            'probe_serial_number' => $request->probe_serial_number,
-            'boiling_temp'        => $boilingTemp,
-            'boiling_valid'       => $boilingValid,
-            'ice_temp'            => $iceTemp,
-            'ice_valid'           => $iceValid,
-            'passed'              => $passed,
-            'status'              => $status,
-            'comments'            => $request->comments,
-            'signature'           => $request->signature ?: $log->signature,
-        ]);
+            $passed = $boilingValid && $iceValid;
+            $status = $passed ? 'Passed' : 'Needs Review';
 
-        return response()->json(['message' => 'Probe calibration check updated successfully', 'log' => $log]);
+            $log->update([
+                'log_date'            => $request->log_date,
+                'log_time'            => $request->log_time,
+                'staff_name'          => $request->staff_name,
+                'probe_id'            => $request->probe_id,
+                'probe_name'          => $request->probe_name,
+                'probe_serial_number' => $request->probe_serial_number,
+                'boiling_temp'        => $boilingTemp,
+                'boiling_valid'       => $boilingValid,
+                'ice_temp'            => $iceTemp,
+                'ice_valid'           => $iceValid,
+                'passed'              => $passed,
+                'status'              => $status,
+                'comments'            => $request->comments,
+                'signature'           => $request->signature ?: $log->signature,
+            ]);
+
+            $newData = $log->fresh()->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'probe_calibration',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json(['message' => 'Probe calibration check updated successfully', 'log' => $log]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['message' => 'Failed to update probe calibration check'], 500);
+        }
     }
 
     public function destroy($id)

@@ -122,37 +122,64 @@ class FryerOilLogController extends Controller
             'step2_comments' => 'nullable|string',
             'signed_by_staff_name' => 'required|string',
             'signature' => 'nullable|string',
+            'amendment_reason' => 'required|string|min:3',
         ]);
 
-        $isTempHigh = $validated['frying_temp'] > 175;
-        $passed = $validated['oil_quality_acceptable'] && !$isTempHigh;
-        $status = $passed ? 'Passed' : 'Attention Required';
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $originalData = $log->toArray();
 
-        $log->update([
-            'log_date' => $validated['log_date'],
-            'log_time' => $validated['log_time'],
-            'staff_name' => $validated['staff_name'],
-            'fryer_station' => $validated['fryer_station'],
-            'frying_temp' => $validated['frying_temp'],
-            'oil_condition' => $validated['oil_condition'],
-            'oil_quality_acceptable' => $validated['oil_quality_acceptable'],
-            'oil_action_taken' => $validated['oil_action_taken'],
-            'quantity_removed' => $validated['quantity_removed'] ?? null,
-            'step1_comments' => $validated['step1_comments'] ?? null,
-            'disposal_type' => $validated['disposal_type'],
-            'grease_area' => $validated['grease_area'],
-            'disposal_quantity' => $validated['disposal_quantity'] ?? null,
-            'disposal_method' => $validated['disposal_method'],
-            'waste_contractor' => $validated['waste_contractor'] ?? null,
-            'collection_ref_number' => $validated['collection_ref_number'] ?? null,
-            'next_cleaning_due_date' => $validated['next_cleaning_due_date'] ?? null,
-            'step2_comments' => $validated['step2_comments'] ?? null,
-            'signed_by_staff_name' => $validated['signed_by_staff_name'],
-            'signature' => $validated['signature'] ?: $log->signature,
-            'status' => $status,
-        ]);
+            $isTempHigh = $validated['frying_temp'] > 175;
+            $passed = $validated['oil_quality_acceptable'] && !$isTempHigh;
+            $status = $passed ? 'Passed' : 'Attention Required';
 
-        return response()->json(['message' => 'Fryer oil log updated successfully', 'log' => $log]);
+            $log->update([
+                'log_date' => $validated['log_date'],
+                'log_time' => $validated['log_time'],
+                'staff_name' => $validated['staff_name'],
+                'fryer_station' => $validated['fryer_station'],
+                'frying_temp' => $validated['frying_temp'],
+                'oil_condition' => $validated['oil_condition'],
+                'oil_quality_acceptable' => $validated['oil_quality_acceptable'],
+                'oil_action_taken' => $validated['oil_action_taken'],
+                'quantity_removed' => $validated['quantity_removed'] ?? null,
+                'step1_comments' => $validated['step1_comments'] ?? null,
+                'disposal_type' => $validated['disposal_type'],
+                'grease_area' => $validated['grease_area'],
+                'disposal_quantity' => $validated['disposal_quantity'] ?? null,
+                'disposal_method' => $validated['disposal_method'],
+                'waste_contractor' => $validated['waste_contractor'] ?? null,
+                'collection_ref_number' => $validated['collection_ref_number'] ?? null,
+                'next_cleaning_due_date' => $validated['next_cleaning_due_date'] ?? null,
+                'step2_comments' => $validated['step2_comments'] ?? null,
+                'signed_by_staff_name' => $validated['signed_by_staff_name'],
+                'signature' => $validated['signature'] ?: $log->signature,
+                'status' => $status,
+            ]);
+
+            $newData = $log->fresh()->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'fryer_oil',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json(['message' => 'Fryer oil log updated successfully', 'log' => $log]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['message' => 'Failed to update fryer oil log'], 500);
+        }
     }
 
     public function destroy($id)

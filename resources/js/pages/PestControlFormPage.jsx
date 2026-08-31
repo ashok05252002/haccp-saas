@@ -5,6 +5,7 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
+import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
 import axios from 'axios';
 
 const PestControlFormPage = ({ logId }) => {
@@ -42,6 +43,7 @@ const PestControlFormPage = ({ logId }) => {
 
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   useEffect(() => {
     // Fetch Staff List
@@ -132,34 +134,7 @@ const PestControlFormPage = ({ logId }) => {
   const hasFailedChecklist = Object.values(checklistAnswers).some(a => a.answer === false);
   const passed = !hasFailedChecklist && isPestFree;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = {};
-
-    if (!staffName) newErrors.staffName = 'Staff member is required.';
-    if (!signedByStaffName) newErrors.signedBy = 'Signed by staff member is required.';
-    if (!signature) newErrors.signature = 'Signature is required.';
-
-    // Check notes for any No answers in master questions
-    let failedNoteMissing = false;
-    Object.entries(checklistAnswers).forEach(([qId, data]) => {
-      if (data.answer === false && !data.note.trim()) {
-        failedNoteMissing = true;
-      }
-    });
-    if (failedNoteMissing) {
-      newErrors.checklist = 'Please add follow-up notes for any questions marked No.';
-    }
-
-    if (!isPestFree && !remarks.trim()) {
-      newErrors.remarks = 'Remarks / Action Notes are required when pest activity is observed.';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
+  const handleFinalSubmit = async (amendmentReason = '') => {
     setSubmitting(true);
     try {
       const checklistData = masterQuestions.map(q => ({
@@ -188,6 +163,7 @@ const PestControlFormPage = ({ logId }) => {
       };
 
       if (logId) {
+        payload.amendment_reason = amendmentReason;
         await axios.put(`/api/pest-control-logs/${logId}`, payload);
       } else {
         await axios.post('/api/pest-control-logs', payload);
@@ -199,6 +175,42 @@ const PestControlFormPage = ({ logId }) => {
       alert(err.response?.data?.message || 'Failed to submit pest control log.');
     } finally {
       setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    const newErrors = {};
+
+    if (!staffName) newErrors.staffName = 'Staff member is required.';
+    if (!signedByStaffName) newErrors.signedBy = 'Signed by staff member is required.';
+    if (!signature) newErrors.signature = 'Signature is required.';
+
+    // Check notes for any No answers in master questions
+    let failedNoteMissing = false;
+    Object.entries(checklistAnswers).forEach(([qId, data]) => {
+      if (data.answer === false && !data.note.trim()) {
+        failedNoteMissing = true;
+      }
+    });
+    if (failedNoteMissing) {
+      newErrors.checklist = 'Please add follow-up notes for any questions marked No.';
+    }
+
+    if (!isPestFree && !remarks.trim()) {
+      newErrors.remarks = 'Remarks / Action Notes are required when pest activity is observed.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    if (logId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSubmit();
     }
   };
 
@@ -438,6 +450,13 @@ const PestControlFormPage = ({ logId }) => {
             </Button>
           </div>
         </form>
+
+        <AmendmentReasonModal
+          isOpen={showReasonModal}
+          onClose={() => setShowReasonModal(false)}
+          onConfirm={handleFinalSubmit}
+          loading={submitting}
+        />
       </div>
     </PageLayout>
   );
