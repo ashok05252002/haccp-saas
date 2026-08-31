@@ -40,6 +40,8 @@ class CookingLogController extends Controller
 
     public function store(Request $request)
     {
+        $status = in_array($request->status, ['IN_PROGRESS', 'COMPLETED']) ? $request->status : 'COMPLETED';
+
         $request->validate([
             'log_date' => 'required|date',
             'log_time' => 'required|string',
@@ -72,6 +74,8 @@ class CookingLogController extends Controller
             'corrective_action' => 'nullable|string',
             'notes' => 'nullable|string',
             'signature' => 'nullable|string',
+            'status' => 'nullable|string|in:IN_PROGRESS,COMPLETED',
+            'final_signed_at' => 'nullable|date',
         ]);
 
         $tenantId = Auth::user()->tenant_id;
@@ -114,6 +118,8 @@ class CookingLogController extends Controller
             'corrective_action' => $request->corrective_action,
             'notes' => $request->notes,
             'signature' => $request->signature,
+            'status' => $status,
+            'final_signed_at' => $request->final_signed_at,
         ]);
 
         return response()->json(['message' => 'Cooking log saved successfully', 'log' => $log], 201);
@@ -127,8 +133,9 @@ class CookingLogController extends Controller
         }
 
         $log = CookingLog::where('tenant_id', $tenantId)->findOrFail($id);
+        $isExistingInProgress = ($log->status === 'IN_PROGRESS');
 
-        $validated = $request->validate([
+        $rules = [
             'log_date' => 'required|date',
             'log_time' => 'required|string',
             'food_item' => 'required|string|max:255',
@@ -160,15 +167,35 @@ class CookingLogController extends Controller
             'corrective_action' => 'nullable|string',
             'notes' => 'nullable|string',
             'signature' => 'nullable|string',
-            'amendment_reason' => 'required|string|min:3',
-        ]);
+            'status' => 'nullable|string|in:IN_PROGRESS,COMPLETED',
+            'final_signed_at' => 'nullable|date',
+        ];
 
+        if (!$isExistingInProgress) {
+            $rules['amendment_reason'] = 'required|string|min:3';
+        } else {
+            $rules['amendment_reason'] = 'nullable|string';
+        }
+
+        $validated = $request->validate($rules);
+
+        $updateData = $validated;
+        unset($updateData['amendment_reason']);
+
+        if (!isset($updateData['status']) || empty($updateData['status'])) {
+            $updateData['status'] = $log->status ?? 'COMPLETED';
+        }
+
+        // If updating an IN_PROGRESS draft: update directly without generating audit amendment history
+        if ($isExistingInProgress) {
+            $log->update($updateData);
+            return response()->json(['message' => 'Cooking log updated successfully', 'log' => $log]);
+        }
+
+        // If updating a COMPLETED log: apply Requirement 1 amendment audit logging within transaction
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
             $originalData = $log->toArray();
-
-            $updateData = $validated;
-            unset($updateData['amendment_reason']);
 
             $log->update($updateData);
 
