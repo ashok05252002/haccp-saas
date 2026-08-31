@@ -43,6 +43,8 @@ class CookingLog extends Model
         'corrective_action',
         'notes',
         'signature',
+        'status',
+        'final_signed_at',
     ];
 
     protected $casts = [
@@ -57,5 +59,6 @@ class CookingLog extends Model
         'chiller_temp' => 'float',
         'reheating_temp' => 'float',
         'hot_holding_temp' => 'float',
+        'final_signed_at' => 'datetime',
     ];
 }
