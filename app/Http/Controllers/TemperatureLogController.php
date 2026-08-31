@@ -97,39 +97,61 @@ class TemperatureLogController extends Controller
             'temperature' => 'required|numeric',
             'is_valid' => 'nullable|boolean',
             'comment' => 'nullable|string',
-            'amendment_reason' => 'nullable|string',
+            'amendment_reason' => 'required|string|min:3',
         ], [
             'staff_name.required' => 'Please select staff member.',
             'thermometer_id.required' => 'Please select thermometer used.',
             'thermometer_id.exists' => 'Selected thermometer is invalid.',
             'signature.required' => 'Please add signature before saving.',
+            'amendment_reason.required' => 'Reason for amendment is required.',
+            'amendment_reason.min' => 'Reason for amendment must be at least 3 characters.',
         ]);
 
-        // If storage zone is present, evaluate is_valid
-        $storageZoneId = $validated['storage_zone_id'] ?? $log->storage_zone_id;
-        $isValid = $validated['is_valid'] ?? $log->is_valid;
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $log, $tenantId, $request) {
+            $originalData = $log->toArray();
 
-        if (isset($validated['temperature'])) {
-            $zone = StorageZone::where('tenant_id', $tenantId)->find($storageZoneId);
-            if ($zone) {
-                $temp = floatval($validated['temperature']);
-                $min = $zone->target_temp_min !== null ? floatval($zone->target_temp_min) : -999;
-                $max = $zone->target_temp_max !== null ? floatval($zone->target_temp_max) : 999;
-                $isValid = ($temp >= $min && $temp <= $max);
+            // If storage zone is present, evaluate is_valid
+            $storageZoneId = $validated['storage_zone_id'] ?? $log->storage_zone_id;
+            $isValid = $validated['is_valid'] ?? $log->is_valid;
+
+            if (isset($validated['temperature'])) {
+                $zone = StorageZone::where('tenant_id', $tenantId)->find($storageZoneId);
+                if ($zone) {
+                    $temp = floatval($validated['temperature']);
+                    $min = $zone->target_temp_min !== null ? floatval($zone->target_temp_min) : -999;
+                    $max = $zone->target_temp_max !== null ? floatval($zone->target_temp_max) : 999;
+                    $isValid = ($temp >= $min && $temp <= $max);
+                }
             }
-        }
 
-        $log->update([
-            'log_date' => $validated['log_date'] ?? $log->log_date,
-            'log_time' => $validated['log_time'] ?? $log->log_time,
-            'staff_name' => array_key_exists('staff_name', $validated) ? $validated['staff_name'] : $log->staff_name,
-            'thermometer_id' => array_key_exists('thermometer_id', $validated) ? $validated['thermometer_id'] : $log->thermometer_id,
-            'storage_zone_id' => $storageZoneId,
-            'temperature' => $validated['temperature'],
-            'is_valid' => $isValid,
-            'comment' => array_key_exists('comment', $validated) ? $validated['comment'] : $log->comment,
-            'signature' => array_key_exists('signature', $validated) && $validated['signature'] ? $validated['signature'] : $log->signature,
-        ]);
+            $log->update([
+                'log_date' => $validated['log_date'] ?? $log->log_date,
+                'log_time' => $validated['log_time'] ?? $log->log_time,
+                'staff_name' => array_key_exists('staff_name', $validated) ? $validated['staff_name'] : $log->staff_name,
+                'thermometer_id' => array_key_exists('thermometer_id', $validated) ? $validated['thermometer_id'] : $log->thermometer_id,
+                'storage_zone_id' => $storageZoneId,
+                'temperature' => $validated['temperature'],
+                'is_valid' => $isValid,
+                'comment' => array_key_exists('comment', $validated) ? $validated['comment'] : $log->comment,
+                'signature' => array_key_exists('signature', $validated) && $validated['signature'] ? $validated['signature'] : $log->signature,
+            ]);
+
+            $newData = $log->fresh()->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'temperature_log',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
+        });
 
         return response()->json(['message' => 'Temperature log updated successfully', 'log' => $log->load(['thermometer', 'storageZone'])]);
     }
