@@ -5,6 +5,7 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
+import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
 import axios from 'axios';
 
 const DEFAULT_UNITS = ['Bain Marie', 'Hot Display Counter', 'Soup Station', 'Buffet Counter'];
@@ -60,6 +61,7 @@ const HotHoldingFormPage = ({ logId }) => {
 
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   useEffect(() => {
     // Fetch Staff List
@@ -218,23 +220,7 @@ const HotHoldingFormPage = ({ logId }) => {
   const hasAnyTempBelowLimit = rows.some(r => isTempInvalid(r.check1) || isTempInvalid(r.check2) || isTempInvalid(r.check3) || isTempInvalid(r.check4));
   const passed = hasAnyEnteredTemp && !hasAnyTempBelowLimit;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = {};
-
-    if (!staffName) newErrors.staffName = 'Staff member is required.';
-    if (!signedByStaffName) newErrors.signedBy = 'Signed by staff member is required.';
-    if (!signature) newErrors.signature = 'Signature is required.';
-
-    if (!hasAnyEnteredTemp) {
-      newErrors.temps = 'Please enter at least one temperature check.';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
+  const handleFinalSubmit = async (amendmentReason = '') => {
     const sanitizedItems = rows.map(r => ({
       id: r.id || ('h_' + Date.now()),
       foodName: r.foodName || 'Hot Food Item',
@@ -260,6 +246,7 @@ const HotHoldingFormPage = ({ logId }) => {
       };
 
       if (logId) {
+        payload.amendment_reason = amendmentReason;
         await axios.put(`/api/hot-holding-logs/${logId}`, payload);
       } else {
         await axios.post('/api/hot-holding-logs', payload);
@@ -271,6 +258,31 @@ const HotHoldingFormPage = ({ logId }) => {
       alert(err.response?.data?.message || 'Failed to submit hot holding log.');
     } finally {
       setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    const newErrors = {};
+
+    if (!staffName) newErrors.staffName = 'Staff member is required.';
+    if (!signedByStaffName) newErrors.signedBy = 'Signed by staff member is required.';
+    if (!signature) newErrors.signature = 'Signature is required.';
+
+    if (!hasAnyEnteredTemp) {
+      newErrors.temps = 'Please enter at least one temperature check.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    if (logId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSubmit();
     }
   };
 
@@ -627,6 +639,13 @@ const HotHoldingFormPage = ({ logId }) => {
             </Button>
           </div>
         </form>
+
+        <AmendmentReasonModal
+          isOpen={showReasonModal}
+          onClose={() => setShowReasonModal(false)}
+          onConfirm={handleFinalSubmit}
+          loading={submitting}
+        />
       </div>
     </PageLayout>
   );

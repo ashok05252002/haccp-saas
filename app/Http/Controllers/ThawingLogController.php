@@ -106,35 +106,62 @@ class ThawingLogController extends Controller
             'comments' => 'nullable|string',
             'signed_by_staff_name' => 'required|string|max:255',
             'signature' => 'nullable|string',
+            'amendment_reason' => 'required|string|min:3',
         ]);
 
-        $defrostTemp = floatval($validated['defrost_temp']);
-        $defrostMethod = $validated['defrost_method'];
-        $isChilledMethod = str_contains(strtolower($defrostMethod), 'refrigerator') ||
-                           str_contains(strtolower($defrostMethod), 'chiller') ||
-                           str_contains(strtolower($defrostMethod), 'water');
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $originalData = $log->toArray();
 
-        $passed = !($isChilledMethod && $defrostTemp > 5.0);
-        $status = $passed ? 'Passed' : 'Needs Review';
+            $defrostTemp = floatval($validated['defrost_temp']);
+            $defrostMethod = $validated['defrost_method'];
+            $isChilledMethod = str_contains(strtolower($defrostMethod), 'refrigerator') ||
+                               str_contains(strtolower($defrostMethod), 'chiller') ||
+                               str_contains(strtolower($defrostMethod), 'water');
 
-        $log->update([
-            'log_date' => $validated['log_date'],
-            'log_time' => $validated['log_time'],
-            'food_item_name' => $validated['food_item_name'],
-            'defrost_method' => $validated['defrost_method'],
-            'storage_location' => $validated['storage_location'] ?? null,
-            'start_date' => $validated['start_date'],
-            'start_time' => $validated['start_time'],
-            'completed_date' => $validated['completed_date'],
-            'completed_time' => $validated['completed_time'],
-            'defrost_temp' => $defrostTemp,
-            'comments' => $validated['comments'] ?? null,
-            'signed_by_staff_name' => $validated['signed_by_staff_name'],
-            'signature' => $validated['signature'] ?: $log->signature,
-            'status' => $status,
-        ]);
+            $passed = !($isChilledMethod && $defrostTemp > 5.0);
+            $status = $passed ? 'Passed' : 'Needs Review';
 
-        return response()->json(['message' => 'Thawing log updated successfully', 'log' => $log]);
+            $log->update([
+                'log_date' => $validated['log_date'],
+                'log_time' => $validated['log_time'],
+                'food_item_name' => $validated['food_item_name'],
+                'defrost_method' => $validated['defrost_method'],
+                'storage_location' => $validated['storage_location'] ?? null,
+                'start_date' => $validated['start_date'],
+                'start_time' => $validated['start_time'],
+                'completed_date' => $validated['completed_date'],
+                'completed_time' => $validated['completed_time'],
+                'defrost_temp' => $defrostTemp,
+                'comments' => $validated['comments'] ?? null,
+                'signed_by_staff_name' => $validated['signed_by_staff_name'],
+                'signature' => $validated['signature'] ?: $log->signature,
+                'status' => $status,
+            ]);
+
+            $newData = $log->fresh()->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'thawing',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json(['message' => 'Thawing log updated successfully', 'log' => $log]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['message' => 'Failed to update thawing log'], 500);
+        }
     }
 
     public function destroy($id)

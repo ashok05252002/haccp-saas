@@ -5,6 +5,7 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
+import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
 import axios from 'axios';
 
 const DEFAULT_METHODS = [
@@ -65,6 +66,7 @@ const ThawingFormPage = ({ logId }) => {
 
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [showReasonModal, setShowReasonModal] = useState(false);
 
   useEffect(() => {
     // Fetch Staff List
@@ -216,8 +218,44 @@ const ThawingFormPage = ({ logId }) => {
     }
   };
 
+  const handleFinalSubmit = async (amendmentReason = '') => {
+    setSubmitting(true);
+    try {
+      const payload = {
+        log_date: today,
+        log_time: nowTime,
+        food_item_name: foodItemName,
+        defrost_method: defrostMethod,
+        storage_location: storageLocation,
+        start_date: startDate,
+        start_time: startTime,
+        completed_date: completedDate,
+        completed_time: completedTime,
+        defrost_temp: parseFloat(defrostTemp),
+        comments: comments,
+        signed_by_staff_name: signedByStaffName,
+        signature: signature,
+      };
+
+      if (logId) {
+        payload.amendment_reason = amendmentReason;
+        await axios.put(`/api/thawing-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/thawing-logs', payload);
+      }
+
+      router.visit('/haccp-logs/thawing');
+    } catch (err) {
+      console.error('Failed to submit thawing log', err);
+      alert(err.response?.data?.message || 'Failed to submit thawing log.');
+    } finally {
+      setSubmitting(false);
+      setShowReasonModal(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const newErrors = {};
 
     if (!foodItemName) newErrors.foodItemName = 'Food item is required.';
@@ -239,36 +277,10 @@ const ThawingFormPage = ({ logId }) => {
       return;
     }
 
-    setSubmitting(true);
-    try {
-      const payload = {
-        log_date: today,
-        log_time: nowTime,
-        food_item_name: foodItemName,
-        defrost_method: defrostMethod,
-        storage_location: storageLocation,
-        start_date: startDate,
-        start_time: startTime,
-        completed_date: completedDate,
-        completed_time: completedTime,
-        defrost_temp: parseFloat(defrostTemp),
-        comments: comments,
-        signed_by_staff_name: signedByStaffName,
-        signature: signature,
-      };
-
-      if (logId) {
-        await axios.put(`/api/thawing-logs/${logId}`, payload);
-      } else {
-        await axios.post('/api/thawing-logs', payload);
-      }
-
-      router.visit('/haccp-logs/thawing');
-    } catch (err) {
-      console.error('Failed to submit thawing log', err);
-      alert(err.response?.data?.message || 'Failed to submit thawing log.');
-    } finally {
-      setSubmitting(false);
+    if (logId) {
+      setShowReasonModal(true);
+    } else {
+      handleFinalSubmit();
     }
   };
 
@@ -559,6 +571,13 @@ const ThawingFormPage = ({ logId }) => {
             </Button>
           </div>
         </form>
+
+        <AmendmentReasonModal
+          isOpen={showReasonModal}
+          onClose={() => setShowReasonModal(false)}
+          onConfirm={handleFinalSubmit}
+          loading={submitting}
+        />
       </div>
     </PageLayout>
   );

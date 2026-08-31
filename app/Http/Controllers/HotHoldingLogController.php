@@ -109,35 +109,62 @@ class HotHoldingLogController extends Controller
             'items.*.check4' => 'nullable',
             'items.*.comments' => 'nullable|string',
             'general_comments' => 'nullable|string',
+            'amendment_reason' => 'required|string|min:3',
         ]);
 
-        $items = $request->input('items', []);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $originalData = $log->toArray();
 
-        // Re-evaluate status
-        $hasBelowThreshold = false;
-        $hasEnteredTemp = false;
+            $items = $request->input('items', []);
 
-        foreach ($items as $item) {
-            foreach (['check1', 'check2', 'check3', 'check4'] as $chk) {
-                if (isset($item[$chk]) && $item[$chk] !== '' && $item[$chk] !== null) {
-                    $hasEnteredTemp = true;
-                    $tempVal = floatval($item[$chk]);
-                    if ($tempVal < 63.0) {
-                        $hasBelowThreshold = true;
+            // Re-evaluate status
+            $hasBelowThreshold = false;
+            $hasEnteredTemp = false;
+
+            foreach ($items as $item) {
+                foreach (['check1', 'check2', 'check3', 'check4'] as $chk) {
+                    if (isset($item[$chk]) && $item[$chk] !== '' && $item[$chk] !== null) {
+                        $hasEnteredTemp = true;
+                        $tempVal = floatval($item[$chk]);
+                        if ($tempVal < 63.0) {
+                            $hasBelowThreshold = true;
+                        }
                     }
                 }
             }
+
+            $status = ($hasEnteredTemp && !$hasBelowThreshold) ? 'Passed' : 'Needs Review';
+
+            $log->update([
+                'items' => $items,
+                'general_comments' => $validated['general_comments'] ?? $log->general_comments,
+                'status' => $status,
+            ]);
+
+            $newData = $log->fresh()->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'hot_holding',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json(['message' => 'Hot holding log updated successfully', 'log' => $log]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['message' => 'Failed to update hot holding log'], 500);
         }
-
-        $status = ($hasEnteredTemp && !$hasBelowThreshold) ? 'Passed' : 'Needs Review';
-
-        $log->update([
-            'items' => $items,
-            'general_comments' => $validated['general_comments'] ?? $log->general_comments,
-            'status' => $status,
-        ]);
-
-        return response()->json(['message' => 'Hot holding log updated successfully', 'log' => $log]);
     }
 
     public function destroy($id)
