@@ -113,17 +113,22 @@ class DeliveryIntakeController extends Controller
             'products.*.use_by_date' => 'nullable|date',
             'products.*.quantity' => 'required|string|max:255',
             'products.*.temperature' => 'required|numeric',
-            'amendment_reason' => 'nullable|string',
+            'amendment_reason' => 'required|string|min:3',
         ], [
             'staff_name.required' => 'Please select staff member.',
             'signature.required' => 'Please add signature before saving.',
             'products.*.temperature.required' => 'Please enter temperature for all products.',
             'products.*.temperature.numeric' => 'Temperature must be a valid number.',
+            'amendment_reason.required' => 'Reason for amendment is required.',
+            'amendment_reason.min' => 'Reason for amendment must be at least 3 characters.',
         ]);
 
         DB::beginTransaction();
 
         try {
+            $log->load('products');
+            $originalData = $log->toArray();
+
             $log->update([
                 'log_date' => $validated['log_date'],
                 'log_time' => $validated['log_time'],
@@ -146,6 +151,22 @@ class DeliveryIntakeController extends Controller
                     'temperature' => $productData['temperature'] ?? null,
                 ]);
             }
+
+            $newData = $log->fresh(['products'])->toArray();
+
+            $managerId = session('manager_approved_by_id') ?? $request->input('manager_approved_by_id');
+            $managerName = session('manager_approved_by_name') ?? $request->input('manager_approved_by_name');
+
+            $auditService = app(\App\Services\HaccpAuditService::class);
+            $auditService->logAmendment(
+                $log,
+                'delivery_intake',
+                $originalData,
+                $newData,
+                $validated['amendment_reason'],
+                $managerId,
+                $managerName
+            );
 
             DB::commit();
 
