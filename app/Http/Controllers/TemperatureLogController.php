@@ -97,6 +97,7 @@ class TemperatureLogController extends Controller
             'temperature' => 'required|numeric',
             'is_valid' => 'nullable|boolean',
             'comment' => 'nullable|string',
+            'amendment_reason' => 'nullable|string',
         ], [
             'staff_name.required' => 'Please select staff member.',
             'thermometer_id.required' => 'Please select thermometer used.',

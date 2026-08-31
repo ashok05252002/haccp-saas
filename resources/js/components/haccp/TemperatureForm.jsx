@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
+import AmendmentReasonModal from '../common/AmendmentReasonModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { Snowflake, AlertTriangle, CheckCircle, Save, Droplets, Thermometer, Box } from 'lucide-react';
 import axios from 'axios';
@@ -14,6 +15,7 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
   const [error, setError] = useState(null);
   const [existingSignature, setExistingSignature] = useState(null);
   const [editZoneId, setEditZoneId] = useState(null);
+  const [reasonModalOpen, setReasonModalOpen] = useState(false);
 
   // Form State
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -104,22 +106,65 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
     return true;
   };
 
+  const handleConfirmAmendment = async (amendmentReason) => {
+    setSubmitting(true);
+    setError(null);
+
+    let signatureData = null;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas
+        ? sigPad.current.getCanvas().toDataURL('image/png')
+        : sigPad.current.toDataURL('image/png');
+    } else if (existingSignature && typeof existingSignature === 'string' && existingSignature.trim()) {
+      signatureData = existingSignature.trim();
+    }
+
+    const targetZoneId = editZoneId || Object.keys(readings).find(k => readings[k]?.temperature !== '');
+    const reading = targetZoneId ? readings[targetZoneId] : null;
+    const targetZone = storageZones.find(z => String(z.id) === String(targetZoneId));
+    const isValid = targetZone ? (validateTemperature(targetZone, reading.temperature) ?? true) : true;
+
+    try {
+      await axios.put(`/api/temperature-logs/${logId}`, {
+        log_date: logDate,
+        log_time: logTime,
+        staff_name: staffName,
+        thermometer_id: parseInt(thermometerId),
+        storage_zone_id: targetZone ? targetZone.id : undefined,
+        temperature: parseFloat(reading.temperature),
+        is_valid: isValid,
+        comment: reading.comment,
+        signature: signatureData,
+        amendment_reason: amendmentReason
+      });
+      setReasonModalOpen(false);
+      if (onSave) onSave();
+    } catch (err) {
+      console.error('Failed to update log', err);
+      const errMsg = err.response?.data?.errors?.staff_name?.[0] ||
+                     err.response?.data?.errors?.thermometer_id?.[0] ||
+                     err.response?.data?.errors?.signature?.[0] ||
+                     err.response?.data?.message || 'Failed to update temperature log.';
+      setError(errMsg);
+      setReasonModalOpen(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
     setError(null);
 
     // 1. Staff Member validation
     if (!staffName || !staffName.trim()) {
       setError("Please select staff member.");
-      setSubmitting(false);
       return;
     }
 
     // 2. Thermometer Used validation
     if (!thermometerId) {
       setError("Please select thermometer used.");
-      setSubmitting(false);
       return;
     }
 
@@ -135,48 +180,24 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
 
     if (!signatureData || !signatureData.trim()) {
       setError("Please add signature before saving.");
-      setSubmitting(false);
       return;
     }
 
     if (isEdit) {
-      // In edit mode, update the specific record
+      // In edit mode, check readings first, then open Reason for Amendment modal
       const targetZoneId = editZoneId || Object.keys(readings).find(k => readings[k]?.temperature !== '');
       const reading = targetZoneId ? readings[targetZoneId] : null;
 
       if (!reading || reading.temperature === '') {
         setError('Please enter a valid temperature for the equipment.');
-        setSubmitting(false);
         return;
       }
 
-      const targetZone = storageZones.find(z => String(z.id) === String(targetZoneId));
-      const isValid = targetZone ? (validateTemperature(targetZone, reading.temperature) ?? true) : true;
-
-      try {
-        await axios.put(`/api/temperature-logs/${logId}`, {
-          log_date: logDate,
-          log_time: logTime,
-          staff_name: staffName,
-          thermometer_id: parseInt(thermometerId),
-          storage_zone_id: targetZone ? targetZone.id : undefined,
-          temperature: parseFloat(reading.temperature),
-          is_valid: isValid,
-          comment: reading.comment,
-          signature: signatureData
-        });
-        if (onSave) onSave();
-      } catch (err) {
-        console.error('Failed to update log', err);
-        const errMsg = err.response?.data?.errors?.staff_name?.[0] ||
-                       err.response?.data?.errors?.thermometer_id?.[0] ||
-                       err.response?.data?.errors?.signature?.[0] ||
-                       err.response?.data?.message || 'Failed to update temperature log.';
-        setError(errMsg);
-        setSubmitting(false);
-      }
+      setReasonModalOpen(true);
       return;
     }
+
+    setSubmitting(true);
 
     // Filter out readings that are empty for Add mode
     const validReadings = [];
@@ -481,6 +502,13 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
           {submitting ? 'Saving...' : (isEdit ? 'Update Entry' : 'Save Entries')}
         </Button>
       </div>
+
+      <AmendmentReasonModal
+        isOpen={reasonModalOpen}
+        onClose={() => setReasonModalOpen(false)}
+        onConfirm={handleConfirmAmendment}
+        loading={submitting}
+      />
     </form>
   );
 };
