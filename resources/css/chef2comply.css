@@ -542,6 +542,72 @@ body.sidebar-minimized {
   .page-main {
     margin-left: 0 !important;
   }
+
+  /* HACCP Log Detail Drawer Specific Print Isolation */
+  body:has(.haccp-log-detail-drawer-overlay) .haccp-reports-main-content,
+  body:has(.haccp-log-detail-drawer-overlay) .sidebar-desktop,
+  body:has(.haccp-log-detail-drawer-overlay) .sidebar-mobile,
+  body:has(.haccp-log-detail-drawer-overlay) .mobile-only,
+  body:has(.haccp-log-detail-drawer-overlay) .page-header {
+    display: none !important;
+  }
+
+  body:has(.haccp-log-detail-drawer-overlay) .page-main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    min-height: auto !important;
+  }
+
+  body:has(.haccp-log-detail-drawer-overlay) .page-main > div {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .haccp-log-detail-drawer-overlay {
+    position: static !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+  }
+
+  .haccp-log-detail-drawer-container {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+    display: block !important;
+    background: #ffffff !important;
+  }
+
+  .haccp-drawer-non-printable {
+    display: none !important;
+  }
+
+  .haccp-drawer-printable-body {
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+  }
+
+  .haccp-drawer-section-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 14px !important;
+    border: 1px solid #D1D5DB !important;
+    border-radius: 8px !important;
+    background-color: #FFFFFF !important;
+  }
 }
 
 /* ============================================

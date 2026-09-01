@@ -136,7 +136,7 @@ const HaccpReportsPage = () => {
     <PageLayout>
       <Head title="HACCP Reports & Audits" />
 
-      <div>
+      <div className="haccp-reports-main-content">
         {/* Page Header */}
         <div className="panel-header-row" style={{ marginBottom: '24px' }}>
           <div>
@@ -482,7 +482,7 @@ const HaccpReportsPage = () => {
         data={selectedLogDetail}
         loading={detailLoading}
         error={detailError}
-        onPrint={() => alert('Print log functionality will be enabled in the upcoming phase.')}
+        onPrint={() => window.print()}
         onDownloadPdf={() => alert('Single log PDF download will be enabled in the upcoming phase.')}
       />
     </PageLayout>

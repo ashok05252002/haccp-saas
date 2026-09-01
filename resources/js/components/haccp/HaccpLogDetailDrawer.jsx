@@ -159,8 +159,17 @@ const HaccpLogDetailDrawer = ({
       .replace(/\b\w/g, (char) => char.toUpperCase());
   };
 
+  const handlePrint = () => {
+    if (onPrint) {
+      onPrint();
+    } else {
+      window.print();
+    }
+  };
+
   return (
     <div
+      className="haccp-log-detail-drawer-overlay"
       style={{
         position: 'fixed',
         top: 0,
@@ -176,6 +185,7 @@ const HaccpLogDetailDrawer = ({
       onClick={handleOverlayClick}
     >
       <div
+        className="haccp-log-detail-drawer-container"
         style={{
           width: '100%',
           maxWidth: '780px',
@@ -189,6 +199,7 @@ const HaccpLogDetailDrawer = ({
       >
         {/* Drawer Sticky Top Header */}
         <div
+          className="haccp-drawer-header"
           style={{
             padding: '20px 24px',
             borderBottom: '1px solid var(--color-border-light)',
@@ -244,6 +255,7 @@ const HaccpLogDetailDrawer = ({
             {data?.log?.status && renderBadge(data.log.status)}
             <button
               type="button"
+              className="haccp-drawer-non-printable"
               onClick={onClose}
               style={{
                 background: 'none',
@@ -265,6 +277,7 @@ const HaccpLogDetailDrawer = ({
 
         {/* Quick Action Toolbar */}
         <div
+          className="haccp-drawer-non-printable"
           style={{
             padding: '12px 24px',
             borderBottom: '1px solid var(--color-border-light)',
@@ -295,7 +308,7 @@ const HaccpLogDetailDrawer = ({
               type="button"
               variant="secondary"
               icon={Printer}
-              onClick={onPrint || (() => {})}
+              onClick={handlePrint}
               disabled={loading || !data}
               style={{ fontSize: '12.5px', padding: '6px 12px' }}
             >
@@ -305,7 +318,10 @@ const HaccpLogDetailDrawer = ({
         </div>
 
         {/* Drawer Scrollable Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div
+          className="haccp-drawer-printable-body"
+          style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}
+        >
           {loading && (
             <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
               <div style={{ fontSize: '15px', fontWeight: 600 }}>Loading detailed log records & audit history...</div>
@@ -338,6 +354,7 @@ const HaccpLogDetailDrawer = ({
               {Array.isArray(data.sections) && data.sections.map((section, sIdx) => (
                 <div
                   key={sIdx}
+                  className="haccp-drawer-section-card"
                   style={{
                     backgroundColor: '#FFFFFF',
                     border: '1px solid var(--color-border-light)',
@@ -394,6 +411,7 @@ const HaccpLogDetailDrawer = ({
 
               {/* Complete Audit & Amendment Trail Section */}
               <div
+                className="haccp-drawer-section-card"
                 style={{
                   backgroundColor: '#FFFFFF',
                   border: '1px solid var(--color-border-light)',
@@ -556,6 +574,7 @@ const HaccpLogDetailDrawer = ({
 
         {/* Drawer Sticky Bottom Footer */}
         <div
+          className="haccp-drawer-non-printable"
           style={{
             padding: '14px 24px',
             borderTop: '1px solid var(--color-border-light)',
