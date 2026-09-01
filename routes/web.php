@@ -749,6 +749,7 @@ Route::middleware(['auth', 'role:super_admin,client,restaurant'])->group(functio
     })->name('haccp-reports');
 
     Route::get('/api/haccp-reports', [\App\Http\Controllers\HaccpReportController::class, 'index']);
+    Route::get('/api/haccp-reports/log-detail/{logType}/{logId}', [\App\Http\Controllers\HaccpReportController::class, 'getLogDetail']);
     Route::get('/api/haccp-reports/export-csv', [\App\Http\Controllers\HaccpReportController::class, 'exportCsv']);
 
     // Thawing / Defrosting Record (Frontend)

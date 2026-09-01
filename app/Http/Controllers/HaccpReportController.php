@@ -20,6 +20,7 @@ use App\Models\FoodDispatchLog;
 use App\Models\FryerOilLog;
 use App\Models\TemperatureLog;
 use App\Models\ThawingLog;
+use App\Models\HaccpLogAmendment;
 
 class HaccpReportController extends Controller
 {
@@ -407,5 +408,159 @@ class HaccpReportController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function getLogDetail(Request $request, $logType, $logId)
+    {
+        $user = Auth::user();
+        $tenantId = $user ? $user->tenant_id : null;
+        if (!$tenantId) {
+            return response()->json(['message' => 'Unauthorized tenant context.'], 403);
+        }
+
+        $branchId = $user->branch_id ?? session('active_branch_id');
+
+        // Whitelist mapping for supported log types in this phase
+        $allowedLogTypes = [
+            'cooking-temperature' => [
+                'model' => CookingLog::class,
+                'moduleName' => 'Cooking Temperature',
+                'auditLogType' => 'cooking_temperature',
+            ],
+        ];
+
+        if (!array_key_exists($logType, $allowedLogTypes)) {
+            return response()->json([
+                'message' => "Unsupported or unrecognized log type '{$logType}'.",
+                'supportedTypes' => array_keys($allowedLogTypes),
+            ], 404);
+        }
+
+        $config = $allowedLogTypes[$logType];
+        $modelClass = $config['model'];
+
+        $query = $modelClass::where('tenant_id', $tenantId)->where('id', $logId);
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        $log = $query->first();
+        if (!$log) {
+            return response()->json([
+                'message' => "{$config['moduleName']} record not found or not accessible within your current branch context.",
+            ], 404);
+        }
+
+        // Fetch audit history from haccp_log_amendments
+        $auditQuery = HaccpLogAmendment::where('tenant_id', $tenantId)
+            ->where('log_type', $config['auditLogType'])
+            ->where('log_id', $log->id);
+
+        if ($branchId) {
+            $auditQuery->where('branch_id', $branchId);
+        }
+
+        $auditHistory = $auditQuery->orderBy('created_at', 'desc')->get()->map(function ($a) {
+            return [
+                'id' => $a->id,
+                'reason' => $a->reason,
+                'amended_by_name' => $a->amended_by_name,
+                'manager_approved_by_name' => $a->manager_approved_by_name,
+                'changed_fields' => $a->changed_fields,
+                'original_data' => $a->original_data,
+                'new_data' => $a->new_data,
+                'ip_address' => $a->ip_address,
+                'created_at' => $a->created_at ? $a->created_at->toIso8601String() : null,
+            ];
+        });
+
+        // Build structured sections for the pilot Cooking Temperature module
+        $sections = [
+            [
+                'title' => 'Overview & Batch Details',
+                'fields' => [
+                    ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                    ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                    ['label' => 'Food Item / Product', 'value' => $log->food_item ?? '-'],
+                    ['label' => 'Batch / Lot Code', 'value' => $log->batch_code ?? '-'],
+                    ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                    ['label' => 'Probe ID', 'value' => $log->probe_id ?? '-'],
+                    ['label' => 'Status', 'value' => $log->status ?? 'COMPLETED'],
+                    ['label' => 'Final Signed Off At', 'value' => $log->final_signed_at ? Carbon::parse($log->final_signed_at)->toIso8601String() : null],
+                ]
+            ],
+            [
+                'title' => 'Stage 1: Cooking (CCP-3)',
+                'fields' => [
+                    ['label' => 'Core Temp', 'value' => $log->cooking_temp !== null ? $log->cooking_temp . ' °C' : 'N/A'],
+                    ['label' => 'Target Temp', 'value' => $log->cooking_target ?? '≥ 75°C'],
+                    ['label' => 'Cooking Method', 'value' => $log->cooking_method ?? 'N/A'],
+                    ['label' => 'Time Finished Cooking', 'value' => $log->time_finished_cooking ?? 'N/A'],
+                    ['label' => 'Result', 'value' => $log->cooking_temp !== null ? ($log->cooking_passed ? 'PASSED' : 'FAILED') : 'N/A'],
+                ]
+            ],
+            [
+                'title' => 'Stage 2: Blast Chilling (CCP-4)',
+                'fields' => [
+                    ['label' => 'Chilling Method', 'value' => $log->chilling_method ?? 'N/A'],
+                    ['label' => 'Start Time', 'value' => $log->chilling_start_time ?? 'N/A'],
+                    ['label' => 'End Time', 'value' => $log->chilling_end_time ?? 'N/A'],
+                    ['label' => 'Start Temp', 'value' => $log->chilling_start_temp !== null ? $log->chilling_start_temp . ' °C' : 'N/A'],
+                    ['label' => 'End Temp', 'value' => $log->chilling_end_temp !== null ? $log->chilling_end_temp . ' °C' : 'N/A'],
+                    ['label' => 'Duration', 'value' => $log->chilling_duration_minutes ? $log->chilling_duration_minutes . ' mins' : 'N/A'],
+                    ['label' => 'Result', 'value' => $log->chilling_end_temp !== null ? ($log->chilling_passed ? 'PASSED' : 'FAILED') : 'N/A'],
+                    ['label' => 'Blast Chilling Corrective Action', 'value' => $log->chilling_corrective_action ?? null],
+                ]
+            ],
+            [
+                'title' => 'Stage 3: Cold Storage / Chiller Hold',
+                'fields' => [
+                    ['label' => 'Location / Unit', 'value' => $log->chiller_location ?? 'N/A'],
+                    ['label' => 'Storage Temp', 'value' => $log->chiller_temp !== null ? $log->chiller_temp . ' °C' : 'N/A'],
+                    ['label' => 'Result', 'value' => $log->chiller_temp !== null ? ($log->chiller_passed ? 'PASSED' : 'FAILED') : 'N/A'],
+                ]
+            ],
+            [
+                'title' => 'Stage 4: Reheating Process',
+                'fields' => [
+                    ['label' => 'Reheating Method', 'value' => $log->reheating_method ?? 'N/A'],
+                    ['label' => 'Reheated Core Temp', 'value' => $log->reheating_temp !== null ? $log->reheating_temp . ' °C' : 'N/A'],
+                    ['label' => 'Result', 'value' => $log->reheating_temp !== null ? ($log->reheating_passed ? 'PASSED' : 'FAILED') : 'N/A'],
+                ]
+            ],
+            [
+                'title' => 'Stage 5: Hot Holding & Service (CCP-5)',
+                'fields' => [
+                    ['label' => 'Hot Holding Location', 'value' => $log->hot_holding_location ?? 'N/A'],
+                    ['label' => 'Holding Temp', 'value' => $log->hot_holding_temp !== null ? $log->hot_holding_temp . ' °C' : 'N/A'],
+                    ['label' => 'Result', 'value' => $log->hot_holding_temp !== null ? ($log->hot_holding_passed ? 'PASSED' : 'FAILED') : 'N/A'],
+                ]
+            ],
+            [
+                'title' => 'Corrective Actions & Observations',
+                'fields' => [
+                    ['label' => 'General Corrective Action Taken', 'value' => $log->corrective_action ?? 'None recorded.'],
+                    ['label' => 'Notes / Observations', 'value' => $log->notes ?? 'None recorded.'],
+                ]
+            ],
+            [
+                'title' => 'Verification & Signatures',
+                'fields' => [
+                    ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                    ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                    ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                    ['label' => 'Final Signed Timestamp', 'value' => $log->final_signed_at ? Carbon::parse($log->final_signed_at)->toIso8601String() : null],
+                ]
+            ]
+        ];
+
+        return response()->json([
+            'moduleName' => $config['moduleName'],
+            'logType' => $logType,
+            'auditLogType' => $config['auditLogType'],
+            'log' => $log,
+            'sections' => $sections,
+            'auditHistory' => $auditHistory,
+        ]);
     }
 }
