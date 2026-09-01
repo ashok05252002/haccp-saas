@@ -42,7 +42,7 @@ class CookingLogController extends Controller
     {
         $status = in_array($request->status, ['IN_PROGRESS', 'COMPLETED']) ? $request->status : 'COMPLETED';
 
-        $request->validate([
+        $rules = [
             'log_date' => 'required|date',
             'log_time' => 'required|string',
             'food_item' => 'required|string|max:255',
@@ -73,16 +73,20 @@ class CookingLogController extends Controller
             'hot_holding_passed' => 'nullable|boolean',
             'corrective_action' => 'nullable|string',
             'notes' => 'nullable|string',
-            'signature' => 'nullable|string',
+            'signature' => ($status === 'COMPLETED') ? 'required|string' : 'nullable|string',
             'status' => 'nullable|string|in:IN_PROGRESS,COMPLETED',
             'final_signed_at' => 'nullable|date',
-        ]);
+        ];
+
+        $request->validate($rules);
 
         $tenantId = Auth::user()->tenant_id;
         $branchId = Auth::user()->branch_id ?? session('active_branch_id');
         if (!$tenantId) {
             return response()->json(['message' => 'Unauthorized tenant context.'], 403);
         }
+
+        $finalSignedAt = ($status === 'COMPLETED') ? ($request->final_signed_at ?? now()) : null;
 
         $log = CookingLog::create([
             'tenant_id' => $tenantId,
@@ -119,7 +123,7 @@ class CookingLogController extends Controller
             'notes' => $request->notes,
             'signature' => $request->signature,
             'status' => $status,
-            'final_signed_at' => $request->final_signed_at,
+            'final_signed_at' => $finalSignedAt,
         ]);
 
         return response()->json(['message' => 'Cooking log saved successfully', 'log' => $log], 201);
@@ -134,6 +138,9 @@ class CookingLogController extends Controller
 
         $log = CookingLog::where('tenant_id', $tenantId)->findOrFail($id);
         $isExistingInProgress = ($log->status === 'IN_PROGRESS');
+        $targetStatus = in_array($request->status, ['IN_PROGRESS', 'COMPLETED'])
+            ? $request->status
+            : ($isExistingInProgress ? 'IN_PROGRESS' : 'COMPLETED');
 
         $rules = [
             'log_date' => 'required|date',
@@ -166,33 +173,49 @@ class CookingLogController extends Controller
             'hot_holding_passed' => 'nullable|boolean',
             'corrective_action' => 'nullable|string',
             'notes' => 'nullable|string',
-            'signature' => 'nullable|string',
             'status' => 'nullable|string|in:IN_PROGRESS,COMPLETED',
             'final_signed_at' => 'nullable|date',
         ];
 
-        if (!$isExistingInProgress) {
-            $rules['amendment_reason'] = 'required|string|min:3';
-        } else {
+        if ($isExistingInProgress) {
+            // During IN_PROGRESS: amendment_reason is NEVER required
             $rules['amendment_reason'] = 'nullable|string';
+
+            if ($targetStatus === 'COMPLETED') {
+                // Final Sign-Off: staff signature is mandatory
+                $rules['signature'] = 'required|string';
+            } else {
+                $rules['signature'] = 'nullable|string';
+            }
+        } else {
+            // Already COMPLETED: Requirement 1 amendment flow
+            $rules['signature'] = 'nullable|string';
+            $rules['amendment_reason'] = 'required|string|min:3';
         }
 
         $validated = $request->validate($rules);
 
         $updateData = $validated;
         unset($updateData['amendment_reason']);
+        $updateData['status'] = $targetStatus;
 
-        if (!isset($updateData['status']) || empty($updateData['status'])) {
-            $updateData['status'] = $log->status ?? 'COMPLETED';
+        // Final Sign-Off timestamp
+        if ($isExistingInProgress && $targetStatus === 'COMPLETED') {
+            $updateData['final_signed_at'] = now();
         }
 
-        // If updating an IN_PROGRESS draft: update directly without generating audit amendment history
+        // If updating an IN_PROGRESS draft (whether continuing or final sign-off):
+        // update directly without generating audit amendment history
         if ($isExistingInProgress) {
             $log->update($updateData);
-            return response()->json(['message' => 'Cooking log updated successfully', 'log' => $log]);
+            $message = ($targetStatus === 'COMPLETED')
+                ? 'Cooking batch completed and signed off'
+                : 'Cooking log updated successfully';
+
+            return response()->json(['message' => $message, 'log' => $log]);
         }
 
-        // If updating a COMPLETED log: apply Requirement 1 amendment audit logging within transaction
+        // If updating an already COMPLETED log: apply Requirement 1 amendment audit logging within transaction
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
             $originalData = $log->toArray();

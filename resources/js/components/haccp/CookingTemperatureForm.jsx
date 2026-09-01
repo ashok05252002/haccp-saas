@@ -443,15 +443,33 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
     }
   };
 
-  const handleFinalSubmit = async (amendmentReason = '') => {
-    setSubmitting(true);
-    const payload = buildFormPayload('COMPLETED');
+  const isCompletedLog = Boolean(logId) && existingStatus === 'COMPLETED';
 
+  const handleFinalSignOff = async () => {
+    setError(null);
+
+    // Validate Signature
+    let signatureData = existingSignature;
+    if (sigPad.current && !sigPad.current.isEmpty()) {
+      signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+    }
+
+    if (!signatureData) {
+      setError('Please add staff signature before final sign-off.');
+      return;
+    }
+
+    if (!logDate || !logTime || !foodItem) {
+      setError('Date, Time, and Food Item are mandatory.');
+      return;
+    }
+
+    const payload = buildFormPayload('COMPLETED');
+    payload.signature = signatureData;
+
+    setSubmitting(true);
     try {
       if (logId) {
-        if (existingStatus === 'COMPLETED') {
-          payload.amendment_reason = amendmentReason;
-        }
         await axios.put(`/api/cooking-logs/${logId}`, payload);
       } else {
         await axios.post('/api/cooking-logs', payload);
@@ -461,7 +479,30 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       }
       onSave();
     } catch (err) {
-      console.error('Failed to save cooking log', err);
+      console.error('Failed to complete final sign-off', err);
+      setError(err.response?.data?.message || 'Failed to complete final sign-off.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleFinalSubmit = async (amendmentReason = '') => {
+    setSubmitting(true);
+    const payload = buildFormPayload('COMPLETED');
+    payload.amendment_reason = amendmentReason;
+
+    try {
+      if (logId) {
+        await axios.put(`/api/cooking-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/cooking-logs', payload);
+      }
+      if (draftKey) {
+        cookingDraftService.deleteDraft(draftKey);
+      }
+      onSave();
+    } catch (err) {
+      console.error('Failed to save cooking log amendment', err);
       setError(err.response?.data?.message || 'Failed to save log.');
     } finally {
       setSubmitting(false);
@@ -483,12 +524,8 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
-    // Only prompt for Amendment Reason when modifying an ALREADY COMPLETED log
-    if (logId && existingStatus === 'COMPLETED') {
-      setShowReasonModal(true);
-    } else {
-      handleFinalSubmit();
-    }
+    // Since this is an already completed log amendment, open AmendmentReasonModal
+    setShowReasonModal(true);
   };
 
   const progressPercent = ((currentStep + 1) / stepsList.length) * 100;
@@ -1016,33 +1053,39 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
           </Button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleSaveInProgress} 
-              disabled={submitting}
-              style={{ 
-                color: '#D97706', 
-                borderColor: '#FCD34D', 
-                backgroundColor: '#FFFBEB',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Clock size={16} />
-              <span>Save & Continue Later</span>
-            </Button>
+            {!isCompletedLog && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleSaveInProgress} 
+                disabled={submitting}
+                style={{ 
+                  color: '#D97706', 
+                  borderColor: '#FCD34D', 
+                  backgroundColor: '#FFFBEB',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Clock size={16} />
+                <span>Save & Continue Later</span>
+              </Button>
+            )}
 
             {currentStep < stepsList.length - 1 ? (
               <Button type="button" variant="primary" onClick={handleNext} disabled={submitting}>
                 Next Step
                 <ArrowRight size={16} style={{ marginLeft: '6px' }} />
               </Button>
-            ) : (
+            ) : isCompletedLog ? (
               <Button type="button" variant="primary" icon={Save} onClick={handleSubmit} disabled={submitting} style={{ backgroundColor: '#10B981', borderColor: '#10B981' }}>
                 {submitting ? 'Saving Log...' : 'Save & Submit Log'}
+              </Button>
+            ) : (
+              <Button type="button" variant="primary" icon={CheckCircle} onClick={handleFinalSignOff} disabled={submitting} style={{ backgroundColor: '#10B981', borderColor: '#10B981' }}>
+                {submitting ? 'Signing Off...' : 'Final Sign-Off'}
               </Button>
             )}
           </div>
