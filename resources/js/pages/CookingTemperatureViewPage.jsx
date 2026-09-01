@@ -53,6 +53,45 @@ const CookingTemperatureViewPage = ({ logId }) => {
 
   const isInProgress = (log.status === 'IN_PROGRESS');
 
+  const renderStageBadge = (tempValue, isPassed) => {
+    const hasData = tempValue !== null && tempValue !== undefined && tempValue !== '';
+    if (!hasData) {
+      return (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          backgroundColor: '#F3F4F6',
+          color: '#6B7280',
+          padding: '4px 10px',
+          borderRadius: '12px',
+          fontSize: '13px',
+          fontWeight: 700
+        }}>
+          <span>N/A</span>
+        </div>
+      );
+    }
+
+    const passed = Boolean(isPassed);
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        backgroundColor: passed ? '#ECFDF5' : '#FEF2F2',
+        color: passed ? '#047857' : '#B91C1C',
+        padding: '4px 10px',
+        borderRadius: '12px',
+        fontSize: '13px',
+        fontWeight: 700
+      }}>
+        {passed ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
+        <span>{passed ? 'PASSED' : 'FAILED'}</span>
+      </div>
+    );
+  };
+
   return (
     <PageLayout>
       <Head title="View Cooking Log" />
@@ -172,10 +211,7 @@ const CookingTemperatureViewPage = ({ logId }) => {
                   <Flame size={22} color="#EA580C" />
                   <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#9A3412' }}>Stage 1: Cooking (CCP-3)</h3>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: log.cooking_passed ? '#ECFDF5' : '#FEF2F2', color: log.cooking_passed ? '#047857' : '#B91C1C', padding: '4px 10px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}>
-                  {log.cooking_passed ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
-                  <span>{log.cooking_passed ? 'PASSED' : 'FAILED'}</span>
-                </div>
+                {renderStageBadge(log.cooking_temp, log.cooking_passed)}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', fontSize: '14px' }}>
                 <div>
@@ -200,10 +236,7 @@ const CookingTemperatureViewPage = ({ logId }) => {
                   <Snowflake size={22} color="#0891B2" />
                   <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#155E75' }}>Stage 2: Blast Chilling (CCP-4)</h3>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: log.chilling_passed ? '#ECFDF5' : '#FEF2F2', color: log.chilling_passed ? '#047857' : '#B91C1C', padding: '4px 10px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}>
-                  {log.chilling_passed ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
-                  <span>{log.chilling_passed ? 'PASSED' : 'FAILED'}</span>
-                </div>
+                {renderStageBadge(log.chilling_end_temp, log.chilling_passed)}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', fontSize: '14px' }}>
                 <div>
@@ -245,10 +278,7 @@ const CookingTemperatureViewPage = ({ logId }) => {
                   <RefrigeratorIcon size={22} color="#2563EB" />
                   <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#1E40AF' }}>Stage 3: Cold Storage / Chiller Hold</h3>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: log.chiller_passed ? '#ECFDF5' : '#FEF2F2', color: log.chiller_passed ? '#047857' : '#B91C1C', padding: '4px 10px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}>
-                  {log.chiller_passed ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
-                  <span>{log.chiller_passed ? 'PASSED' : 'FAILED'}</span>
-                </div>
+                {renderStageBadge(log.chiller_temp, log.chiller_passed)}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '14px' }}>
                 <div>
@@ -269,10 +299,7 @@ const CookingTemperatureViewPage = ({ logId }) => {
                   <RefreshCw size={22} color="#D97706" />
                   <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#B45309' }}>Stage 4: Reheating Process</h3>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: log.reheating_passed ? '#ECFDF5' : '#FEF2F2', color: log.reheating_passed ? '#047857' : '#B91C1C', padding: '4px 10px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}>
-                  {log.reheating_passed ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
-                  <span>{log.reheating_passed ? 'PASSED' : 'FAILED'}</span>
-                </div>
+                {renderStageBadge(log.reheating_temp, log.reheating_passed)}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '14px' }}>
                 <div>
@@ -293,10 +320,7 @@ const CookingTemperatureViewPage = ({ logId }) => {
                   <Soup size={22} color="#DB2777" />
                   <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#9D174D' }}>Stage 5: Hot Holding & Service (CCP-5)</h3>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: log.hot_holding_passed ? '#ECFDF5' : '#FEF2F2', color: log.hot_holding_passed ? '#047857' : '#B91C1C', padding: '4px 10px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}>
-                  {log.hot_holding_passed ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
-                  <span>{log.hot_holding_passed ? 'PASSED' : 'FAILED'}</span>
-                </div>
+                {renderStageBadge(log.hot_holding_temp, log.hot_holding_passed)}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '14px' }}>
                 <div>
