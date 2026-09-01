@@ -45,9 +45,11 @@ const HaccpReportsPage = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
 
+  const SUPPORTED_DETAIL_MODULES = ['cooking-temperature', 'temperature'];
+
   const openLogDetail = async (logRow) => {
-    if (logRow.moduleId !== 'cooking-temperature') {
-      return; // Pilot module only
+    if (!SUPPORTED_DETAIL_MODULES.includes(logRow.moduleId)) {
+      return;
     }
 
     setDetailDrawerOpen(true);
@@ -56,10 +58,10 @@ const HaccpReportsPage = () => {
     setSelectedLogDetail(null);
 
     try {
-      const res = await axios.get(`/api/haccp-reports/log-detail/cooking-temperature/${logRow.id}`);
+      const res = await axios.get(`/api/haccp-reports/log-detail/${logRow.moduleId}/${logRow.id}`);
       setSelectedLogDetail(res.data);
     } catch (err) {
-      console.error('Failed to load detailed cooking temperature log', err);
+      console.error('Failed to load detailed log record', err);
       setDetailError(err.response?.data?.message || 'Failed to load detailed log record.');
     } finally {
       setDetailLoading(false);
@@ -334,22 +336,22 @@ const HaccpReportsPage = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {Array.isArray(data?.logs) && data.logs.length > 0 ? (
                 data.logs.map((log, idx) => {
-                  const isCookingLog = log.moduleId === 'cooking-temperature';
+                  const isClickable = SUPPORTED_DETAIL_MODULES.includes(log.moduleId);
 
                   return (
                     <Card
                       key={idx}
-                      onClick={isCookingLog ? () => openLogDetail(log) : undefined}
+                      onClick={isClickable ? () => openLogDetail(log) : undefined}
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '14px',
-                        cursor: isCookingLog ? 'pointer' : 'default',
+                        cursor: isClickable ? 'pointer' : 'default',
                         transition: 'all 0.15s ease-in-out',
-                        border: isCookingLog ? '1px solid #D1FAE5' : '1px solid var(--color-border-light)',
+                        border: isClickable ? '1px solid #D1FAE5' : '1px solid var(--color-border-light)',
                         backgroundColor: '#FFFFFF',
                       }}
-                      className={isCookingLog ? 'haccp-clickable-report-card' : ''}
+                      className={isClickable ? 'haccp-clickable-report-card' : ''}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '12px' }}>
                         <div>
@@ -357,7 +359,7 @@ const HaccpReportsPage = () => {
                             <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
                               {log.moduleName}
                             </h3>
-                            {isCookingLog && (
+                            {isClickable && (
                               <span
                                 style={{
                                   fontSize: '11px',
