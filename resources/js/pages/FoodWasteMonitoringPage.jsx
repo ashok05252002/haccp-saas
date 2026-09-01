@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Plus, Search, Calendar, Eye, Pencil, Trash2, CheckCircle2, AlertTriangle, ArrowLeft, Trash, Scale, PoundSterling } from 'lucide-react';
+import { Plus, Search, Calendar, Eye, Pencil, Trash2, CheckCircle2, AlertTriangle, ArrowLeft, Trash, Scale, Euro } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -141,10 +141,10 @@ const FoodWasteMonitoringPage = () => {
 
           <Card style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px' }}>
             <div style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}>
-              <PoundSterling size={22} />
+              <Euro size={22} />
             </div>
             <div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#DC2626' }}>£{stats.costSum.toFixed(2)}</div>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: '#DC2626' }}>€{stats.costSum.toFixed(2)}</div>
               <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Total Cost Impact</div>
             </div>
           </Card>
@@ -238,7 +238,7 @@ const FoodWasteMonitoringPage = () => {
                     </td>
                     <td>
                       <strong style={{ color: parseFloat(log.total_cost_impact) > 0 ? '#DC2626' : 'var(--color-text-primary)' }}>
-                        £{parseFloat(log.total_cost_impact || 0).toFixed(2)}
+                        €{parseFloat(log.total_cost_impact || 0).toFixed(2)}
                       </strong>
                     </td>
                     <td>{log.staff_name}</td>

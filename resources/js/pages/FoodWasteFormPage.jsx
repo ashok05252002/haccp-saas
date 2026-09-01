@@ -11,6 +11,7 @@ const UNITS = ['kg', 'g', 'litres', 'portions', 'units', 'trays'];
 
 const createEmptyItem = (defaultType, defaultSource, defaultReason, defaultMethod) => ({
   id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+  itemType: 'ingredient', // 'ingredient' | 'recipe'
   wasteType: defaultType || 'Organic / Processing Scraps',
   foodItem: '',
   source: defaultSource || 'Preparation',
@@ -32,6 +33,10 @@ const FoodWasteFormPage = ({ logId }) => {
   const [reasonsList, setReasonsList] = useState([]);
   const [sourcesList, setSourcesList] = useState([]);
   const [methodsList, setMethodsList] = useState([]);
+
+  // Master Ingredients & Master Recipes for Waste Cost Calculator
+  const [masterIngredients, setMasterIngredients] = useState([]);
+  const [masterRecipes, setMasterRecipes] = useState([]);
 
   // UOM & Storage Types for Manager Hub Master Creation
   const [uomList, setUomList] = useState([]);
@@ -73,6 +78,18 @@ const FoodWasteFormPage = ({ logId }) => {
         setStaffName(res.data[0].name);
         setSignedByStaffName(res.data[0].name);
       }
+    }).catch(() => {});
+
+    // Fetch Master Ingredients for Waste Cost Calculator
+    axios.get('/api/ingredients').then(res => {
+      const activeIngs = (res.data || []).filter(i => i.status === 'Active');
+      setMasterIngredients(activeIngs);
+    }).catch(() => {});
+
+    // Fetch Master Recipes for Waste Cost Calculator
+    axios.get('/api/recipes').then(res => {
+      const activeRecs = (res.data || []).filter(r => r.status === 'Active' || !r.status);
+      setMasterRecipes(activeRecs);
     }).catch(() => {});
 
     // Fetch Food Items (Manager Hub Master)
@@ -132,7 +149,6 @@ const FoodWasteFormPage = ({ logId }) => {
     // Initial 1 item row
     if (!logId) {
       const firstItem = createEmptyItem();
-      firstItem.foodItem = 'Minced Beef';
       setWasteItems([firstItem]);
     }
   }, []);
@@ -158,6 +174,7 @@ const FoodWasteFormPage = ({ logId }) => {
         if (Array.isArray(itemsData) && itemsData.length > 0) {
           const loadedItems = itemsData.map(item => ({
             id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            itemType: item.itemType || item.item_type || 'ingredient',
             wasteType: item.wasteType || item.waste_type || 'Organic / Processing Scraps',
             foodItem: item.foodItem || item.food_item || item.name || '',
             source: item.source || 'Preparation',
@@ -181,7 +198,6 @@ const FoodWasteFormPage = ({ logId }) => {
   /* Item Handlers */
   const handleAddItem = () => {
     const newItem = createEmptyItem(typesList[0], sourcesList[0], reasonsList[0], methodsList[0]);
-    if (foodItemsList.length > 0) newItem.foodItem = foodItemsList[0];
     setWasteItems(prev => [...prev, newItem]);
   };
 
@@ -193,10 +209,59 @@ const FoodWasteFormPage = ({ logId }) => {
     setWasteItems(prev => prev.filter(i => i.id !== id));
   };
 
+  const computeAutoWasteCost = (type, itemName, qty) => {
+    const q = parseFloat(qty);
+    if (isNaN(q) || q <= 0 || !itemName) return '';
+
+    if (type === 'recipe') {
+      const matchedRec = masterRecipes.find(r => r.name === itemName);
+      if (matchedRec && matchedRec.cost_per_portion > 0) {
+        return (q * matchedRec.cost_per_portion).toFixed(2);
+      }
+    } else {
+      const matchedIng = masterIngredients.find(i => i.name === itemName);
+      if (matchedIng && matchedIng.unit_cost > 0) {
+        return (q * matchedIng.unit_cost).toFixed(2);
+      }
+    }
+    return '';
+  };
+
   const handleItemChange = (id, field, value) => {
     setWasteItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      return { ...item, [field]: value };
+
+      let updated = { ...item, [field]: value };
+
+      if (field === 'itemType') {
+        updated.foodItem = '';
+        updated.unit = value === 'recipe' ? 'portions' : 'kg';
+        updated.estimatedCost = '';
+      }
+
+      if (field === 'foodItem') {
+        if (updated.itemType === 'ingredient') {
+          const matchedIng = masterIngredients.find(i => i.name === value);
+          if (matchedIng && matchedIng.uom?.unit_code) {
+            const code = matchedIng.uom.unit_code.toLowerCase();
+            if (UNITS.includes(code)) {
+              updated.unit = code;
+            }
+          }
+        } else if (updated.itemType === 'recipe') {
+          updated.unit = 'portions';
+        }
+      }
+
+      // Auto-calculate cost when itemType, foodItem, or quantity changes
+      if (['itemType', 'foodItem', 'quantity'].includes(field)) {
+        const calculatedCost = computeAutoWasteCost(updated.itemType, updated.foodItem, updated.quantity);
+        if (calculatedCost !== '') {
+          updated.estimatedCost = calculatedCost;
+        }
+      }
+
+      return updated;
     }));
   };
 
@@ -480,22 +545,59 @@ const FoodWasteFormPage = ({ logId }) => {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                      {/* Step 1: Item Category */}
+                      <div className="form-group">
+                        <label className="form-label" style={{ fontWeight: 700 }}>Item Category *</label>
+                        <select
+                          className="form-select"
+                          value={item.itemType || 'ingredient'}
+                          onChange={e => handleItemChange(item.id, 'itemType', e.target.value)}
+                          style={{ fontWeight: 600, color: 'var(--color-primary-darker)' }}
+                        >
+                          <option value="ingredient">🥦 Raw Ingredient</option>
+                          <option value="recipe">🍲 Prepared Dish / Recipe</option>
+                        </select>
+                      </div>
+
+                      {/* Step 2: Food Item / Product */}
+                      <div className="form-group">
+                        <label className="form-label" style={{ fontWeight: 700 }}>Food Item / Product *</label>
+                        <select
+                          className="form-select"
+                          value={item.foodItem}
+                          onChange={e => handleItemChange(item.id, 'foodItem', e.target.value)}
+                        >
+                          <option value="">-- Select {item.itemType === 'recipe' ? 'Prepared Dish' : 'Ingredient'} * --</option>
+                          {item.itemType === 'recipe' ? (
+                            masterRecipes.length > 0 ? (
+                              masterRecipes.map(r => (
+                                <option key={r.id} value={r.name}>
+                                  {r.name} {r.cost_per_portion > 0 ? `(€${r.cost_per_portion.toFixed(2)}/portion)` : ''}
+                                </option>
+                              ))
+                            ) : (
+                              foodItemsList.map(fi => <option key={fi} value={fi}>{fi}</option>)
+                            )
+                          ) : (
+                            masterIngredients.length > 0 ? (
+                              masterIngredients.map(ing => (
+                                <option key={ing.id} value={ing.name}>
+                                  {ing.name} {ing.unit_cost > 0 ? `(€${ing.unit_cost.toFixed(2)}/${ing.uom?.unit_code || 'unit'})` : ''}
+                                </option>
+                              ))
+                            ) : (
+                              foodItemsList.map(fi => <option key={fi} value={fi}>{fi}</option>)
+                            )
+                          )}
+                        </select>
+                      </div>
+
                       {/* Waste Type */}
                       <div className="form-group">
                         <label className="form-label">Waste Type *</label>
                         <select className="form-select" value={item.wasteType} onChange={e => handleItemChange(item.id, 'wasteType', e.target.value)}>
                           {typesList.map(t => (
                             <option key={t} value={t}>{t}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Food Item */}
-                      <div className="form-group">
-                        <label className="form-label">Food Item / Product *</label>
-                        <select className="form-select" value={item.foodItem} onChange={e => handleItemChange(item.id, 'foodItem', e.target.value)}>
-                          {foodItemsList.map(fi => (
-                            <option key={fi} value={fi}>{fi}</option>
                           ))}
                         </select>
                       </div>
@@ -538,8 +640,33 @@ const FoodWasteFormPage = ({ logId }) => {
 
                       {/* Estimated Cost */}
                       <div className="form-group">
-                        <label className="form-label">Estimated Cost (£)</label>
+                        <label className="form-label">Estimated Cost (€)</label>
                         <input className="form-input" type="number" step="0.01" placeholder="e.g. 15.50" value={item.estimatedCost} onChange={e => handleItemChange(item.id, 'estimatedCost', e.target.value)} />
+                        {(() => {
+                          const q = parseFloat(item.quantity);
+                          if (!isNaN(q) && q > 0 && item.foodItem) {
+                            if (item.itemType === 'recipe') {
+                              const rec = masterRecipes.find(r => r.name === item.foodItem);
+                              if (rec && rec.cost_per_portion > 0) {
+                                return (
+                                  <span style={{ fontSize: '11px', color: '#1D4ED8', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                                    ✨ Calculated: {q} portions × €{rec.cost_per_portion.toFixed(2)}/portion
+                                  </span>
+                                );
+                              }
+                            } else {
+                              const ing = masterIngredients.find(i => i.name === item.foodItem);
+                              if (ing && ing.unit_cost > 0) {
+                                return (
+                                  <span style={{ fontSize: '11px', color: '#1D4ED8', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                                    ✨ Calculated: {q} {item.unit} × €{ing.unit_cost.toFixed(2)}/{ing.uom?.unit_code || 'unit'}
+                                  </span>
+                                );
+                              }
+                            }
+                          }
+                          return null;
+                        })()}
                       </div>
 
                       {/* Batch Code */}
@@ -611,7 +738,7 @@ const FoodWasteFormPage = ({ logId }) => {
               <div>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Total Cost Impact</span>
                 <strong style={{ fontSize: '18px', display: 'block', color: totalCostSum > 0 ? '#9B1C1C' : 'var(--color-text-primary)' }}>
-                  £{totalCostSum.toFixed(2)}
+                  €{totalCostSum.toFixed(2)}
                 </strong>
               </div>
             </div>

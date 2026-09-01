@@ -88,7 +88,7 @@ const HaccpLogsSidebarPage = () => {
       key: 'haccp.food-waste',
       href: '/haccp-logs/food-waste',
       title: 'Food Waste & Disposal Log',
-      desc: 'Track wasted food items, disposal reasons, financial cost impact (£), and prevention measures.',
+      desc: 'Track wasted food items, disposal reasons, financial cost impact (€), and prevention measures.',
       icon: Trash,
     },
     {

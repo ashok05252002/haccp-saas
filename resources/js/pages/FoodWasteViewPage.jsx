@@ -113,7 +113,7 @@ const FoodWasteViewPage = ({ logId }) => {
             <div>
               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Total Cost Impact</span>
               <strong style={{ fontSize: '18px', display: 'block', color: parseFloat(log.total_cost_impact) > 0 ? '#DC2626' : 'var(--color-text-primary)' }}>
-                £{parseFloat(log.total_cost_impact || 0).toFixed(2)}
+                €{parseFloat(log.total_cost_impact || 0).toFixed(2)}
               </strong>
             </div>
           </div>
@@ -135,7 +135,7 @@ const FoodWasteViewPage = ({ logId }) => {
                       <th>Source Stage</th>
                       <th>Waste Reason</th>
                       <th>Quantity</th>
-                      <th>Cost (£)</th>
+                      <th>Cost (€)</th>
                       <th>Expiry Date</th>
                       <th>Disposal Method</th>
                     </tr>
@@ -153,7 +153,7 @@ const FoodWasteViewPage = ({ logId }) => {
                           </span>
                         </td>
                         <td><strong>{item.quantity} {item.unit || 'kg'}</strong></td>
-                        <td>£{parseFloat(item.estimatedCost || 0).toFixed(2)}</td>
+                        <td>€{parseFloat(item.estimatedCost || 0).toFixed(2)}</td>
                         <td>{item.expiryDate || '-'}</td>
                         <td>{item.disposalMethod || '-'}</td>
                       </tr>
