@@ -534,6 +534,11 @@ body.sidebar-minimized {
 
 /* Print styles */
 @media print {
+  @page {
+    size: auto;
+    margin: 12mm 15mm;
+  }
+
   .sidebar-desktop,
   .mobile-only {
     display: none !important;
@@ -543,7 +548,7 @@ body.sidebar-minimized {
     margin-left: 0 !important;
   }
 
-  /* HACCP Log Detail Drawer Specific Print Isolation */
+  /* HACCP Log Detail Drawer Specific Print Isolation & Spacing Fix */
   body:has(.haccp-log-detail-drawer-overlay) .haccp-reports-main-content,
   body:has(.haccp-log-detail-drawer-overlay) .sidebar-desktop,
   body:has(.haccp-log-detail-drawer-overlay) .sidebar-mobile,
@@ -557,20 +562,29 @@ body.sidebar-minimized {
     padding: 0 !important;
     background: #ffffff !important;
     min-height: auto !important;
+    height: auto !important;
+    display: block !important;
   }
 
   body:has(.haccp-log-detail-drawer-overlay) .page-main > div {
     padding: 0 !important;
+    margin: 0 !important;
     max-width: 100% !important;
+    min-height: auto !important;
+    height: auto !important;
+    display: block !important;
   }
 
   .haccp-log-detail-drawer-overlay {
     position: static !important;
+    inset: auto !important;
     background: none !important;
     backdrop-filter: none !important;
     display: block !important;
     width: 100% !important;
     height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -583,11 +597,24 @@ body.sidebar-minimized {
     width: 100% !important;
     max-width: 100% !important;
     height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
     box-shadow: none !important;
     border: none !important;
     overflow: visible !important;
     display: block !important;
     background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .haccp-drawer-header {
+    padding: 0 0 12px 0 !important;
+    margin: 0 0 16px 0 !important;
+    border-bottom: 1px solid #E5E7EB !important;
+    background: transparent !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
 
   .haccp-drawer-non-printable {
@@ -595,18 +622,26 @@ body.sidebar-minimized {
   }
 
   .haccp-drawer-printable-body {
+    display: block !important;
+    flex: none !important;
     overflow: visible !important;
     height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
     padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
   }
 
   .haccp-drawer-section-card {
-    page-break-inside: avoid;
-    break-inside: avoid;
-    margin-bottom: 14px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 12px !important;
+    padding: 14px 16px !important;
     border: 1px solid #D1D5DB !important;
     border-radius: 8px !important;
     background-color: #FFFFFF !important;
+    box-shadow: none !important;
   }
 }
 
