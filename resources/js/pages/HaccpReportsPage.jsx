@@ -45,7 +45,7 @@ const HaccpReportsPage = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
 
-  const SUPPORTED_DETAIL_MODULES = ['cooking-temperature', 'temperature'];
+  const SUPPORTED_DETAIL_MODULES = ['cooking-temperature', 'temperature', 'delivery-intake', 'cleaning', 'hot-holding', 'blast-chilling', 'cooling-process', 'thawing', 'probe-calibration', 'food-dispatch', 'fryer-oil', 'pest-control', 'health-declaration', 'staff-training'];
 
   const openLogDetail = async (logRow) => {
     if (!SUPPORTED_DETAIL_MODULES.includes(logRow.moduleId)) {

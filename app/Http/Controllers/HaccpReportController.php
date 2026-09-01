@@ -443,6 +443,90 @@ class HaccpReportController extends Controller
                 'primaryAuditType' => 'delivery_intake',
                 'with' => ['supplier', 'products.foodItem.storageType', 'products.foodItem.uom'],
             ],
+            'cleaning' => [
+                'model' => CleaningLog::class,
+                'moduleName' => 'Cleaning & Sanitation',
+                'auditLogTypes' => ['cleaning_sanitation', 'cleaning'],
+                'primaryAuditType' => 'cleaning_sanitation',
+                'with' => ['area', 'results.question.section'],
+            ],
+            'hot-holding' => [
+                'model' => HotHoldingLog::class,
+                'moduleName' => 'Hot Holding / Bain Marie',
+                'auditLogTypes' => ['hot_holding', 'hot-holding'],
+                'primaryAuditType' => 'hot_holding',
+                'with' => [],
+            ],
+            'blast-chilling' => [
+                'model' => BlastChillingLog::class,
+                'moduleName' => 'Blast Chilling',
+                'auditLogTypes' => ['blast_chilling', 'blast-chilling'],
+                'primaryAuditType' => 'blast_chilling',
+                'with' => [],
+            ],
+            'cooling-process' => [
+                'model' => CoolingProcessLog::class,
+                'moduleName' => 'Cooling Process',
+                'auditLogTypes' => ['cooling_process', 'cooling-process'],
+                'primaryAuditType' => 'cooling_process',
+                'with' => [],
+            ],
+            'thawing' => [
+                'model' => ThawingLog::class,
+                'moduleName' => 'Thawing / Defrosting',
+                'auditLogTypes' => ['thawing'],
+                'primaryAuditType' => 'thawing',
+                'with' => [],
+            ],
+            'probe-calibration' => [
+                'model' => ProbeCalibrationLog::class,
+                'moduleName' => 'Probe Calibration',
+                'auditLogTypes' => ['probe_calibration', 'probe-calibration'],
+                'primaryAuditType' => 'probe_calibration',
+                'with' => [],
+            ],
+            'food-dispatch' => [
+                'model' => FoodDispatchLog::class,
+                'moduleName' => 'Food Dispatch',
+                'auditLogTypes' => ['food_dispatch', 'food-dispatch'],
+                'primaryAuditType' => 'food_dispatch',
+                'with' => [],
+            ],
+            'fryer-oil' => [
+                'model' => FryerOilLog::class,
+                'moduleName' => 'Fryer Oil',
+                'auditLogTypes' => ['fryer_oil', 'fryer-oil'],
+                'primaryAuditType' => 'fryer_oil',
+                'with' => [],
+            ],
+            'pest-control' => [
+                'model' => PestControlLog::class,
+                'moduleName' => 'Pest Control',
+                'auditLogTypes' => ['pest_control', 'pest-control'],
+                'primaryAuditType' => 'pest_control',
+                'with' => [],
+            ],
+            'staff-training' => [
+                'model' => StaffTrainingLog::class,
+                'moduleName' => 'Staff Training & Hygiene',
+                'auditLogTypes' => ['staff_training', 'staff-training'],
+                'primaryAuditType' => 'staff_training',
+                'with' => [],
+            ],
+            'health-declaration' => [
+                'model' => HealthDeclarationLog::class,
+                'moduleName' => 'Health Declaration / Fitness to Work',
+                'auditLogTypes' => ['health_declaration', 'health-declaration'],
+                'primaryAuditType' => 'health_declaration',
+                'with' => ['results.question.section'],
+            ],
+            'staff-training' => [
+                'model' => StaffTrainingLog::class,
+                'moduleName' => 'Staff Training & Hygiene',
+                'auditLogTypes' => ['staff_training', 'staff-training'],
+                'primaryAuditType' => 'staff_training',
+                'with' => [],
+            ],
         ];
 
         if (!array_key_exists($logType, $allowedLogTypes)) {
@@ -694,6 +778,571 @@ class HaccpReportController extends Controller
                     'title' => 'Verification & Signatures',
                     'fields' => [
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'cleaning') {
+            $areaName = $log->area ? $log->area->name : 'N/A';
+
+            $checklistFields = [];
+            if ($log->results && $log->results->count() > 0) {
+                foreach ($log->results as $rIdx => $res) {
+                    $num = $rIdx + 1;
+                    $qText = $res->question ? $res->question->question : "Inspection Item #{$num}";
+                    $secName = ($res->question && $res->question->section) ? $res->question->section->name : '';
+
+                    $status = strtoupper(strval($res->result ?? 'N/A'));
+                    $commentText = !empty($res->comment) ? " (Notes: {$res->comment})" : "";
+
+                    $checklistFields[] = [
+                        'label' => ($secName ? "[{$secName}] " : "") . $qText,
+                        'value' => "Result: {$status}{$commentText}"
+                    ];
+                }
+            } else {
+                $checklistFields[] = [
+                    'label' => 'Checklist Results',
+                    'value' => 'No checklist item results recorded.'
+                ];
+            }
+
+            $sections = [
+                [
+                    'title' => 'Overview & Cleaning Task Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Cleaning Area / Zone', 'value' => $areaName],
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Cleaning Checklist & Hygiene Inspection Results',
+                    'fields' => $checklistFields
+                ],
+                [
+                    'title' => 'Observations & Corrective Actions',
+                    'fields' => [
+                        ['label' => 'Staff Comments / Notes', 'value' => $log->comment ?? 'No comment provided.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signatures',
+                    'fields' => [
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'hot-holding') {
+            $itemFields = [];
+            $items = is_array($log->items) ? $log->items : (is_string($log->items) ? json_decode($log->items, true) : []);
+
+            if (!empty($items) && is_array($items)) {
+                foreach ($items as $iIdx => $it) {
+                    $num = $iIdx + 1;
+                    $foodName = $it['foodName'] ?? $it['food_name'] ?? "Food Item #{$num}";
+                    $timeHold = $it['timeIntoHold'] ?? $it['time_into_hold'] ?? 'N/A';
+
+                    $checks = [];
+                    for ($c = 1; $c <= 4; $c++) {
+                        $key = "check{$c}";
+                        if (isset($it[$key]) && $it[$key] !== null && $it[$key] !== '') {
+                            $val = floatval($it[$key]);
+                            $passText = $val >= 63.0 ? 'PASSED' : 'FAILED (<63°C)';
+                            $checks[] = "Check {$c}: {$val} °C [{$passText}]";
+                        }
+                    }
+
+                    $checkSummary = !empty($checks) ? implode(' | ', $checks) : 'No temp checks recorded';
+                    $itemComment = !empty($it['comments']) ? " | Notes: {$it['comments']}" : (!empty($it['notes']) ? " | Notes: {$it['notes']}" : "");
+
+                    $itemFields[] = [
+                        'label' => "Item #{$num}: {$foodName} (Into Hold: {$timeHold})",
+                        'value' => "{$checkSummary}{$itemComment}"
+                    ];
+                }
+            } else {
+                $itemFields[] = [
+                    'label' => 'Hot Holding Items',
+                    'value' => 'No individual food items recorded.'
+                ];
+            }
+
+            $sections = [
+                [
+                    'title' => 'Overview & Station Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Holding Unit / Station', 'value' => $log->holding_unit ?? 'N/A'],
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? $log->signed_by_staff_name ?? '-'],
+                        ['label' => 'Target Temperature Threshold', 'value' => '≥ 63.0 °C (CCP-5)'],
+                        ['label' => 'Compliance Status', 'value' => $log->status ?? 'Passed'],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Hot Holding Temperature Checks (CCP-5)',
+                    'fields' => $itemFields
+                ],
+                [
+                    'title' => 'Observations & Corrective Actions',
+                    'fields' => [
+                        ['label' => 'Staff Comments / Notes', 'value' => $log->general_comments ?? 'No comments recorded.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signatures',
+                    'fields' => [
+                        ['label' => 'Staff Member / Signee', 'value' => $log->signed_by_staff_name ?? $log->staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'blast-chilling') {
+            $statusResult = $log->end_temp !== null ? ($log->check_passed ? 'PASSED' : 'FAILED') : 'N/A';
+
+            $sections = [
+                [
+                    'title' => 'Overview & Product Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Food Item / Product', 'value' => $log->food_item ?? '-'],
+                        ['label' => 'Batch / Lot Code', 'value' => $log->batch_code ?? '-'],
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Probe ID', 'value' => $log->probe_id ?? '-'],
+                        ['label' => 'Compliance Status', 'value' => $statusResult],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Blast Chilling Temperature Check (CCP-4)',
+                    'fields' => [
+                        ['label' => 'Chiller Unit / Location', 'value' => $log->chiller_location ?? 'N/A'],
+                        ['label' => 'Start Time', 'value' => $log->chilling_start_time ?? 'N/A'],
+                        ['label' => 'End Time', 'value' => $log->chilling_end_time ?? 'N/A'],
+                        ['label' => 'Start Temperature', 'value' => $log->start_temp !== null ? ($log->start_temp . ' °C') : 'N/A'],
+                        ['label' => 'End Temperature', 'value' => $log->end_temp !== null ? ($log->end_temp . ' °C') : 'N/A'],
+                        ['label' => 'Chilling Duration', 'value' => $log->duration_minutes ? ($log->duration_minutes . ' mins') : 'N/A'],
+                        ['label' => 'Target Requirement', 'value' => 'Cool to ≤ 8°C (within 90 mins)'],
+                        ['label' => 'Result', 'value' => $statusResult],
+                    ]
+                ],
+                [
+                    'title' => 'Observations & Corrective Actions',
+                    'fields' => [
+                        ['label' => 'Corrective Action Taken', 'value' => $log->corrective_action ?? 'None recorded.'],
+                        ['label' => 'Notes / Observations', 'value' => $log->notes ?? 'None recorded.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signatures',
+                    'fields' => [
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'cooling-process') {
+            $statusResult = $log->end_temp !== null ? ($log->check_passed ? 'PASSED' : 'FAILED') : 'N/A';
+            $startDateTime = trim(($log->start_date ? (is_object($log->start_date) ? $log->start_date->format('Y-m-d') : strval($log->start_date)) : '') . ' ' . ($log->start_time ?? ''));
+            $endDateTime = trim(($log->end_date ? (is_object($log->end_date) ? $log->end_date->format('Y-m-d') : strval($log->end_date)) : '') . ' ' . ($log->end_time ?? ''));
+
+            $sections = [
+                [
+                    'title' => 'Overview & Product Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Food Item / Product', 'value' => $log->food_item ?? '-'],
+                        ['label' => 'Cooling Method', 'value' => $log->cooling_method ?? 'N/A'],
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Compliance Status', 'value' => $statusResult],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Cooling Process Temperature Check',
+                    'fields' => [
+                        ['label' => 'Storage / Chiller Location', 'value' => $log->storage_location ?? 'N/A'],
+                        ['label' => 'Start Date & Time', 'value' => $startDateTime !== '' ? $startDateTime : 'N/A'],
+                        ['label' => 'End Date & Time', 'value' => $endDateTime !== '' ? $endDateTime : 'N/A'],
+                        ['label' => 'Start Temperature', 'value' => $log->start_temp !== null ? ($log->start_temp . ' °C') : 'N/A'],
+                        ['label' => 'End Temperature', 'value' => $log->end_temp !== null ? ($log->end_temp . ' °C') : 'N/A'],
+                        ['label' => 'Duration', 'value' => $log->duration_minutes ? ($log->duration_minutes . ' mins') : 'N/A'],
+                        ['label' => 'Target Requirement', 'value' => 'Cool down safely within critical limit threshold'],
+                        ['label' => 'Result', 'value' => $statusResult],
+                    ]
+                ],
+                [
+                    'title' => 'Observations & Corrective Actions',
+                    'fields' => [
+                        ['label' => 'Staff Comments / Notes', 'value' => $log->comments ?? 'None recorded.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signatures',
+                    'fields' => [
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'thawing') {
+            $startDateTime = trim(($log->start_date ? (is_object($log->start_date) ? $log->start_date->format('Y-m-d') : strval($log->start_date)) : '') . ' ' . ($log->start_time ?? ''));
+            $completedDateTime = trim(($log->completed_date ? (is_object($log->completed_date) ? $log->completed_date->format('Y-m-d') : strval($log->completed_date)) : '') . ' ' . ($log->completed_time ?? ''));
+
+            $sections = [
+                [
+                    'title' => 'Overview & Food Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Food Item', 'value' => $log->food_item_name ?? '-'],
+                        ['label' => 'Defrost / Thawing Method', 'value' => $log->defrost_method ?? 'N/A'],
+                        ['label' => 'Staff Member', 'value' => $log->signed_by_staff_name ?? '-'],
+                        ['label' => 'Compliance Status', 'value' => $log->status ?? 'Passed'],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Thawing Process Details',
+                    'fields' => [
+                        ['label' => 'Storage Location', 'value' => $log->storage_location ?? 'N/A'],
+                        ['label' => 'Start Date & Time', 'value' => $startDateTime !== '' ? $startDateTime : 'N/A'],
+                        ['label' => 'Completion Date & Time', 'value' => $completedDateTime !== '' ? $completedDateTime : 'N/A'],
+                        ['label' => 'Defrost Temperature', 'value' => $log->defrost_temp !== null ? ($log->defrost_temp . ' °C') : 'N/A'],
+                        ['label' => 'Target Requirement', 'value' => 'Thaw under refrigeration (≤ 8°C) or controlled defrost'],
+                        ['label' => 'Compliance Result', 'value' => $log->status ?? 'Passed'],
+                    ]
+                ],
+                [
+                    'title' => 'Observations & Corrective Actions',
+                    'fields' => [
+                        ['label' => 'Staff Comments / Notes', 'value' => $log->comments ?? 'None recorded.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signatures',
+                    'fields' => [
+                        ['label' => 'Staff Member', 'value' => $log->signed_by_staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'probe-calibration') {
+            $probeName = $log->probe_name ?? ('Probe ID #' . ($log->probe_id ?? 'N/A'));
+            $calibResult = $log->passed !== null ? ($log->passed ? 'PASSED (In Tolerance)' : 'FAILED (Out of Tolerance)') : ($log->status ?? 'Passed');
+
+            $sections = [
+                [
+                    'title' => 'Overview & Device Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Thermometer / Probe Name', 'value' => $probeName],
+                        ['label' => 'Serial Number', 'value' => $log->probe_serial_number ?? 'N/A'],
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Calibration Status', 'value' => $calibResult],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Calibration Test Checks',
+                    'fields' => [
+                        ['label' => 'Ice Water Check (0°C ± 1°C)', 'value' => $log->ice_temp !== null ? ($log->ice_temp . ' °C [' . ($log->ice_valid ? 'PASSED' : 'FAILED') . ']') : 'N/A'],
+                        ['label' => 'Boiling Water Check (100°C ± 1°C)', 'value' => $log->boiling_temp !== null ? ($log->boiling_temp . ' °C [' . ($log->boiling_valid ? 'PASSED' : 'FAILED') . ']') : 'N/A'],
+                        ['label' => 'Overall Calibration Result', 'value' => $calibResult],
+                    ]
+                ],
+                [
+                    'title' => 'Observations & Corrective Actions',
+                    'fields' => [
+                        ['label' => 'Staff Comments / Notes', 'value' => $log->comments ?? 'None recorded.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signatures',
+                    'fields' => [
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'food-dispatch') {
+            $sections = [
+                [
+                    'title' => 'Overview & Dispatch Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Food Item / Product', 'value' => $log->food_item ?? '-'],
+                        ['label' => 'Batch Code', 'value' => $log->batch_code ?? 'N/A'],
+                        ['label' => 'Destination / Dispatch Unit', 'value' => $log->destination ?? 'N/A'],
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Status', 'value' => $log->status ?? 'Passed'],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Last Updated', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Dispatch Temperature & Safety Checks',
+                    'fields' => [
+                        ['label' => 'Dispatch Temperature', 'value' => $log->temperature !== null ? $log->temperature . ' °C' : 'N/A'],
+                        ['label' => 'Required Limit / Passed', 'value' => $log->temp_in_range !== null ? ($log->temp_in_range ? 'Yes (In Range)' : 'No (Out of Range)') : 'N/A'],
+                        ['label' => 'Separation Maintained', 'value' => $log->separation !== null ? ($log->separation ? 'Yes' : 'No') : 'N/A'],
+                        ['label' => 'Overall Check Result', 'value' => $log->passed !== null ? ($log->passed ? 'PASSED' : 'FAILED') : 'N/A'],
+                    ]
+                ],
+                [
+                    'title' => 'Corrective Actions & Notes',
+                    'fields' => [
+                        ['label' => 'Staff Comments / Notes', 'value' => $log->comments ?? 'None recorded.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signature',
+                    'fields' => [
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'fryer-oil') {
+            $sections = [
+                [
+                    'title' => 'Overview & Fryer Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Fryer Station / Name', 'value' => $log->fryer_station ?? '-'],
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Status', 'value' => $log->status ?? 'Passed'],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Last Updated', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Oil Quality Checks',
+                    'fields' => [
+                        ['label' => 'Frying Temperature', 'value' => $log->frying_temp !== null ? $log->frying_temp . ' °C' : 'N/A'],
+                        ['label' => 'Oil Condition / Colour', 'value' => $log->oil_condition ?? 'N/A'],
+                        ['label' => 'Oil Quality Acceptable', 'value' => $log->oil_quality_acceptable !== null ? ($log->oil_quality_acceptable ? 'Yes' : 'No') : 'N/A'],
+                    ]
+                ],
+                [
+                    'title' => 'Action Taken & Disposal Details',
+                    'fields' => [
+                        ['label' => 'Action Taken', 'value' => $log->oil_action_taken ?? 'N/A'],
+                        ['label' => 'Quantity Removed', 'value' => $log->quantity_removed !== null ? $log->quantity_removed . ' L' : 'N/A'],
+                        ['label' => 'Disposal Type', 'value' => $log->disposal_type ?? 'N/A'],
+                        ['label' => 'Grease Area / Bin', 'value' => $log->grease_area ?? 'N/A'],
+                        ['label' => 'Disposal Quantity', 'value' => $log->disposal_quantity !== null ? $log->disposal_quantity . ' L' : 'N/A'],
+                        ['label' => 'Disposal Method', 'value' => $log->disposal_method ?? 'N/A'],
+                        ['label' => 'Waste Contractor', 'value' => $log->waste_contractor ?? 'N/A'],
+                        ['label' => 'Collection Ref Number', 'value' => $log->collection_ref_number ?? 'N/A'],
+                        ['label' => 'Next Cleaning Due Date', 'value' => $log->next_cleaning_due_date ? (is_object($log->next_cleaning_due_date) ? $log->next_cleaning_due_date->format('Y-m-d') : strval($log->next_cleaning_due_date)) : 'N/A'],
+                    ]
+                ],
+                [
+                    'title' => 'Observations & Notes',
+                    'fields' => [
+                        ['label' => 'Step 1 Comments (Quality Check)', 'value' => $log->step1_comments ?? 'None recorded.'],
+                        ['label' => 'Step 2 Comments (Disposal)', 'value' => $log->step2_comments ?? 'None recorded.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signature',
+                    'fields' => [
+                        ['label' => 'Signed By', 'value' => $log->signed_by_staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'pest-control') {
+            $checklistFields = [];
+            if (!empty($log->checklist_answers) && is_array($log->checklist_answers)) {
+                foreach ($log->checklist_answers as $idx => $ans) {
+                    $qText = $ans['question'] ?? "Checklist Item #" . ($idx + 1);
+                    $resVal = isset($ans['answer']) ? ($ans['answer'] ? 'Yes' : 'No') : 'N/A';
+                    $checklistFields[] = [
+                        'label' => $qText,
+                        'value' => 'Result: ' . $resVal
+                    ];
+                }
+            } else {
+                $checklistFields[] = [
+                    'label' => 'Checklist Results',
+                    'value' => 'No checklist item results recorded.'
+                ];
+            }
+
+            $sections = [
+                [
+                    'title' => 'Overview & Inspection Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Inspection Area / Type', 'value' => $log->check_type ?? '-'],
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Contractor Name', 'value' => $log->contractor_name ?? 'N/A'],
+                        ['label' => 'Status', 'value' => $log->status ?? 'Passed'],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Last Updated', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Routine Checks',
+                    'fields' => $checklistFields
+                ],
+                [
+                    'title' => 'Pest Activity Inspection',
+                    'fields' => [
+                        ['label' => 'Pest Activity Observed', 'value' => $log->pest_activity_observed !== null ? ($log->pest_activity_observed ? 'Yes' : 'No') : 'N/A'],
+                        ['label' => 'Pest Type', 'value' => $log->pest_type ?? 'N/A'],
+                        ['label' => 'Location Found', 'value' => $log->location_found ?? 'N/A'],
+                        ['label' => 'Evidence Observed', 'value' => $log->evidence_observed ?? 'N/A'],
+                        ['label' => 'Food Affected', 'value' => $log->food_affected !== null ? ($log->food_affected ? 'Yes' : 'No') : 'N/A'],
+                    ]
+                ],
+                [
+                    'title' => 'Corrective Actions & Follow-Up',
+                    'fields' => [
+                        ['label' => 'Action Notes', 'value' => $log->action_notes ?? 'None recorded.'],
+                        ['label' => 'Contractor Contacted', 'value' => $log->contractor_contacted !== null ? ($log->contractor_contacted ? 'Yes' : 'No') : 'N/A'],
+                        ['label' => 'Visit Date', 'value' => $log->visit_date ? (is_object($log->visit_date) ? $log->visit_date->format('Y-m-d') : strval($log->visit_date)) : 'N/A'],
+                        ['label' => 'Report Ref Number', 'value' => $log->report_ref_number ?? 'N/A'],
+                        ['label' => 'Next Visit Due Date', 'value' => $log->next_visit_due_date ? (is_object($log->next_visit_due_date) ? $log->next_visit_due_date->format('Y-m-d') : strval($log->next_visit_due_date)) : 'N/A'],
+                        ['label' => 'Recommendations', 'value' => $log->recommendations ?? 'None.'],
+                        ['label' => 'General Comments', 'value' => $log->general_comments ?? 'None.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signature',
+                    'fields' => [
+                        ['label' => 'Signed By', 'value' => $log->signed_by_staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'health-declaration') {
+            $questionFields = [];
+            if ($log->results && $log->results->count() > 0) {
+                foreach ($log->results as $rIdx => $res) {
+                    $num = $rIdx + 1;
+                    $qText = $res->question ? $res->question->question_text : "Question #{$num}";
+                    $secName = ($res->question && $res->question->section) ? $res->question->section->name : '';
+                    $answer = $res->answer ?? 'N/A';
+                    $notes = !empty($res->notes) ? " (Notes: {$res->notes})" : "";
+
+                    $questionFields[] = [
+                        'label' => ($secName ? "[{$secName}] " : "") . $qText,
+                        'value' => "Answer: {$answer}{$notes}"
+                    ];
+                }
+            } else {
+                $questionFields[] = [
+                    'label' => 'Health Questions',
+                    'value' => 'No individual question responses recorded.'
+                ];
+            }
+
+            $sections = [
+                [
+                    'title' => 'Overview & Staff Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Overall Fitness Status', 'value' => $log->overall_status ?? 'N/A'],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Last Updated', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Health Declaration Responses',
+                    'fields' => $questionFields
+                ],
+                [
+                    'title' => 'Manager Action & Corrective Actions',
+                    'fields' => [
+                        ['label' => 'Symptoms Reported', 'value' => $log->symptoms_reported !== null ? ($log->symptoms_reported ? 'Yes' : 'No') : 'N/A'],
+                        ['label' => 'Manager Comments', 'value' => $log->comment ?? 'None recorded.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signature',
+                    'fields' => [
+                        ['label' => 'Staff Signature', 'value' => !empty($log->signature)],
+                        ['label' => 'Staff Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Manager Signature', 'value' => !empty($log->manager_signature)],
+                        ['label' => 'Manager Signature Image', 'value' => $log->manager_signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'staff-training') {
+            $sections = [
+                [
+                    'title' => 'Overview & Training Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Training Task / Title', 'value' => $log->task_title ?? '-'],
+                        ['label' => 'Trainer Name', 'value' => $log->trainer_name ?? 'N/A'],
+                        ['label' => 'Status', 'value' => $log->status ?? 'Passed'],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Last Updated', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Staff / Role Coverage',
+                    'fields' => [
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Role / Position', 'value' => $log->staff_position ?? 'N/A'],
+                    ]
+                ],
+                [
+                    'title' => 'Training / Hygiene Confirmation',
+                    'fields' => [
+                        ['label' => 'Task Description', 'value' => $log->task_description ?? 'N/A'],
+                        ['label' => 'Understanding Confirmed', 'value' => $log->understanding_confirmed !== null ? ($log->understanding_confirmed ? 'Yes' : 'No') : 'N/A'],
+                    ]
+                ],
+                [
+                    'title' => 'Observations & Corrective Actions',
+                    'fields' => [
+                        ['label' => 'Notes', 'value' => $log->notes ?? 'None recorded.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signature',
+                    'fields' => [
+                        ['label' => 'Signed By', 'value' => $log->signed_by_staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
                         ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
