@@ -9,18 +9,25 @@ import axios from 'axios';
 
 const UNITS = ['kg', 'g', 'litres', 'portions', 'units', 'trays'];
 
-const createEmptyItem = (defaultType, defaultSource, defaultReason, defaultMethod) => ({
+const createEmptyItem = () => ({
   id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-  wasteType: defaultType || 'Organic / Processing Scraps',
+  itemType: 'ingredient', // 'ingredient' | 'recipe'
+  ingredientId: '',
+  recipeId: '',
   foodItem: '',
-  source: defaultSource || 'Preparation',
-  reason: defaultReason || 'Spoilage',
+  wasteTypeId: '',
+  wasteType: '',
+  sourceId: '',
+  source: '',
+  reasonId: '',
+  reason: '',
   quantity: '',
   unit: 'kg',
   estimatedCost: '',
   batchCode: '',
   expiryDate: '',
-  disposalMethod: defaultMethod || 'Food waste bin',
+  disposalMethodId: '',
+  disposalMethod: '',
   notes: '',
 });
 
@@ -32,6 +39,16 @@ const FoodWasteFormPage = ({ logId }) => {
   const [reasonsList, setReasonsList] = useState([]);
   const [sourcesList, setSourcesList] = useState([]);
   const [methodsList, setMethodsList] = useState([]);
+
+  // Full Master Objects for ID & Name resolution
+  const [typesMaster, setTypesMaster] = useState([]);
+  const [reasonsMaster, setReasonsMaster] = useState([]);
+  const [sourcesMaster, setSourcesMaster] = useState([]);
+  const [methodsMaster, setMethodsMaster] = useState([]);
+
+  // Master Ingredients & Master Recipes for Waste Cost Calculator
+  const [masterIngredients, setMasterIngredients] = useState([]);
+  const [masterRecipes, setMasterRecipes] = useState([]);
 
   // UOM & Storage Types for Manager Hub Master Creation
   const [uomList, setUomList] = useState([]);
@@ -75,6 +92,18 @@ const FoodWasteFormPage = ({ logId }) => {
       }
     }).catch(() => {});
 
+    // Fetch Master Ingredients for Waste Cost Calculator
+    axios.get('/api/ingredients').then(res => {
+      const activeIngs = (res.data || []).filter(i => i.status === 'Active');
+      setMasterIngredients(activeIngs);
+    }).catch(() => {});
+
+    // Fetch Master Recipes for Waste Cost Calculator
+    axios.get('/api/recipes').then(res => {
+      const activeRecs = (res.data || []).filter(r => r.status === 'Active' || !r.status);
+      setMasterRecipes(activeRecs);
+    }).catch(() => {});
+
     // Fetch Food Items (Manager Hub Master)
     axios.get('/api/food-items').then(res => {
       const fList = (res.data || []).map(f => typeof f === 'string' ? f : f.name);
@@ -99,51 +128,115 @@ const FoodWasteFormPage = ({ logId }) => {
 
     // Fetch Waste Types (Manager Hub Master)
     axios.get('/api/waste-types').then(res => {
-      const tList = (res.data || []).filter(t => t.status === 'Active' || !t.status).map(t => t.name || t.type_name);
-      setTypesList(tList.length > 0 ? tList : ['Organic / Processing Scraps', 'Expired Stock', 'Damaged Goods', 'Overproduction', 'Customer Return', 'Spoilage']);
+      const raw = (res.data || []).filter(t => t.status === 'Active' || !t.status);
+      const list = raw.map(t => ({ id: t.id, name: t.name || t.type_name }));
+      setTypesMaster(list);
+      setTypesList(list.map(t => t.name));
     }).catch(() => {
       setTypesList(['Organic / Processing Scraps', 'Expired Stock', 'Damaged Goods', 'Overproduction', 'Customer Return', 'Spoilage']);
     });
 
     // Fetch Waste Reasons (Manager Hub Master)
     axios.get('/api/waste-reasons').then(res => {
-      const rList = (res.data || []).filter(r => r.status === 'Active' || !r.status).map(r => r.name || r.reason_name);
-      setReasonsList(rList.length > 0 ? rList : ['Spoilage', 'Expired raw materials', 'Overproduction', 'Temperature abuse', 'Damaged packaging', 'Contamination risk', 'Returned plate', 'Trimming / Prep scrap']);
+      const raw = (res.data || []).filter(r => r.status === 'Active' || !r.status);
+      const list = raw.map(r => ({ id: r.id, name: r.name || r.reason_name }));
+      setReasonsMaster(list);
+      setReasonsList(list.map(r => r.name));
     }).catch(() => {
       setReasonsList(['Spoilage', 'Expired raw materials', 'Overproduction', 'Temperature abuse', 'Damaged packaging', 'Contamination risk', 'Returned plate', 'Trimming / Prep scrap']);
     });
 
     // Fetch Waste Sources (Manager Hub Master)
     axios.get('/api/waste-source-stages').then(res => {
-      const sList = (res.data || []).filter(s => s.status === 'Active' || !s.status).map(s => s.name || s.stage_name);
-      setSourcesList(sList.length > 0 ? sList : ['Preparation', 'Storage', 'Cooking / Hot Holding', 'Customer Plate', 'Receiving / Intake']);
+      const raw = (res.data || []).filter(s => s.status === 'Active' || !s.status);
+      const list = raw.map(s => ({ id: s.id, name: s.name || s.stage_name }));
+      setSourcesMaster(list);
+      setSourcesList(list.map(s => s.name));
     }).catch(() => {
       setSourcesList(['Preparation', 'Storage', 'Cooking / Hot Holding', 'Customer Plate', 'Receiving / Intake']);
     });
 
     // Fetch Waste Disposal Methods (Manager Hub Master)
     axios.get('/api/waste-disposal-methods').then(res => {
-      const mList = (res.data || []).filter(m => m.status === 'Active' || !m.status).map(m => m.name || m.method_name);
-      setMethodsList(mList.length > 0 ? mList : ['Food waste bin', 'Composting', 'Waste contractor', 'Sink disposal', 'Returned to supplier', 'Rendered / Animal feed']);
+      const raw = (res.data || []).filter(m => m.status === 'Active' || !m.status);
+      const list = raw.map(m => ({ id: m.id, name: m.name || m.method_name }));
+      setMethodsMaster(list);
+      setMethodsList(list.map(m => m.name));
     }).catch(() => {
       setMethodsList(['Food waste bin', 'Composting', 'Waste contractor', 'Sink disposal', 'Returned to supplier', 'Rendered / Animal feed']);
     });
 
     // Initial 1 item row
     if (!logId) {
-      const firstItem = createEmptyItem();
-      firstItem.foodItem = 'Minced Beef';
-      setWasteItems([firstItem]);
+      setWasteItems([createEmptyItem()]);
     }
   }, []);
+
+  // Once masters load:
+  // 1. Patch items with empty IDs to use first master entry (new items)
+  // 2. Resolve names from IDs for items loaded from DB (edit mode)
+  useEffect(() => {
+    if (typesMaster.length === 0 && sourcesMaster.length === 0 && reasonsMaster.length === 0 && methodsMaster.length === 0) return;
+    setWasteItems(prev => prev.map(item => {
+      const updated = { ...item };
+
+      // Resolve wasteType name from wasteTypeId, or default to first master
+      if (updated.wasteTypeId) {
+        const found = typesMaster.find(t => String(t.id) === String(updated.wasteTypeId));
+        if (found) updated.wasteType = found.name;
+      } else if (typesMaster.length > 0) {
+        updated.wasteTypeId = typesMaster[0].id;
+        updated.wasteType = typesMaster[0].name;
+      }
+
+      // Resolve source name from sourceId, or default to first master
+      if (updated.sourceId) {
+        const found = sourcesMaster.find(s => String(s.id) === String(updated.sourceId));
+        if (found) updated.source = found.name;
+      } else if (sourcesMaster.length > 0) {
+        updated.sourceId = sourcesMaster[0].id;
+        updated.source = sourcesMaster[0].name;
+      }
+
+      // Resolve reason name from reasonId, or default to first master
+      if (updated.reasonId) {
+        const found = reasonsMaster.find(r => String(r.id) === String(updated.reasonId));
+        if (found) updated.reason = found.name;
+      } else if (reasonsMaster.length > 0) {
+        updated.reasonId = reasonsMaster[0].id;
+        updated.reason = reasonsMaster[0].name;
+      }
+
+      // Resolve disposalMethod name from disposalMethodId, or default to first master
+      if (updated.disposalMethodId) {
+        const found = methodsMaster.find(m => String(m.id) === String(updated.disposalMethodId));
+        if (found) updated.disposalMethod = found.name;
+      } else if (methodsMaster.length > 0) {
+        updated.disposalMethodId = methodsMaster[0].id;
+        updated.disposalMethod = methodsMaster[0].name;
+      }
+
+      return updated;
+    }));
+  }, [typesMaster, sourcesMaster, reasonsMaster, methodsMaster]);
+
+  const formatDateStr = (str) => {
+    if (!str) return '';
+    return String(str).split('T')[0];
+  };
+
+  const formatTimeStr = (str) => {
+    if (!str) return '';
+    return String(str).substring(0, 5);
+  };
 
   useEffect(() => {
     if (!logId) return;
     axios.get(`/api/food-waste-logs/${logId}`).then(res => {
       const data = res.data;
       if (data) {
-        if (data.log_date) setLogDate(data.log_date);
-        if (data.log_time) setLogTime(data.log_time);
+        if (data.log_date) setLogDate(formatDateStr(data.log_date));
+        if (data.log_time) setLogTime(formatTimeStr(data.log_time));
         if (data.staff_name) setStaffName(data.staff_name);
         if (data.general_comments) setGeneralComments(data.general_comments);
         if (data.prevention_action) setPreventionAction(data.prevention_action);
@@ -156,20 +249,37 @@ const FoodWasteFormPage = ({ logId }) => {
         }
 
         if (Array.isArray(itemsData) && itemsData.length > 0) {
-          const loadedItems = itemsData.map(item => ({
-            id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-            wasteType: item.wasteType || item.waste_type || 'Organic / Processing Scraps',
-            foodItem: item.foodItem || item.food_item || item.name || '',
-            source: item.source || 'Preparation',
-            reason: item.reason || 'Spoilage',
-            quantity: item.quantity !== null && item.quantity !== undefined ? String(item.quantity) : '',
-            unit: item.unit || 'kg',
-            estimatedCost: item.estimatedCost !== null && item.estimatedCost !== undefined ? String(item.estimatedCost) : (item.cost ? String(item.cost) : ''),
-            batchCode: item.batchCode || item.batch_code || '',
-            expiryDate: item.expiryDate || item.expiry_date || '',
-            disposalMethod: item.disposalMethod || item.disposal_method || 'Food waste bin',
-            notes: item.notes || item.comments || '',
-          }));
+          const loadedItems = itemsData.map(item => {
+            const foodName = item.foodItem || item.food_item || item.name || '';
+            let type = item.itemType || item.item_type || null;
+            if (!type || type === 'ingredient') {
+              const detected = detectItemType(foodName, masterRecipes, masterIngredients);
+              if (detected === 'recipe') type = 'recipe';
+              else if (!type) type = 'ingredient';
+            }
+            return {
+              id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+              itemType: type,
+              ingredientId: item.ingredientId || item.ingredient_id || '',
+              recipeId: item.recipeId || item.recipe_id || '',
+              foodItem: foodName,
+              // Load IDs only — names will be resolved by masters-patch useEffect
+              wasteTypeId: item.waste_type_id || item.wasteTypeId || '',
+              wasteType: '', // resolved by masters-patch useEffect
+              sourceId: item.source_stage_id || item.sourceId || '',
+              source: '', // resolved by masters-patch useEffect
+              reasonId: item.reason_id || item.reasonId || '',
+              reason: '', // resolved by masters-patch useEffect
+              disposalMethodId: item.disposal_method_id || item.disposalMethodId || '',
+              disposalMethod: '', // resolved by masters-patch useEffect
+              quantity: item.quantity !== null && item.quantity !== undefined ? String(item.quantity) : '',
+              unit: item.unit || (type === 'recipe' ? 'portions' : 'kg'),
+              estimatedCost: item.estimatedCost !== null && item.estimatedCost !== undefined ? String(item.estimatedCost) : '',
+              batchCode: item.batchCode || item.batch_code || '',
+              expiryDate: formatDateStr(item.expiryDate || item.expiry_date || ''),
+              notes: item.notes || '',
+            };
+          });
           setWasteItems(loadedItems);
         }
       }
@@ -180,8 +290,12 @@ const FoodWasteFormPage = ({ logId }) => {
 
   /* Item Handlers */
   const handleAddItem = () => {
-    const newItem = createEmptyItem(typesList[0], sourcesList[0], reasonsList[0], methodsList[0]);
-    if (foodItemsList.length > 0) newItem.foodItem = foodItemsList[0];
+    const newItem = createEmptyItem();
+    // Apply first master defaults immediately
+    if (typesMaster.length > 0) { newItem.wasteTypeId = typesMaster[0].id; newItem.wasteType = typesMaster[0].name; }
+    if (sourcesMaster.length > 0) { newItem.sourceId = sourcesMaster[0].id; newItem.source = sourcesMaster[0].name; }
+    if (reasonsMaster.length > 0) { newItem.reasonId = reasonsMaster[0].id; newItem.reason = reasonsMaster[0].name; }
+    if (methodsMaster.length > 0) { newItem.disposalMethodId = methodsMaster[0].id; newItem.disposalMethod = methodsMaster[0].name; }
     setWasteItems(prev => [...prev, newItem]);
   };
 
@@ -193,10 +307,125 @@ const FoodWasteFormPage = ({ logId }) => {
     setWasteItems(prev => prev.filter(i => i.id !== id));
   };
 
+  const computeAutoWasteCost = (type, itemName, qty) => {
+    const q = parseFloat(qty);
+    if (isNaN(q) || q <= 0 || !itemName) return '';
+
+    const targetName = String(itemName).trim().toLowerCase();
+
+    if (type === 'recipe') {
+      const matchedRec = masterRecipes.find(r => String(r.name).trim().toLowerCase() === targetName);
+      if (matchedRec && parseFloat(matchedRec.cost_per_portion) > 0) {
+        return (q * parseFloat(matchedRec.cost_per_portion)).toFixed(2);
+      }
+    } else {
+      const matchedIng = masterIngredients.find(i => String(i.name).trim().toLowerCase() === targetName);
+      if (matchedIng && parseFloat(matchedIng.unit_cost) > 0) {
+        return (q * parseFloat(matchedIng.unit_cost)).toFixed(2);
+      }
+    }
+    return '';
+  };
+
+  const detectItemType = (itemName, recipeList, ingredientList) => {
+    if (!itemName) return 'ingredient';
+    const target = String(itemName).trim().toLowerCase();
+    if (recipeList && recipeList.some(r => String(r.name).trim().toLowerCase() === target)) {
+      return 'recipe';
+    }
+    if (ingredientList && ingredientList.some(i => String(i.name).trim().toLowerCase() === target)) {
+      return 'ingredient';
+    }
+    return 'ingredient';
+  };
+
+  // Sync auto-cost & smart itemType detection whenever master data finishes loading
+  useEffect(() => {
+    if (masterIngredients.length === 0 && masterRecipes.length === 0) return;
+    setWasteItems(prev => prev.map(item => {
+      let updated = { ...item };
+      if (item.foodItem) {
+        const detected = detectItemType(item.foodItem, masterRecipes, masterIngredients);
+        if (detected === 'recipe' && updated.itemType !== 'recipe') {
+          updated.itemType = 'recipe';
+          updated.unit = 'portions';
+        }
+      }
+      if (updated.foodItem && updated.quantity && parseFloat(updated.quantity) > 0) {
+        const calculatedCost = computeAutoWasteCost(updated.itemType || 'ingredient', updated.foodItem, updated.quantity);
+        if (calculatedCost !== '') {
+          updated.estimatedCost = calculatedCost;
+        }
+      }
+      return updated;
+    }));
+  }, [masterIngredients, masterRecipes]);
+
   const handleItemChange = (id, field, value) => {
     setWasteItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      return { ...item, [field]: value };
+
+      let updated = { ...item, [field]: value };
+
+      // Resolve ID from master when ID field changes
+      if (field === 'wasteTypeId') {
+        const found = typesMaster.find(t => String(t.id) === String(value));
+        if (found) { updated.wasteTypeId = found.id; updated.wasteType = found.name; }
+      }
+      if (field === 'sourceId') {
+        const found = sourcesMaster.find(s => String(s.id) === String(value));
+        if (found) { updated.sourceId = found.id; updated.source = found.name; }
+      }
+      if (field === 'reasonId') {
+        const found = reasonsMaster.find(r => String(r.id) === String(value));
+        if (found) { updated.reasonId = found.id; updated.reason = found.name; }
+      }
+      if (field === 'disposalMethodId') {
+        const found = methodsMaster.find(m => String(m.id) === String(value));
+        if (found) { updated.disposalMethodId = found.id; updated.disposalMethod = found.name; }
+      }
+
+      if (field === 'itemType') {
+        updated.foodItem = '';
+        updated.ingredientId = '';
+        updated.recipeId = '';
+        updated.unit = value === 'recipe' ? 'portions' : 'kg';
+        updated.estimatedCost = '';
+      }
+
+      if (field === 'foodItem') {
+        if (updated.itemType === 'recipe') {
+          const rec = masterRecipes.find(r => String(r.name).trim().toLowerCase() === String(value).trim().toLowerCase());
+          if (rec) {
+            updated.recipeId = rec.id;
+            updated.foodItem = rec.name;
+            updated.unit = 'portions';
+          } else {
+            updated.foodItem = value;
+          }
+        } else {
+          const ing = masterIngredients.find(i => String(i.name).trim().toLowerCase() === String(value).trim().toLowerCase());
+          if (ing) {
+            updated.ingredientId = ing.id;
+            updated.foodItem = ing.name;
+            if (ing.uom?.unit_code) {
+              const code = ing.uom.unit_code.toLowerCase();
+              if (UNITS.includes(code)) updated.unit = code;
+            }
+          } else {
+            updated.foodItem = value;
+          }
+        }
+      }
+
+      if (['itemType', 'foodItem', 'quantity'].includes(field)) {
+        const calculatedCost = computeAutoWasteCost(updated.itemType || 'ingredient', updated.foodItem, updated.quantity);
+        if (calculatedCost !== '') {
+          updated.estimatedCost = calculatedCost;
+        }
+      }
+
+      return updated;
     }));
   };
 
@@ -315,11 +544,14 @@ const FoodWasteFormPage = ({ logId }) => {
 
     setSubmitting(true);
     try {
+      // Strip the internal row-tracking id before submitting
+      const cleanItems = wasteItems.map(({ id: _rowId, ...rest }) => rest);
+
       const payload = {
         log_date: logDate,
         log_time: logTime,
         staff_name: staffName,
-        items: wasteItems,
+        items: cleanItems,
         general_comments: generalComments,
         prevention_action: preventionAction,
         signed_by_staff_name: signedByStaffName,
@@ -480,22 +712,62 @@ const FoodWasteFormPage = ({ logId }) => {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-                      {/* Waste Type */}
+                      {/* Step 1: Item Category */}
                       <div className="form-group">
-                        <label className="form-label">Waste Type *</label>
-                        <select className="form-select" value={item.wasteType} onChange={e => handleItemChange(item.id, 'wasteType', e.target.value)}>
-                          {typesList.map(t => (
-                            <option key={t} value={t}>{t}</option>
-                          ))}
+                        <label className="form-label" style={{ fontWeight: 700 }}>Item Category *</label>
+                        <select
+                          className="form-select"
+                          value={item.itemType || 'ingredient'}
+                          onChange={e => handleItemChange(item.id, 'itemType', e.target.value)}
+                          style={{ fontWeight: 600, color: 'var(--color-primary-darker)' }}
+                        >
+                          <option value="ingredient">🥦 Raw Ingredient</option>
+                          <option value="recipe">🍲 Prepared Dish / Recipe</option>
                         </select>
                       </div>
 
-                      {/* Food Item */}
+                      {/* Step 2: Food Item / Product */}
                       <div className="form-group">
-                        <label className="form-label">Food Item / Product *</label>
-                        <select className="form-select" value={item.foodItem} onChange={e => handleItemChange(item.id, 'foodItem', e.target.value)}>
-                          {foodItemsList.map(fi => (
-                            <option key={fi} value={fi}>{fi}</option>
+                        <label className="form-label" style={{ fontWeight: 700 }}>Food Item / Product *</label>
+                        <select
+                          className="form-select"
+                          value={item.foodItem}
+                          onChange={e => handleItemChange(item.id, 'foodItem', e.target.value)}
+                        >
+                          <option value="">-- Select {item.itemType === 'recipe' ? 'Prepared Dish' : 'Ingredient'} * --</option>
+                          {item.itemType === 'recipe' ? (
+                            <>
+                              {masterRecipes.map(r => (
+                                <option key={r.id} value={r.name}>
+                                  {r.name} {r.cost_per_portion > 0 ? `(€${r.cost_per_portion.toFixed(2)}/portion)` : ''}
+                                </option>
+                              ))}
+                              {item.foodItem && !masterRecipes.some(r => r.name === item.foodItem) && (
+                                <option value={item.foodItem}>{item.foodItem}</option>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {masterIngredients.map(ing => (
+                                <option key={ing.id} value={ing.name}>
+                                  {ing.name} {ing.unit_cost > 0 ? `(€${ing.unit_cost.toFixed(2)}/${ing.uom?.unit_code || 'unit'})` : ''}
+                                </option>
+                              ))}
+                              {item.foodItem && !masterIngredients.some(i => i.name === item.foodItem) && (
+                                <option value={item.foodItem}>{item.foodItem}</option>
+                              )}
+                            </>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* Waste Type */}
+                      <div className="form-group">
+                        <label className="form-label">Waste Type *</label>
+                        <select className="form-select" value={String(item.wasteTypeId || '')} onChange={e => handleItemChange(item.id, 'wasteTypeId', e.target.value)}>
+                          {typesMaster.length === 0 && <option value="">Loading...</option>}
+                          {typesMaster.map(t => (
+                            <option key={t.id} value={String(t.id)}>{t.name}</option>
                           ))}
                         </select>
                       </div>
@@ -503,9 +775,10 @@ const FoodWasteFormPage = ({ logId }) => {
                       {/* Waste Source */}
                       <div className="form-group">
                         <label className="form-label">Waste Source / Stage *</label>
-                        <select className="form-select" value={item.source} onChange={e => handleItemChange(item.id, 'source', e.target.value)}>
-                          {sourcesList.map(s => (
-                            <option key={s} value={s}>{s}</option>
+                        <select className="form-select" value={String(item.sourceId || '')} onChange={e => handleItemChange(item.id, 'sourceId', e.target.value)}>
+                          {sourcesMaster.length === 0 && <option value="">Loading...</option>}
+                          {sourcesMaster.map(s => (
+                            <option key={s.id} value={String(s.id)}>{s.name}</option>
                           ))}
                         </select>
                       </div>
@@ -513,9 +786,10 @@ const FoodWasteFormPage = ({ logId }) => {
                       {/* Waste Reason */}
                       <div className="form-group">
                         <label className="form-label">Waste Reason *</label>
-                        <select className="form-select" value={item.reason} onChange={e => handleItemChange(item.id, 'reason', e.target.value)}>
-                          {reasonsList.map(r => (
-                            <option key={r} value={r}>{r}</option>
+                        <select className="form-select" value={String(item.reasonId || '')} onChange={e => handleItemChange(item.id, 'reasonId', e.target.value)}>
+                          {reasonsMaster.length === 0 && <option value="">Loading...</option>}
+                          {reasonsMaster.map(r => (
+                            <option key={r.id} value={String(r.id)}>{r.name}</option>
                           ))}
                         </select>
                       </div>
@@ -538,8 +812,33 @@ const FoodWasteFormPage = ({ logId }) => {
 
                       {/* Estimated Cost */}
                       <div className="form-group">
-                        <label className="form-label">Estimated Cost (£)</label>
+                        <label className="form-label">Estimated Cost (€)</label>
                         <input className="form-input" type="number" step="0.01" placeholder="e.g. 15.50" value={item.estimatedCost} onChange={e => handleItemChange(item.id, 'estimatedCost', e.target.value)} />
+                        {(() => {
+                          const q = parseFloat(item.quantity);
+                          if (!isNaN(q) && q > 0 && item.foodItem) {
+                            if (item.itemType === 'recipe') {
+                              const rec = masterRecipes.find(r => r.name === item.foodItem);
+                              if (rec && rec.cost_per_portion > 0) {
+                                return (
+                                  <span style={{ fontSize: '11px', color: '#1D4ED8', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                                    ✨ Calculated: {q} portions × €{rec.cost_per_portion.toFixed(2)}/portion
+                                  </span>
+                                );
+                              }
+                            } else {
+                              const ing = masterIngredients.find(i => i.name === item.foodItem);
+                              if (ing && ing.unit_cost > 0) {
+                                return (
+                                  <span style={{ fontSize: '11px', color: '#1D4ED8', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                                    ✨ Calculated: {q} {item.unit} × €{ing.unit_cost.toFixed(2)}/{ing.uom?.unit_code || 'unit'}
+                                  </span>
+                                );
+                              }
+                            }
+                          }
+                          return null;
+                        })()}
                       </div>
 
                       {/* Batch Code */}
@@ -559,9 +858,10 @@ const FoodWasteFormPage = ({ logId }) => {
                       {/* Disposal Method */}
                       <div className="form-group">
                         <label className="form-label">Disposal Method *</label>
-                        <select className="form-select" value={item.disposalMethod} onChange={e => handleItemChange(item.id, 'disposalMethod', e.target.value)}>
-                          {methodsList.map(m => (
-                            <option key={m} value={m}>{m}</option>
+                        <select className="form-select" value={String(item.disposalMethodId || '')} onChange={e => handleItemChange(item.id, 'disposalMethodId', e.target.value)}>
+                          {methodsMaster.length === 0 && <option value="">Loading...</option>}
+                          {methodsMaster.map(m => (
+                            <option key={m.id} value={String(m.id)}>{m.name}</option>
                           ))}
                         </select>
                       </div>
@@ -611,7 +911,7 @@ const FoodWasteFormPage = ({ logId }) => {
               <div>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Total Cost Impact</span>
                 <strong style={{ fontSize: '18px', display: 'block', color: totalCostSum > 0 ? '#9B1C1C' : 'var(--color-text-primary)' }}>
-                  £{totalCostSum.toFixed(2)}
+                  €{totalCostSum.toFixed(2)}
                 </strong>
               </div>
             </div>

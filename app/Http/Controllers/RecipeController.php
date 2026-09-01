@@ -17,7 +17,7 @@ class RecipeController extends Controller
             return response()->json([], 200);
         }
 
-        $query = Recipe::with('ingredients')->where('tenant_id', $tenantId);
+        $query = Recipe::with('ingredients.masterIngredient')->where('tenant_id', $tenantId);
 
         if ($request->filled('search')) {
             $s = strtolower($request->search);
@@ -40,7 +40,7 @@ class RecipeController extends Controller
     public function show($id)
     {
         $tenantId = Auth::user()->tenant_id;
-        $recipe = Recipe::with('ingredients')->where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
+        $recipe = Recipe::with('ingredients.masterIngredient')->where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
 
         return response()->json($recipe);
     }

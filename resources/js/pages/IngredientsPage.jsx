@@ -35,7 +35,14 @@ const IngredientsPage = () => {
   const [ingredientsLoading, setIngredientsLoading] = useState(false);
   const [ingModalOpen, setIngModalOpen] = useState(false);
   const [ingEditId, setIngEditId] = useState(null);
-  const [ingForm, setIngForm] = useState({ name: '', uom_id: '', ingredient_category_id: '', status: 'Active' });
+  const [ingForm, setIngForm] = useState({ 
+    name: '', 
+    uom_id: '', 
+    ingredient_category_id: '', 
+    cost_price: '', 
+    cost_quantity: '1', 
+    status: 'Active' 
+  });
   const [ingFormError, setIngFormError] = useState('');
   const [uomListForIng, setUomListForIng] = useState([]);
 
@@ -105,14 +112,23 @@ const IngredientsPage = () => {
     }
 
     try {
+      const payload = {
+        name: ingForm.name,
+        uom_id: ingForm.uom_id,
+        ingredient_category_id: ingForm.ingredient_category_id,
+        cost_price: ingForm.cost_price !== '' ? parseFloat(ingForm.cost_price) : null,
+        cost_quantity: ingForm.cost_price !== '' ? (parseFloat(ingForm.cost_quantity) || 1) : null,
+        status: ingForm.status,
+      };
+
       if (ingEditId) {
-        await axios.put(`/api/ingredients/${ingEditId}`, ingForm);
+        await axios.put(`/api/ingredients/${ingEditId}`, payload);
         setSuccess('Ingredient updated successfully!');
       } else {
-        await axios.post('/api/ingredients', ingForm);
+        await axios.post('/api/ingredients', payload);
         setSuccess('Ingredient added successfully!');
       }
-      setIngForm({ name: '', uom_id: '', ingredient_category_id: '', status: 'Active' });
+      setIngForm({ name: '', uom_id: '', ingredient_category_id: '', cost_price: '', cost_quantity: '1', status: 'Active' });
       setIngModalOpen(false);
       setIngEditId(null);
       fetchData();
@@ -121,6 +137,8 @@ const IngredientsPage = () => {
       const errMsg = err.response?.data?.errors?.name?.[0] || 
                      err.response?.data?.errors?.ingredient_category_id?.[0] || 
                      err.response?.data?.errors?.uom_id?.[0] || 
+                     err.response?.data?.errors?.cost_price?.[0] || 
+                     err.response?.data?.errors?.cost_quantity?.[0] || 
                      'An error occurred.';
       setIngFormError(errMsg);
     }
@@ -132,6 +150,8 @@ const IngredientsPage = () => {
       name: ing.name,
       uom_id: ing.uom_id ? String(ing.uom_id) : '',
       ingredient_category_id: ing.ingredient_category_id ? String(ing.ingredient_category_id) : '',
+      cost_price: ing.cost_price !== null && ing.cost_price !== undefined ? String(ing.cost_price) : '',
+      cost_quantity: ing.cost_quantity !== null && ing.cost_quantity !== undefined ? String(ing.cost_quantity) : '1',
       status: ing.status,
     });
     setIngFormError('');
@@ -152,6 +172,8 @@ const IngredientsPage = () => {
         name: ingConfirmRecord.name,
         uom_id: ingConfirmRecord.uom_id || null,
         ingredient_category_id: ingConfirmRecord.ingredient_category_id || null,
+        cost_price: ingConfirmRecord.cost_price !== null ? ingConfirmRecord.cost_price : null,
+        cost_quantity: ingConfirmRecord.cost_quantity !== null ? ingConfirmRecord.cost_quantity : null,
         status: nextStatus,
       });
       setIngConfirmModalOpen(false);
@@ -170,7 +192,7 @@ const IngredientsPage = () => {
 
   const openAddIngModal = () => {
     setIngEditId(null);
-    setIngForm({ name: '', uom_id: '', ingredient_category_id: '', status: 'Active' });
+    setIngForm({ name: '', uom_id: '', ingredient_category_id: '', cost_price: '', cost_quantity: '1', status: 'Active' });
     setIngFormError('');
     setIngModalOpen(true);
   };
@@ -372,27 +394,29 @@ const IngredientsPage = () => {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th >Ingredient Name</th>
-                    <th >Category</th>
-                    <th >Default UOM</th>
-                    <th >Status</th>
+                    <th>Ingredient Name</th>
+                    <th>Category</th>
+                    <th>Default UOM</th>
+                    <th>Package Price</th>
+                    <th>Unit Cost</th>
+                    <th>Status</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredIngredients.map((ing) => (
                     <tr key={ing.id}>
-                      <td >
+                      <td>
                         <strong style={{ color: 'var(--color-text-primary)' }}>{ing.name}</strong>
                       </td>
-                      <td >
+                      <td>
                         {ing.category ? (
                           <span style={styles.categoryBadge}>{ing.category.name}</span>
                         ) : (
                           <span style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic' }}>Unassigned</span>
                         )}
                       </td>
-                      <td >
+                      <td>
                         {ing.uom ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <code style={styles.codeBadge}>{ing.uom.unit_code}</code>
@@ -402,7 +426,25 @@ const IngredientsPage = () => {
                           <span style={{ fontSize: '12px', color: '#D97706', fontWeight: 500, fontStyle: 'italic' }}>⚠️ UOM missing</span>
                         )}
                       </td>
-                      <td >
+                      <td>
+                        {ing.cost_price !== null && ing.cost_price !== undefined ? (
+                          <span style={{ fontSize: '13px', color: 'var(--color-text-primary)', fontWeight: 500 }}>
+                            €{parseFloat(ing.cost_price).toFixed(2)} <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>for {parseFloat(ing.cost_quantity || 1)} {ing.uom?.unit_code || ''}</span>
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '13px', color: '#9CA3AF' }}>—</span>
+                        )}
+                      </td>
+                      <td>
+                        {ing.unit_cost !== null && ing.unit_cost !== undefined ? (
+                          <strong style={{ fontSize: '13px', color: 'var(--color-primary)' }}>
+                            €{parseFloat(ing.unit_cost).toFixed(2)} <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-text-secondary)' }}>/ {ing.uom?.unit_code || 'unit'}</span>
+                          </strong>
+                        ) : (
+                          <span style={{ fontSize: '13px', color: '#9CA3AF' }}>—</span>
+                        )}
+                      </td>
+                      <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <Toggle
                             checked={ing.status === 'Active'}
@@ -577,6 +619,78 @@ const IngredientsPage = () => {
             <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>
               Select the standard measurement unit used to track this ingredient.
             </span>
+          </div>
+
+          {/* Pricing & Package Quantity Section */}
+          <div style={{
+            padding: '14px',
+            backgroundColor: '#F9FAFB',
+            borderRadius: '8px',
+            border: '1px solid #E5E7EB',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+              Purchase Pricing & Package Quantity <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 400 }}>(Optional)</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ fontSize: '12px' }}>Purchase Price (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="form-input"
+                  value={ingForm.cost_price}
+                  onChange={(e) => setIngForm({ ...ingForm, cost_price: e.target.value })}
+                  placeholder="e.g. 15.00"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ fontSize: '12px' }}>Package Quantity</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0.001"
+                  className="form-input"
+                  value={ingForm.cost_quantity}
+                  onChange={(e) => setIngForm({ ...ingForm, cost_quantity: e.target.value })}
+                  placeholder="e.g. 5"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            {/* Live Rate Preview */}
+            {ingForm.cost_price !== '' && !isNaN(parseFloat(ingForm.cost_price)) && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                backgroundColor: '#EFF6FF',
+                borderRadius: '6px',
+                border: '1px solid #BFDBFE',
+                fontSize: '12px',
+                color: '#1E40AF'
+              }}>
+                <span>Calculated Unit Rate:</span>
+                <strong>
+                  {(() => {
+                    const p = parseFloat(ingForm.cost_price);
+                    const q = parseFloat(ingForm.cost_quantity) || 1;
+                    if (isNaN(p) || q <= 0) return '—';
+                    const selectedUom = uomListForIng.find(u => String(u.id) === String(ingForm.uom_id));
+                    const unitLabel = selectedUom ? selectedUom.unit_code : 'unit';
+                    return `€${(p / q).toFixed(2)} / ${unitLabel}`;
+                  })()}
+                </strong>
+              </div>
+            )}
           </div>
 
           <div className="form-group">

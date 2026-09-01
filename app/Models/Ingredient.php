@@ -15,7 +15,16 @@ class Ingredient extends Model
         'name',
         'uom_id',
         'ingredient_category_id',
+        'cost_price',
+        'cost_quantity',
+        'unit_cost',
         'status',
+    ];
+
+    protected $casts = [
+        'cost_price'    => 'float',
+        'cost_quantity' => 'float',
+        'unit_cost'     => 'float',
     ];
 
     public function tenant()
