@@ -482,8 +482,6 @@ const HaccpReportsPage = () => {
         data={selectedLogDetail}
         loading={detailLoading}
         error={detailError}
-        onPrint={() => window.print()}
-        onDownloadPdf={() => alert('Single log PDF download will be enabled in the upcoming phase.')}
       />
     </PageLayout>
   );

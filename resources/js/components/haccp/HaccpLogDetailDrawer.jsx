@@ -159,6 +159,29 @@ const HaccpLogDetailDrawer = ({
       .replace(/\b\w/g, (char) => char.toUpperCase());
   };
 
+  const handleDownloadPdf = () => {
+    if (onDownloadPdf) {
+      onDownloadPdf();
+      return;
+    }
+
+    // Set document title temporarily to provide a clean default filename when saving as PDF
+    const originalTitle = document.title;
+    const moduleLabel = (data?.moduleName || 'HACCP_Log').replace(/[^a-zA-Z0-9]/g, '_');
+    const logId = data?.log?.id ? `_${data.log.id}` : '';
+    const logDate = data?.log?.log_date ? `_${data.log.log_date}` : '';
+    const safeFileName = `${moduleLabel}_Log${logId}${logDate}`;
+
+    try {
+      document.title = safeFileName;
+      window.print();
+    } finally {
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
+    }
+  };
+
   const handlePrint = () => {
     if (onPrint) {
       onPrint();
@@ -298,9 +321,10 @@ const HaccpLogDetailDrawer = ({
               type="button"
               variant="secondary"
               icon={Download}
-              onClick={onDownloadPdf || (() => {})}
+              onClick={handleDownloadPdf}
               disabled={loading || !data}
               style={{ fontSize: '12.5px', padding: '6px 12px' }}
+              title="Choose 'Save as PDF' in the print dialog"
             >
               Download Single PDF
             </Button>
