@@ -160,7 +160,7 @@ const CookingTemperatureMonitoringPage = () => {
                     <Button 
                       variant="primary" 
                       size="sm" 
-                      onClick={() => requestEdit(`/haccp-logs/cooking-temperature/edit/${batch.id}`)}
+                      onClick={() => router.visit(`/haccp-logs/cooking-temperature/edit/${batch.id}`)}
                       style={{ 
                         backgroundColor: '#D97706', 
                         borderColor: '#D97706',

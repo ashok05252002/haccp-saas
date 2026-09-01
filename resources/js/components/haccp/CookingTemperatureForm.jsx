@@ -1,15 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { usePage } from '@inertiajs/react';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
 import AmendmentReasonModal from '../common/AmendmentReasonModal';
 import SignatureCanvas from 'react-signature-canvas';
-import { AlertTriangle, Save, Flame, Snowflake, Snowflake as RefrigeratorIcon, RefreshCw, Soup, CheckCircle, ArrowRight, ArrowLeft, Plus } from 'lucide-react';
+import { AlertTriangle, Save, Flame, Snowflake, Snowflake as RefrigeratorIcon, RefreshCw, Soup, CheckCircle, ArrowRight, ArrowLeft, Plus, Clock } from 'lucide-react';
 import axios from 'axios';
+import cookingDraftService from '../../services/cookingDraftService';
 
 const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
+  const { auth } = usePage().props;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [existingSignature, setExistingSignature] = useState(null);
+  const [existingStatus, setExistingStatus] = useState(null);
+  const [draftKey, setDraftKey] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [showReasonModal, setShowReasonModal] = useState(false);
 
@@ -67,6 +72,17 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
   }, []);
 
   useEffect(() => {
+    const tenantId = auth?.user?.tenant_id || 1;
+    const branchId = auth?.user?.branch_id || auth?.active_branch_id || 1;
+    const key = cookingDraftService.buildDraftKey({
+      tenant_id: tenantId,
+      branch_id: branchId,
+      draft_id: logId ? `log_${logId}` : `new_${Date.now()}`
+    });
+    setDraftKey(key);
+  }, [auth, logId]);
+
+  useEffect(() => {
     if (!logId) return;
     const fetchExisting = async () => {
       try {
@@ -74,6 +90,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
         const res = await axios.get(`/api/cooking-logs/${logId}`);
         const data = res.data;
         if (data) {
+          if (data.status) setExistingStatus(data.status);
           if (data.log_date) setLogDate(data.log_date);
           if (data.log_time) setLogTime(data.log_time);
           if (data.staff_name) setStaffName(data.staff_name);
@@ -313,31 +330,13 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
     { title: 'Hot Holding & Final', icon: Soup },
   ];
 
-  const handleNext = () => {
-    setError(null);
-    if (currentStep === 0) {
-      if (!logDate || !logTime || !foodItem) {
-        setError('Date, Time, and Food Item are mandatory.');
-        return;
-      }
-    }
-    setCurrentStep(prev => Math.min(prev + 1, stepsList.length - 1));
-  };
-
-  const handlePrev = () => {
-    setError(null);
-    setCurrentStep(prev => Math.max(prev - 1, 0));
-  };
-
-  const handleFinalSubmit = async (amendmentReason = '') => {
+  const buildFormPayload = (status = 'COMPLETED') => {
     let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
       signatureData = sigPad.current.getCanvas().toDataURL('image/png');
     }
 
-    setSubmitting(true);
-
-    const payload = {
+    return {
       log_date: logDate,
       log_time: logTime,
       staff_name: staffName || null,
@@ -374,15 +373,91 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
       corrective_action: correctiveAction || null,
       notes: notes || null,
-      signature: signatureData,
+      signature: signatureData || null,
+      status: status,
     };
+  };
 
+  const handleNext = () => {
+    setError(null);
+    if (currentStep === 0) {
+      if (!logDate || !logTime || !foodItem) {
+        setError('Date, Time, and Food Item are mandatory.');
+        return;
+      }
+    }
+
+    // Auto-save local draft progress on step transition
+    if (draftKey && foodItem) {
+      cookingDraftService.saveDraft(draftKey, {
+        tenant_id: auth?.user?.tenant_id,
+        branch_id: auth?.user?.branch_id || auth?.active_branch_id,
+        formData: buildFormPayload('IN_PROGRESS')
+      });
+    }
+
+    setCurrentStep(prev => Math.min(prev + 1, stepsList.length - 1));
+  };
+
+  const handlePrev = () => {
+    setError(null);
+    setCurrentStep(prev => Math.max(prev - 1, 0));
+  };
+
+  const handleSaveInProgress = async () => {
+    setError(null);
+
+    if (!logDate || !logTime || !foodItem) {
+      setError('Date, Time, and Food Item are required to save an in-progress batch.');
+      return;
+    }
+
+    const payload = buildFormPayload('IN_PROGRESS');
+
+    // 1. Save local draft to tablet localStorage
+    if (draftKey) {
+      cookingDraftService.saveDraft(draftKey, {
+        tenant_id: auth?.user?.tenant_id,
+        branch_id: auth?.user?.branch_id || auth?.active_branch_id,
+        formData: payload
+      });
+    }
+
+    // 2. Save/Update to backend as IN_PROGRESS
+    setSubmitting(true);
     try {
       if (logId) {
-        payload.amendment_reason = amendmentReason;
         await axios.put(`/api/cooking-logs/${logId}`, payload);
       } else {
         await axios.post('/api/cooking-logs', payload);
+      }
+      if (draftKey) {
+        cookingDraftService.deleteDraft(draftKey);
+      }
+      onSave();
+    } catch (err) {
+      console.error('Failed to save in-progress cooking log', err);
+      setError(err.response?.data?.message || 'Failed to save in-progress batch.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleFinalSubmit = async (amendmentReason = '') => {
+    setSubmitting(true);
+    const payload = buildFormPayload('COMPLETED');
+
+    try {
+      if (logId) {
+        if (existingStatus === 'COMPLETED') {
+          payload.amendment_reason = amendmentReason;
+        }
+        await axios.put(`/api/cooking-logs/${logId}`, payload);
+      } else {
+        await axios.post('/api/cooking-logs', payload);
+      }
+      if (draftKey) {
+        cookingDraftService.deleteDraft(draftKey);
       }
       onSave();
     } catch (err) {
@@ -397,7 +472,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
   const handleSubmit = async () => {
     setError(null);
 
-    // Validate Signature
+    // Validate Signature for completed submission
     let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
       signatureData = sigPad.current.getCanvas().toDataURL('image/png');
@@ -408,7 +483,8 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
-    if (logId) {
+    // Only prompt for Amendment Reason when modifying an ALREADY COMPLETED log
+    if (logId && existingStatus === 'COMPLETED') {
       setShowReasonModal(true);
     } else {
       handleFinalSubmit();
@@ -939,16 +1015,37 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
             {currentStep === 0 ? 'Cancel' : 'Previous Step'}
           </Button>
 
-          {currentStep < stepsList.length - 1 ? (
-            <Button type="button" variant="primary" onClick={handleNext}>
-              Next Step
-              <ArrowRight size={16} style={{ marginLeft: '6px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleSaveInProgress} 
+              disabled={submitting}
+              style={{ 
+                color: '#D97706', 
+                borderColor: '#FCD34D', 
+                backgroundColor: '#FFFBEB',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <Clock size={16} />
+              <span>Save & Continue Later</span>
             </Button>
-          ) : (
-            <Button type="button" variant="primary" icon={Save} onClick={handleSubmit} disabled={submitting} style={{ backgroundColor: '#10B981', borderColor: '#10B981' }}>
-              {submitting ? 'Saving Log...' : 'Save & Submit Log'}
-            </Button>
-          )}
+
+            {currentStep < stepsList.length - 1 ? (
+              <Button type="button" variant="primary" onClick={handleNext} disabled={submitting}>
+                Next Step
+                <ArrowRight size={16} style={{ marginLeft: '6px' }} />
+              </Button>
+            ) : (
+              <Button type="button" variant="primary" icon={Save} onClick={handleSubmit} disabled={submitting} style={{ backgroundColor: '#10B981', borderColor: '#10B981' }}>
+                {submitting ? 'Saving Log...' : 'Save & Submit Log'}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

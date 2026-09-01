@@ -13,23 +13,33 @@ export const useHaccpEditGate = () => {
       return true;
     }
 
+    // Main restaurant / branch manager login without assigned restrictive custom role
+    if (auth.user.role === 'restaurant' && !auth.user.role_id && !auth.user.assigned_role && !auth.user.assignedRole) {
+      return true;
+    }
+
     let permissions = auth.user.assigned_role?.permissions ?? 
                       auth.user.assignedRole?.permissions ?? 
                       auth.user.role?.permissions ?? 
                       auth.user.permissions ?? 
                       null;
 
-    // null means legacy full access / unrestricted role
-    if (permissions === null) {
-      return true;
+    if (typeof permissions === 'string') {
+      const trimmed = permissions.trim();
+      if (trimmed === '' || trimmed === 'null' || trimmed === 'NULL') {
+        permissions = null;
+      } else {
+        try {
+          permissions = JSON.parse(permissions);
+        } catch (e) {
+          permissions = [];
+        }
+      }
     }
 
-    if (typeof permissions === 'string') {
-      try {
-        permissions = JSON.parse(permissions);
-      } catch (e) {
-        permissions = [];
-      }
+    // null means legacy full access / unrestricted role
+    if (permissions === null || permissions === undefined) {
+      return true;
     }
 
     if (!Array.isArray(permissions)) return false;
