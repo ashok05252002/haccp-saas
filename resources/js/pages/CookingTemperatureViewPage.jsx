@@ -51,6 +51,8 @@ const CookingTemperatureViewPage = ({ logId }) => {
     );
   }
 
+  const isInProgress = (log.status === 'IN_PROGRESS');
+
   return (
     <PageLayout>
       <Head title="View Cooking Log" />
@@ -63,22 +65,78 @@ const CookingTemperatureViewPage = ({ logId }) => {
 
         <div className="panel-header-row" style={{ marginBottom: '24px' }}>
           <div>
-            <h1 className="page-title">Cook, Cool, Reheat & Hold Process Log</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <h1 className="page-title" style={{ margin: 0 }}>Cook, Cool, Reheat & Hold Process Log</h1>
+              {isInProgress ? (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#FEF3C7',
+                  color: '#92400E',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#D97706' }}></span>
+                  IN PROGRESS
+                </span>
+              ) : (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#ECFDF5',
+                  color: '#065F46',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' }}></span>
+                  COMPLETED
+                </span>
+              )}
+            </div>
             <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
               Full breakdown of all 6 process stages.
             </p>
           </div>
-          <Button variant="primary" onClick={() => requestEdit(`/haccp-logs/cooking-temperature/edit/${logId}`)}>
-            Edit Entry
-          </Button>
+
+          {isInProgress ? (
+            <Button 
+              variant="primary" 
+              onClick={() => router.visit(`/haccp-logs/cooking-temperature/edit/${logId}`)}
+              style={{ backgroundColor: '#D97706', borderColor: '#D97706' }}
+            >
+              Resume Batch
+            </Button>
+          ) : (
+            <Button variant="primary" onClick={() => requestEdit(`/haccp-logs/cooking-temperature/edit/${logId}`)}>
+              Edit Entry
+            </Button>
+          )}
         </div>
 
         <div style={{ maxWidth: '840px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Header Card */}
           <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--color-border-light)', borderRadius: '14px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-text-primary)' }}>{log.food_item}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-light)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-text-primary)' }}>{log.food_item}</div>
+              {log.final_signed_at && (
+                <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                  Signed Off: {new Date(log.final_signed_at).toLocaleString()}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-light)' }}>
               <div>
                 <label style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Date & Time</label>
                 <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '2px' }}>{log.log_date} {log.log_time}</div>
@@ -94,6 +152,12 @@ const CookingTemperatureViewPage = ({ logId }) => {
               <div>
                 <label style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Probe ID</label>
                 <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '2px' }}>{log.probe_id || 'N/A'}</div>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Status</label>
+                <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px', color: isInProgress ? '#D97706' : '#059669' }}>
+                  {isInProgress ? 'IN PROGRESS' : 'COMPLETED'}
+                </div>
               </div>
             </div>
           </div>
@@ -265,14 +329,23 @@ const CookingTemperatureViewPage = ({ logId }) => {
             )}
 
             <div>
-              <strong style={{ fontSize: '13px', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Signature:</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <strong style={{ fontSize: '13px', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Staff Signature:</strong>
+                {log.final_signed_at && (
+                  <span style={{ fontSize: '12px', color: '#059669', fontWeight: 700 }}>
+                    Final Signed: {new Date(log.final_signed_at).toLocaleString()}
+                  </span>
+                )}
+              </div>
               <div style={{ marginTop: '8px' }}>
                 {log.signature ? (
                   <div style={{ backgroundColor: '#FAFAFA', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border-light)', display: 'inline-block' }}>
                     <img src={log.signature} alt="Signature" style={{ height: '80px', objectFit: 'contain' }} />
                   </div>
                 ) : (
-                  <span style={{ fontSize: '14px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No signature recorded.</span>
+                  <span style={{ fontSize: '14px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                    {isInProgress ? 'Pending staff signature on Final Sign-Off.' : 'No signature recorded.'}
+                  </span>
                 )}
               </div>
             </div>
