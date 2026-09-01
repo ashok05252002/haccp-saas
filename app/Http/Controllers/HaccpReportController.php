@@ -436,6 +436,13 @@ class HaccpReportController extends Controller
                 'primaryAuditType' => 'temperature_log',
                 'with' => ['storageZone', 'thermometer'],
             ],
+            'delivery-intake' => [
+                'model' => DeliveryIntakeLog::class,
+                'moduleName' => 'Delivery & Intake',
+                'auditLogTypes' => ['delivery_intake', 'delivery-intake'],
+                'primaryAuditType' => 'delivery_intake',
+                'with' => ['supplier', 'products.foodItem.storageType', 'products.foodItem.uom'],
+            ],
         ];
 
         if (!array_key_exists($logType, $allowedLogTypes)) {
@@ -620,6 +627,76 @@ class HaccpReportController extends Controller
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
                         ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ]
+            ];
+        } elseif ($logType === 'delivery-intake') {
+            $supplierName = $log->supplier ? $log->supplier->name : 'N/A';
+            $vehicleStatus = $log->vehicle_safe === null ? 'N/A' : ($log->vehicle_safe ? 'PASSED (Clean & Safe)' : 'FAILED (Unsafe/Unclean)');
+            $packagingStatus = $log->packaging_intact === null ? 'N/A' : ($log->packaging_intact ? 'PASSED (Intact & Sealed)' : 'FAILED (Damaged/Unsealed)');
+
+            $productFields = [];
+            if ($log->products && $log->products->count() > 0) {
+                foreach ($log->products as $pIdx => $prod) {
+                    $num = $pIdx + 1;
+                    $itemName = $prod->foodItem ? $prod->foodItem->name : 'Unknown Product';
+                    $uomName = ($prod->foodItem && $prod->foodItem->uom) ? ($prod->foodItem->uom->name ?? $prod->foodItem->uom->unit_name ?? '') : '';
+                    $storageTypeName = ($prod->foodItem && $prod->foodItem->storageType) ? $prod->foodItem->storageType->name : '';
+
+                    $qtyText = $prod->quantity !== null ? ($prod->quantity . ($uomName ? ' ' . $uomName : '')) : 'N/A';
+                    $tempText = $prod->temperature !== null ? ($prod->temperature . ' °C') : 'N/A';
+                    $batchText = $prod->batch_number ?? 'N/A';
+                    $expiryText = $prod->use_by_date ?? 'N/A';
+
+                    $summaryText = "{$itemName} | Qty: {$qtyText} | Temp: {$tempText} | Batch: {$batchText} | Expiry: {$expiryText}" . ($storageTypeName ? " | Storage: {$storageTypeName}" : "");
+
+                    $productFields[] = [
+                        'label' => "Product #{$num}: {$itemName}",
+                        'value' => $summaryText
+                    ];
+                }
+            } else {
+                $productFields[] = [
+                    'label' => 'Delivered Items',
+                    'value' => 'No individual product items recorded.'
+                ];
+            }
+
+            $sections = [
+                [
+                    'title' => 'Overview & Delivery Details',
+                    'fields' => [
+                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+                        ['label' => 'Supplier Name', 'value' => $supplierName],
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                    ]
+                ],
+                [
+                    'title' => 'Vehicle & Packaging Hygiene Checks',
+                    'fields' => [
+                        ['label' => 'Vehicle Cleanliness & Condition', 'value' => $vehicleStatus],
+                        ['label' => 'Packaging Condition & Seals', 'value' => $packagingStatus],
+                    ]
+                ],
+                [
+                    'title' => 'Delivered Products & Temperature Checks',
+                    'fields' => $productFields
+                ],
+                [
+                    'title' => 'Observations & Corrective Actions',
+                    'fields' => [
+                        ['label' => 'Staff Comments / Notes', 'value' => $log->comment ?? 'No comment provided.'],
+                    ]
+                ],
+                [
+                    'title' => 'Verification & Signatures',
+                    'fields' => [
+                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
+                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
