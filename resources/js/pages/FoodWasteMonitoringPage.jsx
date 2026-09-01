@@ -11,6 +11,16 @@ import ManagerPinModal from '../components/common/ManagerPinModal';
 import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
+const formatDateStr = (str) => {
+  if (!str) return '';
+  return String(str).split('T')[0];
+};
+
+const formatTimeStr = (str) => {
+  if (!str) return '';
+  return String(str).substring(0, 5);
+};
+
 const FoodWasteMonitoringPage = () => {
   const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
@@ -23,8 +33,8 @@ const FoodWasteMonitoringPage = () => {
   const [deleting, setDeleting] = useState(false);
 
   const fetchLogs = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await axios.get('/api/food-waste-logs');
       setLogs(res.data || []);
     } catch (err) {
@@ -42,16 +52,16 @@ const FoodWasteMonitoringPage = () => {
     setDeleteId(id);
   };
 
-  const handleExecuteDelete = async () => {
+  const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
     try {
       await axios.delete(`/api/food-waste-logs/${deleteId}`);
+      setLogs(prev => prev.filter(l => l.id !== deleteId));
       setDeleteId(null);
-      fetchLogs();
     } catch (err) {
-      console.error('Failed to delete log entry', err);
-      alert('Failed to delete log entry.');
+      console.error('Failed to delete food waste log', err);
+      alert('Failed to delete food waste log.');
     } finally {
       setDeleting(false);
     }
@@ -61,12 +71,16 @@ const FoodWasteMonitoringPage = () => {
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
       const q = searchQuery.toLowerCase();
+      const itemNames = Array.isArray(log.items)
+        ? log.items.map(i => (i.foodItem || i.food_item || '').toLowerCase()).join(' ')
+        : '';
       const matchSearch =
         (log.staff_name && log.staff_name.toLowerCase().includes(q)) ||
-        (log.main_reason && log.main_reason.toLowerCase().includes(q)) ||
-        (log.quantity_summary && log.quantity_summary.toLowerCase().includes(q));
+        (log.quantity_summary && log.quantity_summary.toLowerCase().includes(q)) ||
+        itemNames.includes(q);
 
-      const matchDate = !dateFilter || log.log_date === dateFilter;
+      const logDateFormatted = formatDateStr(log.log_date);
+      const matchDate = !dateFilter || logDateFormatted === dateFilter;
       const matchStatus = statusFilter === 'ALL' || log.status === statusFilter;
 
       return matchSearch && matchDate && matchStatus;
@@ -75,19 +89,19 @@ const FoodWasteMonitoringPage = () => {
 
   // Statistics
   const stats = useMemo(() => {
-    const total = logs.length;
+    const total = filteredLogs.length;
     let costSum = 0;
     let totalItemsCount = 0;
     let attentionRequired = 0;
 
-    logs.forEach(l => {
+    filteredLogs.forEach(l => {
       costSum += parseFloat(l.total_cost_impact) || 0;
       totalItemsCount += parseInt(l.total_entries) || 0;
       if (l.status === 'Attention Required') attentionRequired++;
     });
 
     return { total, costSum, totalItemsCount, attentionRequired };
-  }, [logs]);
+  }, [filteredLogs]);
 
   return (
     <PageLayout>
@@ -211,11 +225,10 @@ const FoodWasteMonitoringPage = () => {
               <thead>
                 <tr>
                   <th>Date & Time</th>
-                  <th>Total Items</th>
-                  <th>Quantity Breakdown</th>
-                  <th>Main Reason</th>
-                  <th>Cost Impact</th>
                   <th>Staff</th>
+                  <th>Waste Items</th>
+                  <th>Qty Summary</th>
+                  <th>Cost Impact</th>
                   <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -224,24 +237,40 @@ const FoodWasteMonitoringPage = () => {
                 {filteredLogs.map(log => (
                   <tr key={log.id}>
                     <td>
-                      <strong style={{ color: 'var(--color-text-primary)' }}>{log.log_date}</strong>
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{log.log_time}</div>
+                      <strong style={{ color: 'var(--color-text-primary)' }}>{formatDateStr(log.log_date)}</strong>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{formatTimeStr(log.log_time)}</div>
+                    </td>
+                    <td style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{log.staff_name}</td>
+                    <td>
+                      {/* Show individual item names from items JSON */}
+                      {Array.isArray(log.items) && log.items.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          {log.items.slice(0, 3).map((item, idx) => (
+                            <span key={idx} style={{ fontSize: '12.5px', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ color: 'var(--color-text-muted)' }}>{item.itemType === 'recipe' ? '🍲' : '🥦'}</span>
+                              <span style={{ fontWeight: 500 }}>{item.foodItem || item.food_item || '—'}</span>
+                              <span style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>({item.quantity} {item.unit})</span>
+                            </span>
+                          ))}
+                          {log.items.length > 3 && (
+                            <span style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600 }}>+{log.items.length - 3} more items</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                          {log.total_entries || 0} items — {log.quantity_summary || '0 kg'}
+                        </span>
+                      )}
                     </td>
                     <td>
-                      <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{log.total_entries} items</span>
-                    </td>
-                    <td>
-                      <strong style={{ color: 'var(--color-text-primary)' }}>{log.quantity_summary || '0 kg'}</strong>
-                    </td>
-                    <td>
-                      {log.main_reason || 'N/A'}
+                      <span style={{ fontWeight: 700, color: 'var(--color-primary)', display: 'block' }}>{log.total_entries} items</span>
+                      <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{log.quantity_summary || '0 kg'}</span>
                     </td>
                     <td>
                       <strong style={{ color: parseFloat(log.total_cost_impact) > 0 ? '#DC2626' : 'var(--color-text-primary)' }}>
                         €{parseFloat(log.total_cost_impact || 0).toFixed(2)}
                       </strong>
                     </td>
-                    <td>{log.staff_name}</td>
                     <td>
                       <StatusBadge status={log.status} />
                     </td>
@@ -273,7 +302,7 @@ const FoodWasteMonitoringPage = () => {
               <Button variant="secondary" onClick={() => setDeleteId(null)} disabled={deleting}>
                 Cancel
               </Button>
-              <Button variant="danger" onClick={handleExecuteDelete} disabled={deleting}>
+              <Button variant="danger" onClick={handleDelete} disabled={deleting}>
                 {deleting ? 'Deleting...' : 'Delete Log Entry'}
               </Button>
             </div>

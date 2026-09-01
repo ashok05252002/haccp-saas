@@ -18,7 +18,10 @@ class FoodWasteLog extends Model
         'items',
         'total_entries',
         'quantity_summary',
+        'main_waste_type',
+        'main_source_stage',
         'main_reason',
+        'main_disposal_method',
         'total_cost_impact',
         'general_comments',
         'prevention_action',
@@ -28,7 +31,7 @@ class FoodWasteLog extends Model
     ];
 
     protected $casts = [
-        'log_date' => 'date',
+        'log_date' => 'date:Y-m-d',
         'items' => 'array',
         'total_cost_impact' => 'decimal:2',
     ];

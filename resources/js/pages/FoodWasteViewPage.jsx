@@ -9,6 +9,16 @@ import ManagerPinModal from '../components/common/ManagerPinModal';
 import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
+const formatDateStr = (str) => {
+  if (!str) return '';
+  return String(str).split('T')[0];
+};
+
+const formatTimeStr = (str) => {
+  if (!str) return '';
+  return String(str).substring(0, 5);
+};
+
 const FoodWasteViewPage = ({ logId }) => {
   const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [log, setLog] = useState(null);
@@ -48,9 +58,12 @@ const FoodWasteViewPage = ({ logId }) => {
     );
   }
 
+  const formattedDate = formatDateStr(log.log_date);
+  const formattedTime = formatTimeStr(log.log_time);
+
   return (
     <PageLayout>
-      <Head title={`Food Waste Log - ${log.log_date}`} />
+      <Head title={`Food Waste Log - ${formattedDate}`} />
 
       <div>
         <button onClick={() => router.visit('/haccp-logs/food-waste')} className="back-btn" style={{ marginBottom: '16px' }}>
@@ -65,7 +78,7 @@ const FoodWasteViewPage = ({ logId }) => {
               <StatusBadge status={log.status} />
             </div>
             <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-              Logged on {log.log_date} at {log.log_time} by {log.staff_name}
+              Logged on {formattedDate} at {formattedTime} by {log.staff_name}
             </p>
           </div>
 
@@ -84,7 +97,7 @@ const FoodWasteViewPage = ({ logId }) => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
             <div>
               <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Date & Time</span>
-              <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{log.log_date} at {log.log_time}</strong>
+              <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{formattedDate} at {formattedTime}</strong>
             </div>
 
             <div>
@@ -94,7 +107,7 @@ const FoodWasteViewPage = ({ logId }) => {
           </div>
 
           {/* Summary Metric Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', backgroundColor: '#F9FAFB', padding: '16px 20px', borderRadius: '10px', border: '1px solid var(--color-border-light)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px', backgroundColor: '#F9FAFB', padding: '16px 20px', borderRadius: '10px', border: '1px solid var(--color-border-light)' }}>
             <div>
               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Total Items</span>
               <strong style={{ fontSize: '18px', display: 'block', color: 'var(--color-text-primary)' }}>{log.total_entries} items</strong>
@@ -106,8 +119,23 @@ const FoodWasteViewPage = ({ logId }) => {
             </div>
 
             <div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Main Waste Type</span>
+              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{log.main_waste_type || 'Organic / Scraps'}</strong>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Source Stage</span>
+              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{log.main_source_stage || 'Preparation'}</strong>
+            </div>
+
+            <div>
               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Main Waste Reason</span>
-              <strong style={{ fontSize: '15px', display: 'block', color: 'var(--color-text-primary)' }}>{log.main_reason || 'N/A'}</strong>
+              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{log.main_reason || 'N/A'}</strong>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Disposal Method</span>
+              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{log.main_disposal_method || 'Food waste bin'}</strong>
             </div>
 
             <div>
@@ -121,7 +149,7 @@ const FoodWasteViewPage = ({ logId }) => {
           {/* Itemized Waste Table */}
           <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '20px' }}>
             <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '14px', color: 'var(--color-text-primary)' }}>
-              Logged Waste Items
+              Logged Waste Items ({Array.isArray(log.items) ? log.items.length : 0})
             </div>
 
             {Array.isArray(log.items) && log.items.length > 0 ? (
@@ -130,34 +158,74 @@ const FoodWasteViewPage = ({ logId }) => {
                   <thead>
                     <tr>
                       <th>#</th>
+                      <th>Category</th>
                       <th>Food Item</th>
                       <th>Waste Type</th>
                       <th>Source Stage</th>
                       <th>Waste Reason</th>
                       <th>Quantity</th>
                       <th>Cost (€)</th>
+                      <th>Batch Code</th>
                       <th>Expiry Date</th>
                       <th>Disposal Method</th>
+                      <th>Notes</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {log.items.map((item, idx) => (
-                      <tr key={idx}>
-                        <td>{idx + 1}</td>
-                        <td><strong style={{ color: 'var(--color-text-primary)' }}>{item.foodItem || '-'}</strong></td>
-                        <td>{item.wasteType || '-'}</td>
-                        <td>{item.source || '-'}</td>
-                        <td>
-                          <span style={{ fontWeight: 600, color: ['Temperature abuse', 'Expired raw materials', 'Contamination risk'].includes(item.reason) ? '#DC2626' : 'inherit' }}>
-                            {item.reason || '-'}
-                          </span>
-                        </td>
-                        <td><strong>{item.quantity} {item.unit || 'kg'}</strong></td>
-                        <td>€{parseFloat(item.estimatedCost || 0).toFixed(2)}</td>
-                        <td>{item.expiryDate || '-'}</td>
-                        <td>{item.disposalMethod || '-'}</td>
-                      </tr>
-                    ))}
+                    {log.items.map((item, idx) => {
+                      const foodItem = item.foodItem || item.food_item || item.name || '-';
+                      const itemType = item.itemType || item.item_type || 'ingredient';
+                      const wasteType = item.wasteType || item.waste_type || item.type || '-';
+                      const source = item.source || item.source_stage || item.stage || '-';
+                      const reason = item.reason || item.waste_reason || '-';
+                      const qty = item.quantity !== null && item.quantity !== undefined ? item.quantity : '-';
+                      const unit = item.unit || (itemType === 'recipe' ? 'portions' : 'kg');
+                      const cost = item.estimatedCost || item.estimated_cost || item.cost || 0;
+                      const batchCode = item.batchCode || item.batch_code || item.batch || '-';
+                      const expiryDate = item.expiryDate || item.expiry_date || item.expiry || '-';
+                      const disposalMethod = item.disposalMethod || item.disposal_method || item.method || '-';
+                      const notes = item.notes || item.comments || '-';
+
+                      const isSevereReason = ['Temperature abuse', 'Expired raw materials', 'Contamination risk'].includes(reason);
+
+                      return (
+                        <tr key={idx}>
+                          <td>{idx + 1}</td>
+                          <td>
+                            <span style={{
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              backgroundColor: itemType === 'recipe' ? '#F3E8FF' : '#DCFCE7',
+                              color: itemType === 'recipe' ? '#6B21A8' : '#15803D',
+                              display: 'inline-block',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {itemType === 'recipe' ? '🍲 Recipe' : '🥦 Ingredient'}
+                            </span>
+                          </td>
+                          <td><strong style={{ color: 'var(--color-text-primary)' }}>{foodItem}</strong></td>
+                          <td>{wasteType}</td>
+                          <td>{source}</td>
+                          <td>
+                            <span style={{ fontWeight: 600, color: isSevereReason ? '#DC2626' : 'inherit' }}>
+                              {reason}
+                            </span>
+                          </td>
+                          <td><strong>{qty} {unit}</strong></td>
+                          <td>
+                            <strong style={{ color: parseFloat(cost) > 0 ? '#DC2626' : 'inherit' }}>
+                              €{parseFloat(cost || 0).toFixed(2)}
+                            </strong>
+                          </td>
+                          <td><code>{batchCode}</code></td>
+                          <td>{expiryDate}</td>
+                          <td>{disposalMethod}</td>
+                          <td style={{ fontSize: '12px', color: 'var(--color-text-secondary)', maxWidth: '200px' }}>{notes}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
