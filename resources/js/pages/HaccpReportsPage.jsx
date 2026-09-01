@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
-import { Download, Printer, FileText, Calendar, CheckCircle2, AlertTriangle, Filter, BarChart3, Clock } from 'lucide-react';
+import { Download, Printer, FileText, Calendar, CheckCircle2, AlertTriangle, Filter, BarChart3, Clock, ChevronRight } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import StatusBadge from '../components/common/StatusBadge';
 import MultiSelectDropdown from '../components/common/MultiSelectDropdown';
+import HaccpLogDetailDrawer from '../components/haccp/HaccpLogDetailDrawer';
 import axios from 'axios';
 
 const ALL_MODULE_OPTIONS = [
@@ -37,6 +38,39 @@ const HaccpReportsPage = () => {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Drill-Down Drawer State
+  const [selectedLogDetail, setSelectedLogDetail] = useState(null);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
+
+  const openLogDetail = async (logRow) => {
+    if (logRow.moduleId !== 'cooking-temperature') {
+      return; // Pilot module only
+    }
+
+    setDetailDrawerOpen(true);
+    setDetailLoading(true);
+    setDetailError(null);
+    setSelectedLogDetail(null);
+
+    try {
+      const res = await axios.get(`/api/haccp-reports/log-detail/cooking-temperature/${logRow.id}`);
+      setSelectedLogDetail(res.data);
+    } catch (err) {
+      console.error('Failed to load detailed cooking temperature log', err);
+      setDetailError(err.response?.data?.message || 'Failed to load detailed log record.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeLogDetail = () => {
+    setDetailDrawerOpen(false);
+    setSelectedLogDetail(null);
+    setDetailError(null);
+  };
 
   // Quick Date Preset Helpers
   const handlePresetSelect = (presetType) => {
@@ -299,101 +333,137 @@ const HaccpReportsPage = () => {
             {/* Audit Logs List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {Array.isArray(data?.logs) && data.logs.length > 0 ? (
-                data.logs.map((log, idx) => (
-                  <Card key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '12px' }}>
-                      <div>
-                        <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-                          {log.moduleName}
-                        </h3>
-                        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                          Log Record ID: #{log.id} • Date: <strong>{log.date}</strong> at {log.time}
+                data.logs.map((log, idx) => {
+                  const isCookingLog = log.moduleId === 'cooking-temperature';
+
+                  return (
+                    <Card
+                      key={idx}
+                      onClick={isCookingLog ? () => openLogDetail(log) : undefined}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '14px',
+                        cursor: isCookingLog ? 'pointer' : 'default',
+                        transition: 'all 0.15s ease-in-out',
+                        border: isCookingLog ? '1px solid #D1FAE5' : '1px solid var(--color-border-light)',
+                        backgroundColor: '#FFFFFF',
+                      }}
+                      className={isCookingLog ? 'haccp-clickable-report-card' : ''}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '12px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
+                              {log.moduleName}
+                            </h3>
+                            {isCookingLog && (
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  color: 'var(--color-primary)',
+                                  backgroundColor: '#ECFDF5',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                }}
+                              >
+                                View Details <ChevronRight size={12} />
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                            Log Record ID: #{log.id} • Date: <strong>{log.date}</strong> at {log.time}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <StatusBadge status={log.status} />
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <StatusBadge status={log.status} />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '13.5px' }}>
-                      <div>
-                        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Inspector / Staff</span>
-                        <strong style={{ color: 'var(--color-text-primary)' }}>{log.staffName}</strong>
-                      </div>
-
-                      {log.formData?.holdingUnit && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '13.5px' }}>
                         <div>
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Station / Unit</span>
-                          <strong>{log.formData.holdingUnit}</strong>
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Inspector / Staff</span>
+                          <strong style={{ color: 'var(--color-text-primary)' }}>{log.staffName}</strong>
+                        </div>
+
+                        {log.formData?.holdingUnit && (
+                          <div>
+                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Station / Unit</span>
+                            <strong>{log.formData.holdingUnit}</strong>
+                          </div>
+                        )}
+
+                        {log.formData?.mainReason && (
+                          <div>
+                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Primary Waste Reason</span>
+                            <strong>{log.formData.mainReason}</strong>
+                          </div>
+                        )}
+
+                        {log.formData?.taskTitle && (
+                          <div>
+                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Training Task</span>
+                            <strong>{log.formData.taskTitle}</strong>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Form Details Summary */}
+                      {log.formData?.generalComments && (
+                        <div style={{ padding: '10px 14px', backgroundColor: '#F9FAFB', borderRadius: '8px', border: '1px solid var(--color-border-light)', fontSize: '13px' }}>
+                          <strong>Comments / Observations:</strong> {log.formData.generalComments}
                         </div>
                       )}
 
-                      {log.formData?.mainReason && (
-                        <div>
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Primary Waste Reason</span>
-                          <strong>{log.formData.mainReason}</strong>
-                        </div>
-                      )}
-
-                      {log.formData?.taskTitle && (
-                        <div>
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Training Task</span>
-                          <strong>{log.formData.taskTitle}</strong>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Form Details Summary */}
-                    {log.formData?.generalComments && (
-                      <div style={{ padding: '10px 14px', backgroundColor: '#F9FAFB', borderRadius: '8px', border: '1px solid var(--color-border-light)', fontSize: '13px' }}>
-                        <strong>Comments / Observations:</strong> {log.formData.generalComments}
-                      </div>
-                    )}
-
-                    {/* Itemized Table if Hot Holding */}
-                    {log.moduleId === 'hot-holding' && Array.isArray(log.formData?.items) && log.formData.items.length > 0 && (
-                      <div style={{ overflowX: 'auto', border: '1px solid var(--color-border-light)', borderRadius: '8px' }}>
-                        <table className="data-table" style={{ fontSize: '12.5px' }}>
-                          <thead>
-                            <tr>
-                              <th>Food Item</th>
-                              <th>Time into Hold</th>
-                              <th>Check 1 (°C)</th>
-                              <th>Check 2 (°C)</th>
-                              <th>Check 3 (°C)</th>
-                              <th>Check 4 (°C)</th>
-                              <th>Comments</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {log.formData.items.map((it, iIdx) => (
-                              <tr key={iIdx}>
-                                <td><strong>{it.foodName}</strong></td>
-                                <td>{it.timeIntoHold || '-'}</td>
-                                <td>{it.check1 ? `${it.check1}°C` : '-'}</td>
-                                <td>{it.check2 ? `${it.check2}°C` : '-'}</td>
-                                <td>{it.check3 ? `${it.check3}°C` : '-'}</td>
-                                <td>{it.check4 ? `${it.check4}°C` : '-'}</td>
-                                <td>{it.comments || '-'}</td>
+                      {/* Itemized Table if Hot Holding */}
+                      {log.moduleId === 'hot-holding' && Array.isArray(log.formData?.items) && log.formData.items.length > 0 && (
+                        <div style={{ overflowX: 'auto', border: '1px solid var(--color-border-light)', borderRadius: '8px' }}>
+                          <table className="data-table" style={{ fontSize: '12.5px' }}>
+                            <thead>
+                              <tr>
+                                <th>Food Item</th>
+                                <th>Time into Hold</th>
+                                <th>Check 1 (°C)</th>
+                                <th>Check 2 (°C)</th>
+                                <th>Check 3 (°C)</th>
+                                <th>Check 4 (°C)</th>
+                                <th>Comments</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {/* Signature */}
-                    {log.signature && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderTop: '1px solid var(--color-border-light)', paddingTop: '10px' }}>
-                        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Staff Signature:</span>
-                        <div style={{ height: '40px', padding: '4px 10px', backgroundColor: '#FAFAFA', border: '1px solid var(--color-border-light)', borderRadius: '6px' }}>
-                          <img src={log.signature} alt="Signature" style={{ height: '100%', objectFit: 'contain' }} />
+                            </thead>
+                            <tbody>
+                              {log.formData.items.map((it, iIdx) => (
+                                <tr key={iIdx}>
+                                  <td><strong>{it.foodName}</strong></td>
+                                  <td>{it.timeIntoHold || '-'}</td>
+                                  <td>{it.check1 ? `${it.check1}°C` : '-'}</td>
+                                  <td>{it.check2 ? `${it.check2}°C` : '-'}</td>
+                                  <td>{it.check3 ? `${it.check3}°C` : '-'}</td>
+                                  <td>{it.check4 ? `${it.check4}°C` : '-'}</td>
+                                  <td>{it.comments || '-'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                      </div>
-                    )}
-                  </Card>
-                ))
+                      )}
+
+                      {/* Signature */}
+                      {log.signature && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderTop: '1px solid var(--color-border-light)', paddingTop: '10px' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Staff Signature:</span>
+                          <div style={{ height: '40px', padding: '4px 10px', backgroundColor: '#FAFAFA', border: '1px solid var(--color-border-light)', borderRadius: '6px' }}>
+                            <img src={log.signature} alt="Signature" style={{ height: '100%', objectFit: 'contain' }} />
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })
               ) : (
                 <Card style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                   <FileText size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
@@ -404,6 +474,17 @@ const HaccpReportsPage = () => {
           </>
         )}
       </div>
+
+      {/* HACCP Log Detail Drawer (Requirement 4) */}
+      <HaccpLogDetailDrawer
+        isOpen={detailDrawerOpen}
+        onClose={closeLogDetail}
+        data={selectedLogDetail}
+        loading={detailLoading}
+        error={detailError}
+        onPrint={() => alert('Print log functionality will be enabled in the upcoming phase.')}
+        onDownloadPdf={() => alert('Single log PDF download will be enabled in the upcoming phase.')}
+      />
     </PageLayout>
   );
 };
