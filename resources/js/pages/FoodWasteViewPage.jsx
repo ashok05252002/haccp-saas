@@ -24,6 +24,12 @@ const FoodWasteViewPage = ({ logId }) => {
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Master lookup tables keyed by id
+  const [typesMaster, setTypesMaster]     = useState([]);
+  const [sourcesMaster, setSourcesMaster] = useState([]);
+  const [reasonsMaster, setReasonsMaster] = useState([]);
+  const [methodsMaster, setMethodsMaster] = useState([]);
+
   useEffect(() => {
     axios.get(`/api/food-waste-logs/${logId}`).then(res => {
       setLog(res.data);
@@ -32,7 +38,23 @@ const FoodWasteViewPage = ({ logId }) => {
     }).finally(() => {
       setLoading(false);
     });
+
+    // Load master tables for name resolution
+    axios.get('/api/waste-masters').then(res => {
+      const d = res.data || {};
+      setTypesMaster(d.types    || []);
+      setSourcesMaster(d.sources || []);
+      setReasonsMaster(d.reasons || []);
+      setMethodsMaster(d.methods || []);
+    }).catch(() => {});
   }, [logId]);
+
+  // Resolve a name from an ID using a master array [{id, name}]
+  const resolveName = (id, master) => {
+    if (!id) return '—';
+    const found = master.find(m => String(m.id) === String(id));
+    return found ? found.name : String(id);
+  };
 
   const handlePrint = () => {
     window.print();
@@ -120,22 +142,22 @@ const FoodWasteViewPage = ({ logId }) => {
 
             <div>
               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Main Waste Type</span>
-              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{log.main_waste_type || 'Organic / Scraps'}</strong>
+              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{resolveName(log.main_waste_type, typesMaster)}</strong>
             </div>
 
             <div>
               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Source Stage</span>
-              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{log.main_source_stage || 'Preparation'}</strong>
+              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{resolveName(log.main_source_stage, sourcesMaster)}</strong>
             </div>
 
             <div>
               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Main Waste Reason</span>
-              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{log.main_reason || 'N/A'}</strong>
+              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{resolveName(log.main_reason, reasonsMaster)}</strong>
             </div>
 
             <div>
               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Disposal Method</span>
-              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{log.main_disposal_method || 'Food waste bin'}</strong>
+              <strong style={{ fontSize: '14px', display: 'block', color: 'var(--color-text-primary)' }}>{resolveName(log.main_disposal_method, methodsMaster)}</strong>
             </div>
 
             <div>
@@ -173,20 +195,24 @@ const FoodWasteViewPage = ({ logId }) => {
                   </thead>
                   <tbody>
                     {log.items.map((item, idx) => {
-                      const foodItem = item.foodItem || item.food_item || item.name || '-';
-                      const itemType = item.itemType || item.item_type || 'ingredient';
-                      const wasteType = item.wasteType || item.waste_type || item.type || '-';
-                      const source = item.source || item.source_stage || item.stage || '-';
-                      const reason = item.reason || item.waste_reason || '-';
-                      const qty = item.quantity !== null && item.quantity !== undefined ? item.quantity : '-';
-                      const unit = item.unit || (itemType === 'recipe' ? 'portions' : 'kg');
-                      const cost = item.estimatedCost || item.estimated_cost || item.cost || 0;
-                      const batchCode = item.batchCode || item.batch_code || item.batch || '-';
-                      const expiryDate = item.expiryDate || item.expiry_date || item.expiry || '-';
-                      const disposalMethod = item.disposalMethod || item.disposal_method || item.method || '-';
-                      const notes = item.notes || item.comments || '-';
+                      const foodItem       = item.foodItem || item.food_item || item.name || '—';
+                      const itemType       = item.itemType || item.item_type || 'ingredient';
+                      // Resolve names from IDs using masters
+                      const wasteType      = resolveName(item.waste_type_id, typesMaster);
+                      const source         = resolveName(item.source_stage_id, sourcesMaster);
+                      const reason         = resolveName(item.reason_id, reasonsMaster);
+                      const disposalMethod = resolveName(item.disposal_method_id, methodsMaster);
+                      const qty            = item.quantity !== null && item.quantity !== undefined ? item.quantity : '—';
+                      const unit           = item.unit || (itemType === 'recipe' ? 'portions' : 'kg');
+                      const cost           = item.estimatedCost || 0;
+                      const batchCode      = item.batchCode || '—';
+                      const expiryDate     = item.expiryDate || '—';
+                      const notes          = item.notes || '—';
 
-                      const isSevereReason = ['Temperature abuse', 'Expired raw materials', 'Contamination risk'].includes(reason);
+                      const severeReasonIds = reasonsMaster
+                        .filter(r => ['Temperature abuse', 'Expired raw materials', 'Contamination risk'].includes(r.name))
+                        .map(r => String(r.id));
+                      const isSevereReason = severeReasonIds.includes(String(item.reason_id));
 
                       return (
                         <tr key={idx}>

@@ -172,27 +172,50 @@ const FoodWasteFormPage = ({ logId }) => {
     }
   }, []);
 
-  // Once masters load, patch any item that still has empty IDs with the first master entry
+  // Once masters load:
+  // 1. Patch items with empty IDs to use first master entry (new items)
+  // 2. Resolve names from IDs for items loaded from DB (edit mode)
   useEffect(() => {
     if (typesMaster.length === 0 && sourcesMaster.length === 0 && reasonsMaster.length === 0 && methodsMaster.length === 0) return;
     setWasteItems(prev => prev.map(item => {
       const updated = { ...item };
-      if (!updated.wasteTypeId && typesMaster.length > 0) {
+
+      // Resolve wasteType name from wasteTypeId, or default to first master
+      if (updated.wasteTypeId) {
+        const found = typesMaster.find(t => String(t.id) === String(updated.wasteTypeId));
+        if (found) updated.wasteType = found.name;
+      } else if (typesMaster.length > 0) {
         updated.wasteTypeId = typesMaster[0].id;
         updated.wasteType = typesMaster[0].name;
       }
-      if (!updated.sourceId && sourcesMaster.length > 0) {
+
+      // Resolve source name from sourceId, or default to first master
+      if (updated.sourceId) {
+        const found = sourcesMaster.find(s => String(s.id) === String(updated.sourceId));
+        if (found) updated.source = found.name;
+      } else if (sourcesMaster.length > 0) {
         updated.sourceId = sourcesMaster[0].id;
         updated.source = sourcesMaster[0].name;
       }
-      if (!updated.reasonId && reasonsMaster.length > 0) {
+
+      // Resolve reason name from reasonId, or default to first master
+      if (updated.reasonId) {
+        const found = reasonsMaster.find(r => String(r.id) === String(updated.reasonId));
+        if (found) updated.reason = found.name;
+      } else if (reasonsMaster.length > 0) {
         updated.reasonId = reasonsMaster[0].id;
         updated.reason = reasonsMaster[0].name;
       }
-      if (!updated.disposalMethodId && methodsMaster.length > 0) {
+
+      // Resolve disposalMethod name from disposalMethodId, or default to first master
+      if (updated.disposalMethodId) {
+        const found = methodsMaster.find(m => String(m.id) === String(updated.disposalMethodId));
+        if (found) updated.disposalMethod = found.name;
+      } else if (methodsMaster.length > 0) {
         updated.disposalMethodId = methodsMaster[0].id;
         updated.disposalMethod = methodsMaster[0].name;
       }
+
       return updated;
     }));
   }, [typesMaster, sourcesMaster, reasonsMaster, methodsMaster]);
@@ -240,20 +263,21 @@ const FoodWasteFormPage = ({ logId }) => {
               ingredientId: item.ingredientId || item.ingredient_id || '',
               recipeId: item.recipeId || item.recipe_id || '',
               foodItem: foodName,
-              wasteTypeId: item.wasteTypeId || item.waste_type_id || '',
-              wasteType: item.wasteType || item.waste_type || 'Organic / Processing Scraps',
-              sourceId: item.sourceId || item.source_stage_id || '',
-              source: item.source || item.source_stage || 'Preparation',
-              reasonId: item.reasonId || item.reason_id || '',
-              reason: item.reason || item.waste_reason || 'Spoilage',
+              // Load IDs only — names will be resolved by masters-patch useEffect
+              wasteTypeId: item.waste_type_id || item.wasteTypeId || '',
+              wasteType: '', // resolved by masters-patch useEffect
+              sourceId: item.source_stage_id || item.sourceId || '',
+              source: '', // resolved by masters-patch useEffect
+              reasonId: item.reason_id || item.reasonId || '',
+              reason: '', // resolved by masters-patch useEffect
+              disposalMethodId: item.disposal_method_id || item.disposalMethodId || '',
+              disposalMethod: '', // resolved by masters-patch useEffect
               quantity: item.quantity !== null && item.quantity !== undefined ? String(item.quantity) : '',
               unit: item.unit || (type === 'recipe' ? 'portions' : 'kg'),
-              estimatedCost: item.estimatedCost !== null && item.estimatedCost !== undefined ? String(item.estimatedCost) : (item.cost ? String(item.cost) : ''),
-              batchCode: item.batchCode || item.batch_code || item.batch || '',
-              expiryDate: formatDateStr(item.expiryDate || item.expiry_date || item.expiry),
-              disposalMethodId: item.disposalMethodId || item.disposal_method_id || '',
-              disposalMethod: item.disposalMethod || item.disposal_method || 'Food waste bin',
-              notes: item.notes || item.comments || '',
+              estimatedCost: item.estimatedCost !== null && item.estimatedCost !== undefined ? String(item.estimatedCost) : '',
+              batchCode: item.batchCode || item.batch_code || '',
+              expiryDate: formatDateStr(item.expiryDate || item.expiry_date || ''),
+              notes: item.notes || '',
             };
           });
           setWasteItems(loadedItems);
