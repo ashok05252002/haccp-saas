@@ -385,6 +385,10 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
         setError('Date, Time, and Food Item are mandatory.');
         return;
       }
+      if (!staffName || !staffName.trim()) {
+        setError('Please select staff name.');
+        return;
+      }
     }
 
     // Auto-save local draft progress on step transition
@@ -409,6 +413,11 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
     if (!logDate || !logTime || !foodItem) {
       setError('Date, Time, and Food Item are required to save an in-progress batch.');
+      return;
+    }
+
+    if (!staffName || !staffName.trim()) {
+      setError('Please select staff name.');
       return;
     }
 
@@ -448,6 +457,16 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
   const handleFinalSignOff = async () => {
     setError(null);
 
+    if (!logDate || !logTime || !foodItem) {
+      setError('Date, Time, and Food Item are mandatory.');
+      return;
+    }
+
+    if (!staffName || !staffName.trim()) {
+      setError('Please select staff name.');
+      return;
+    }
+
     // Validate Signature
     let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
@@ -456,11 +475,6 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
     if (!signatureData) {
       setError('Please add staff signature before final sign-off.');
-      return;
-    }
-
-    if (!logDate || !logTime || !foodItem) {
-      setError('Date, Time, and Food Item are mandatory.');
       return;
     }
 
@@ -512,6 +526,11 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
   const handleSubmit = async () => {
     setError(null);
+
+    if (!staffName || !staffName.trim()) {
+      setError('Please select staff name.');
+      return;
+    }
 
     // Validate Signature for completed submission
     let signatureData = existingSignature;
@@ -660,11 +679,12 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                   </select>
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Staff Name</label>
+                  <label className="form-label">Staff Name *</label>
                   <select
                     className="form-input"
                     value={staffName}
                     onChange={e => setStaffName(e.target.value)}
+                    required
                   >
                     <option value="">-- Select Staff Member --</option>
                     {managerStaff.map(s => (
