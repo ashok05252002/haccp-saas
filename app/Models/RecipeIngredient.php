@@ -9,6 +9,7 @@ class RecipeIngredient extends Model
     protected $fillable = [
         'recipe_id',
         'ingredient_id',
+        'supplier_id',
         'ingredient_name',
         'quantity',
         'unit',
@@ -26,5 +27,10 @@ class RecipeIngredient extends Model
     public function masterIngredient()
     {
         return $this->belongsTo(Ingredient::class, 'ingredient_id');
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class, 'supplier_id');
     }
 }

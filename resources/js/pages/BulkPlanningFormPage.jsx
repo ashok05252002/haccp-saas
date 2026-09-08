@@ -6,6 +6,7 @@ import {
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import Modal from '../components/common/Modal';
 import axios from 'axios';
 import { getPlanById, savePlan } from '../services/planningService';
 
@@ -21,6 +22,20 @@ const BulkPlanningFormPage = ({ planId }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
+
+  // Modal State for Quick Adding Supplier
+  const [supModalOpen, setSupModalOpen] = useState(false);
+  const [supTargetMapKey, setSupTargetMapKey] = useState(null);
+  const [supModalSaving, setSupModalSaving] = useState(false);
+  const [supModalError, setSupModalError] = useState('');
+
+  const [newSupForm, setNewSupForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    status: 'Active'
+  });
 
   // In-line supplier selection overrides: { [mapKey]: supplierId }
   const [supplierOverrides, setSupplierOverrides] = useState({});
@@ -238,6 +253,46 @@ const BulkPlanningFormPage = ({ planId }) => {
       ...prev,
       [mapKey]: newSupplierId
     }));
+  };
+
+  const handleOpenSupModal = (mapKey) => {
+    setSupTargetMapKey(mapKey);
+    setNewSupForm({ name: '', phone: '', email: '', address: '', status: 'Active' });
+    setSupModalError('');
+    setSupModalOpen(true);
+  };
+
+  const handleSaveNewSupplier = async (e) => {
+    e.preventDefault();
+    setSupModalError('');
+
+    if (!newSupForm.name.trim()) {
+      setSupModalError('Supplier Name is required.');
+      return;
+    }
+
+    setSupModalSaving(true);
+    try {
+      const res = await axios.post('/api/suppliers', newSupForm);
+      const createdSup = res.data;
+
+      setSuppliers(prev => [...prev, createdSup]);
+
+      if (supTargetMapKey && createdSup.status === 'Active') {
+        handleSupplierOverrideChange(supTargetMapKey, String(createdSup.id));
+      }
+
+      setSupModalOpen(false);
+    } catch (err) {
+      console.error('Failed to create new supplier', err);
+      if (err.response && err.response.data && err.response.data.errors && err.response.data.errors.name) {
+        setSupModalError(err.response.data.errors.name[0]);
+      } else {
+        setSupModalError(err.response?.data?.message || 'Failed to create new supplier.');
+      }
+    } finally {
+      setSupModalSaving(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -591,32 +646,54 @@ const BulkPlanningFormPage = ({ planId }) => {
 
                                 {/* Supplier Selector (Allows assigning to any active supplier) */}
                                 <td>
-                                  <select
-                                    className="form-input"
-                                    style={{ fontSize: '12px', padding: '4px 8px', borderColor: 'var(--color-primary)', minWidth: '160px' }}
-                                    value={item.selectedSupplierId}
-                                    onChange={e => handleSupplierOverrideChange(item.mapKey, e.target.value)}
-                                  >
-                                    {item.eligibleSuppliers && item.eligibleSuppliers.length > 0 && (
-                                      <optgroup label="Assigned Supplier(s)">
-                                        {item.eligibleSuppliers.map(s => (
-                                          <option key={`assigned-${s.id}`} value={s.id}>
-                                            {s.name} (Assigned)
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <select
+                                      className="form-input"
+                                      style={{ fontSize: '12px', padding: '4px 8px', borderColor: 'var(--color-primary)', minWidth: '160px' }}
+                                      value={item.selectedSupplierId}
+                                      onChange={e => handleSupplierOverrideChange(item.mapKey, e.target.value)}
+                                    >
+                                      {item.eligibleSuppliers && item.eligibleSuppliers.length > 0 && (
+                                        <optgroup label="Assigned Supplier(s)">
+                                          {item.eligibleSuppliers.map(s => (
+                                            <option key={`assigned-${s.id}`} value={s.id}>
+                                              {s.name} (Assigned)
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      )}
+
+                                      <optgroup label={item.eligibleSuppliers && item.eligibleSuppliers.length > 0 ? "Other Suppliers" : "All Suppliers"}>
+                                        {(item.otherSuppliers && item.otherSuppliers.length > 0 ? item.otherSuppliers : suppliers).map(s => (
+                                          <option key={`other-${s.id}`} value={s.id}>
+                                            {s.name}
                                           </option>
                                         ))}
                                       </optgroup>
-                                    )}
 
-                                    <optgroup label={item.eligibleSuppliers && item.eligibleSuppliers.length > 0 ? "Other Suppliers" : "All Suppliers"}>
-                                      {(item.otherSuppliers && item.otherSuppliers.length > 0 ? item.otherSuppliers : suppliers).map(s => (
-                                        <option key={`other-${s.id}`} value={s.id}>
-                                          {s.name}
-                                        </option>
-                                      ))}
-                                    </optgroup>
-
-                                    <option value="unassigned">Unassigned / General</option>
-                                  </select>
+                                      <option value="unassigned">Unassigned / General</option>
+                                    </select>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenSupModal(item.mapKey)}
+                                      className="no-print"
+                                      style={{
+                                        alignSelf: 'flex-start',
+                                        background: 'var(--color-primary-pale, #EEF2FF)', 
+                                        border: '1px solid var(--color-primary, #4F46E5)', 
+                                        fontSize: '10px', 
+                                        color: 'var(--color-primary, #4F46E5)', 
+                                        fontWeight: 700, 
+                                        cursor: 'pointer',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        flexShrink: 0,
+                                        whiteSpace: 'nowrap'
+                                      }}
+                                    >
+                                      + Add Supplier
+                                    </button>
+                                  </div>
                                 </td>
 
                                 <td style={{ backgroundColor: '#F0FDF4', color: '#15803D', fontWeight: 800, fontSize: '15px' }}>
@@ -663,6 +740,107 @@ const BulkPlanningFormPage = ({ planId }) => {
           </form>
         )}
       </div>
+
+      {/* Quick Add Supplier Modal */}
+      <Modal
+        isOpen={supModalOpen}
+        onClose={() => setSupModalOpen(false)}
+        title="Add New Supplier"
+        size="md"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setSupModalOpen(false)}
+              disabled={supModalSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSaveNewSupplier}
+              disabled={supModalSaving}
+            >
+              {supModalSaving ? 'Saving...' : 'Save Supplier'}
+            </Button>
+          </div>
+        }
+      >
+        <form onSubmit={handleSaveNewSupplier} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {supModalError && (
+            <div style={{
+              padding: '10px 14px',
+              backgroundColor: '#FEE2E2',
+              color: '#B91C1C',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 600
+            }}>
+              {supModalError}
+            </div>
+          )}
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Supplier Name *</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="e.g. Fresh Farms Co."
+              value={newSupForm.name}
+              onChange={e => setNewSupForm({ ...newSupForm, name: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Phone Number</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="e.g. 555-1234"
+              value={newSupForm.phone}
+              onChange={e => setNewSupForm({ ...newSupForm, phone: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Email Address</label>
+            <input
+              type="email"
+              className="form-input"
+              placeholder="e.g. orders@freshfarms.com"
+              value={newSupForm.email}
+              onChange={e => setNewSupForm({ ...newSupForm, email: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Address / Location Details</label>
+            <textarea
+              className="form-input"
+              rows="2"
+              placeholder="Full address or delivery notes..."
+              value={newSupForm.address}
+              onChange={e => setNewSupForm({ ...newSupForm, address: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Status *</label>
+            <select
+              className="form-input"
+              value={newSupForm.status}
+              onChange={e => setNewSupForm({ ...newSupForm, status: e.target.value })}
+              required
+            >
+              <option value="Active">Active (Approved Supplier)</option>
+              <option value="Inactive">Inactive (Not Approved Supplier)</option>
+            </select>
+          </div>
+        </form>
+      </Modal>
     </PageLayout>
   );
 };

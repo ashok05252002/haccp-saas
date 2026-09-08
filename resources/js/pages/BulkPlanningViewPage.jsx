@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  CalendarDays, ArrowLeft, Printer, Edit2, Truck, AlertCircle
+  CalendarDays, ArrowLeft, Printer, Edit2, Truck, AlertCircle, Copy
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
@@ -71,7 +71,10 @@ const BulkPlanningViewPage = ({ planId }) => {
         const ingId = ing.ingredient_id ? String(ing.ingredient_id) : '';
         const nameKey = (ing.ingredient_name || '').trim().toLowerCase();
         const unitKey = (ing.unit || '').trim();
-        const mapKey = ingId ? `id_${ingId}` : `name_${nameKey}__${unitKey}`;
+        const supId = ing.supplier_id ? String(ing.supplier_id) : '';
+        
+        const baseKey = ingId ? `id_${ingId}` : `name_${nameKey}__${unitKey}`;
+        const mapKey = `${baseKey}_sup_${supId}`;
 
         const baseQty = parseFloat(ing.quantity) || 0;
         const totalLineQty = baseQty * multiplier;
@@ -82,10 +85,12 @@ const BulkPlanningViewPage = ({ planId }) => {
         } else {
           map[mapKey] = {
             mapKey,
+            baseKey,
             ingredient_id: ingId,
             name: ing.ingredient_name,
             quantity: totalLineQty,
             unit: ing.unit,
+            supplier_id: supId,
             dishes: [rec.name]
           };
         }
@@ -119,10 +124,12 @@ const BulkPlanningViewPage = ({ planId }) => {
         });
       });
 
-      const overrideId = overrides[ing.mapKey];
+      const overrideId = overrides[ing.baseKey] || overrides[ing.mapKey];
       let selectedSup = null;
 
-      if (overrideId) {
+      if (ing.supplier_id) {
+        selectedSup = suppliers.find(s => String(s.id) === String(ing.supplier_id));
+      } else if (overrideId) {
         if (overrideId !== 'unassigned') {
           selectedSup = suppliers.find(s => String(s.id) === String(overrideId));
         }
@@ -134,10 +141,16 @@ const BulkPlanningViewPage = ({ planId }) => {
       const groupName = selectedSup ? selectedSup.name : 'Unassigned / General Supplier';
 
       if (!grouped[groupKey]) {
+        let catText = 'Unassigned / General';
+        if (selectedSup && selectedSup.categories && selectedSup.categories.length > 0) {
+          catText = selectedSup.categories.map(c => c.name).join(', ');
+        }
+        
         grouped[groupKey] = {
           supplierName: groupName,
           supplierPhone: selectedSup ? selectedSup.phone : null,
           supplierEmail: selectedSup ? selectedSup.email : null,
+          supplierCategory: catText,
           items: []
         };
       }
@@ -150,6 +163,61 @@ const BulkPlanningViewPage = ({ planId }) => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleCopyPO = (group) => {
+    const planName = plan ? plan.name : 'Unknown Plan';
+    const planDate = plan ? formatDate(plan.planned_date || plan.weekLabel) : 'Unknown Date';
+    
+    let text = `Purchase Order\n`;
+    text += `Supplier: ${group.supplierName}\n`;
+    text += `Category: ${group.supplierCategory}\n`;
+    if (group.supplierPhone) text += `Phone: ${group.supplierPhone}\n`;
+    if (group.supplierEmail) text += `Email: ${group.supplierEmail}\n`;
+    text += `Plan: ${planName} (Date: ${planDate})\n\n`;
+    text += `Items to Order:\n`;
+    
+    group.items.forEach((item, idx) => {
+      text += `${idx + 1}. ${item.quantity} ${item.unit} - ${item.name}\n`;
+    });
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('PO Copied to clipboard!');
+      }).catch(err => {
+        console.error('Clipboard copy failed:', err);
+        alert('Failed to copy PO.');
+      });
+    } else {
+      alert('Clipboard API not supported in this browser.');
+    }
+  };
+
+  const handleDownloadSupplierCSV = () => {
+    const headers = ['Supplier Category', 'Supplier Name', 'Ingredient', 'Quantity', 'Unit'];
+    const rows = [headers.join(',')];
+
+    supplierPurchaseGroups.forEach(group => {
+      const cat = group.supplierCategory ? `"${group.supplierCategory.replace(/"/g, '""')}"` : '"Unassigned"';
+      const sup = group.supplierName ? `"${group.supplierName.replace(/"/g, '""')}"` : '"Unassigned Supplier"';
+      
+      group.items.forEach(item => {
+        const ing = item.name ? `"${item.name.replace(/"/g, '""')}"` : '""';
+        const qty = `"${item.quantity}"`;
+        const uom = item.unit ? `"${item.unit.replace(/"/g, '""')}"` : '""';
+        rows.push([cat, sup, ing, qty, uom].join(','));
+      });
+    });
+
+    const csvContent = rows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'bulk-planning-supplier-breakdown.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -333,8 +401,48 @@ const BulkPlanningViewPage = ({ planId }) => {
                   </p>
                 </div>
 
-                <div style={{ backgroundColor: 'var(--color-primary-pale)', color: 'var(--color-primary)', padding: '6px 14px', borderRadius: '20px', fontWeight: 700, fontSize: '13px' }}>
-                  {supplierPurchaseGroups.length} Supplier Purchase Sheets
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ backgroundColor: 'var(--color-primary-pale)', color: 'var(--color-primary)', padding: '6px 14px', borderRadius: '20px', fontWeight: 700, fontSize: '13px' }}>
+                    {supplierPurchaseGroups.length} Supplier Purchase Sheets
+                  </div>
+                  <button 
+                    className="no-print"
+                    onClick={handlePrint}
+                    style={{ 
+                      background: '#fff', 
+                      border: '1px solid var(--color-border-light)', 
+                      padding: '6px 12px', 
+                      borderRadius: '6px', 
+                      fontSize: '13px', 
+                      fontWeight: 600, 
+                      color: 'var(--color-text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    Print / Save PDF
+                  </button>
+                  <button 
+                    className="no-print"
+                    onClick={handleDownloadSupplierCSV}
+                    style={{ 
+                      background: '#fff', 
+                      border: '1px solid var(--color-border-light)', 
+                      padding: '6px 12px', 
+                      borderRadius: '6px', 
+                      fontSize: '13px', 
+                      fontWeight: 600, 
+                      color: 'var(--color-text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    Download CSV
+                  </button>
                 </div>
               </div>
 
@@ -366,26 +474,53 @@ const BulkPlanningViewPage = ({ planId }) => {
                         flexWrap: 'wrap',
                         gap: '10px'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <Truck size={18} color="var(--color-primary)" />
-                          <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
-                            {group.supplierName}
-                          </h4>
-                          {group.supplierPhone && (
-                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-                              📞 {group.supplierPhone}
-                            </span>
-                          )}
-                          {group.supplierEmail && (
-                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-                              ✉️ {group.supplierEmail}
-                            </span>
-                          )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {group.supplierCategory}
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Truck size={18} color="var(--color-primary)" />
+                            <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+                              {group.supplierName}
+                            </h4>
+                            {group.supplierPhone && (
+                              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+                                📞 {group.supplierPhone}
+                              </span>
+                            )}
+                            {group.supplierEmail && (
+                              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+                                ✉️ {group.supplierEmail}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        <span style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}>
-                          {group.items.length} {group.items.length === 1 ? 'Product' : 'Products'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}>
+                            {group.items.length} {group.items.length === 1 ? 'Product' : 'Products'}
+                          </span>
+                          <button 
+                            className="no-print"
+                            onClick={() => handleCopyPO(group)}
+                            style={{ 
+                              background: '#fff', 
+                              border: '1px solid var(--color-border-light)', 
+                              padding: '4px 10px', 
+                              borderRadius: '6px', 
+                              fontSize: '12px', 
+                              fontWeight: 600, 
+                              color: 'var(--color-text-secondary)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Copy size={14} />
+                            Copy PO
+                          </button>
+                        </div>
                       </div>
 
                       {/* Products Table */}

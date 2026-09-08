@@ -240,7 +240,7 @@ const SupplierFormPage = ({ supplierId }) => {
                     style={{ width: '100%', boxSizing: 'border-box' }}
                   >
                     <option value="Active">Active (Approved Supplier)</option>
-                    <option value="Inactive">Inactive (Suspended)</option>
+                    <option value="Inactive">Inactive (Not Approved Supplier)</option>
                   </select>
                 </div>
               </div>

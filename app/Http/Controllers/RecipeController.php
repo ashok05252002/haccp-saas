@@ -7,6 +7,7 @@ use App\Models\RecipeIngredient;
 use App\Models\Ingredient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class RecipeController extends Controller
 {
@@ -17,7 +18,7 @@ class RecipeController extends Controller
             return response()->json([], 200);
         }
 
-        $query = Recipe::with('ingredients.masterIngredient')->where('tenant_id', $tenantId);
+        $query = Recipe::with(['ingredients.masterIngredient', 'ingredients.supplier'])->where('tenant_id', $tenantId);
 
         if ($request->filled('search')) {
             $s = strtolower($request->search);
@@ -40,7 +41,7 @@ class RecipeController extends Controller
     public function show($id)
     {
         $tenantId = Auth::user()->tenant_id;
-        $recipe = Recipe::with('ingredients.masterIngredient')->where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
+        $recipe = Recipe::with(['ingredients.masterIngredient', 'ingredients.supplier'])->where('tenant_id', $tenantId)->where('id', $id)->firstOrFail();
 
         return response()->json($recipe);
     }
@@ -65,6 +66,16 @@ class RecipeController extends Controller
             'ingredients' => 'nullable|array',
             'ingredients.*.ingredient_name' => 'required|string|max:255',
             'ingredients.*.ingredient_id' => 'nullable|integer',
+            'ingredients.*.supplier_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('suppliers', 'id')->where(function ($query) use ($tenantId, $branchId) {
+                    $query->where('tenant_id', $tenantId);
+                    if ($branchId) {
+                        $query->where('branch_id', $branchId);
+                    }
+                }),
+            ],
             'ingredients.*.quantity' => 'required|numeric|min:0',
             'ingredients.*.unit' => 'required|string|max:50',
         ]);
@@ -87,6 +98,7 @@ class RecipeController extends Controller
                 RecipeIngredient::create([
                     'recipe_id' => $recipe->id,
                     'ingredient_id' => $ing['ingredient_id'] ?? null,
+                    'supplier_id' => $ing['supplier_id'] ?? null,
                     'ingredient_name' => $ing['ingredient_name'],
                     'quantity' => $ing['quantity'],
                     'unit' => $ing['unit'],
@@ -111,6 +123,21 @@ class RecipeController extends Controller
             'haccp_notes' => 'nullable|string',
             'allergens' => 'nullable|array',
             'ingredients' => 'nullable|array',
+            'ingredients.*.ingredient_name' => 'required|string|max:255',
+            'ingredients.*.ingredient_id' => 'nullable|integer',
+            'ingredients.*.supplier_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('suppliers', 'id')->where(function ($query) use ($tenantId) {
+                    $query->where('tenant_id', $tenantId);
+                    $branchId = Auth::user()->branch_id;
+                    if ($branchId) {
+                        $query->where('branch_id', $branchId);
+                    }
+                }),
+            ],
+            'ingredients.*.quantity' => 'required|numeric|min:0',
+            'ingredients.*.unit' => 'required|string|max:50',
         ]);
 
         $recipe->update([
@@ -130,6 +157,7 @@ class RecipeController extends Controller
                 RecipeIngredient::create([
                     'recipe_id' => $recipe->id,
                     'ingredient_id' => $ing['ingredient_id'] ?? null,
+                    'supplier_id' => $ing['supplier_id'] ?? null,
                     'ingredient_name' => $ing['ingredient_name'],
                     'quantity' => $ing['quantity'],
                     'unit' => $ing['unit'],
