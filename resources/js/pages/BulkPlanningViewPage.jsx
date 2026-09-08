@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  CalendarDays, ArrowLeft, Printer, Edit2, Truck, AlertCircle, Copy
+  CalendarDays, ArrowLeft, Printer, Edit2, Truck, AlertCircle, Copy, Download
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
@@ -390,40 +390,23 @@ const BulkPlanningViewPage = ({ planId }) => {
 
             {/* Supplier Purchase Order Breakdown */}
             <Card padding="0">
-              <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <div>
-                  <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Truck size={20} color="var(--color-primary)" />
-                    <span>Supplier Purchase Orders (Which Supplier • Which Product • How Much)</span>
-                  </h3>
-                  <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: '4px 0 0 0' }}>
+              <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Truck size={20} color="var(--color-primary)" />
+                      <span>Supplier Purchase Orders (Which Supplier • Which Product • How Much)</span>
+                    </h3>
+                    <div style={{ backgroundColor: 'var(--color-primary-pale)', color: 'var(--color-primary)', padding: '4px 10px', borderRadius: '20px', fontWeight: 700, fontSize: '12px' }}>
+                      {supplierPurchaseGroups.length} Supplier Purchase Sheets
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: 0 }}>
                     Aggregated commercial ingredient purchase quantities grouped by Supplier.
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ backgroundColor: 'var(--color-primary-pale)', color: 'var(--color-primary)', padding: '6px 14px', borderRadius: '20px', fontWeight: 700, fontSize: '13px' }}>
-                    {supplierPurchaseGroups.length} Supplier Purchase Sheets
-                  </div>
-                  <button 
-                    className="no-print"
-                    onClick={handlePrint}
-                    style={{ 
-                      background: '#fff', 
-                      border: '1px solid var(--color-border-light)', 
-                      padding: '6px 12px', 
-                      borderRadius: '6px', 
-                      fontSize: '13px', 
-                      fontWeight: 600, 
-                      color: 'var(--color-text-secondary)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    Print / Save PDF
-                  </button>
+                <div>
                   <button 
                     className="no-print"
                     onClick={handleDownloadSupplierCSV}
@@ -441,6 +424,7 @@ const BulkPlanningViewPage = ({ planId }) => {
                       gap: '6px'
                     }}
                   >
+                    <Download size={16} />
                     Download CSV
                   </button>
                 </div>
