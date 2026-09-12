@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
-  ChefHat, ArrowLeft, Edit2, Clock, CheckCircle2, ShieldAlert, AlertCircle, Utensils
+  ChefHat, ArrowLeft, Edit2, Clock, CheckCircle2, ShieldAlert, AlertCircle, Utensils,
+  Tag, Truck
 } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
@@ -31,6 +32,17 @@ const RecipeViewPage = ({ recipeId }) => {
       fetchRecipeDetails();
     }
   }, [recipeId]);
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <PageLayout>
@@ -67,7 +79,7 @@ const RecipeViewPage = ({ recipeId }) => {
                   <span>{recipe.name}</span>
                 </h1>
                 <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px', margin: 0 }}>
-                  Full commercial kitchen recipe breakdown, ingredient portions, and HACCP prep guidelines.
+                  Full commercial kitchen recipe breakdown, ingredient portions, supplier mappings, and HACCP prep guidelines.
                 </p>
               </div>
             )}
@@ -87,7 +99,7 @@ const RecipeViewPage = ({ recipeId }) => {
         {loading ? (
           <Card>
             <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-              Loading recipe details...
+              Loading complete recipe specifications...
             </div>
           </Card>
         ) : error || !recipe ? (
@@ -107,20 +119,43 @@ const RecipeViewPage = ({ recipeId }) => {
           </Card>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            {/* Meta Specifications Bar */}
+            {/* Meta Specifications & Badges Bar */}
             <Card padding="20px">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ backgroundColor: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', padding: '6px 14px', borderRadius: '14px', fontWeight: 700, fontSize: '13px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {/* Status Badge */}
+                  <span style={{
+                    backgroundColor: recipe.status === 'Inactive' ? '#FEE2E2' : '#ECFDF5',
+                    color: recipe.status === 'Inactive' ? '#DC2626' : '#047857',
+                    border: `1px solid ${recipe.status === 'Inactive' ? '#FCA5A5' : '#A7F3D0'}`,
+                    padding: '6px 14px',
+                    borderRadius: '14px',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: recipe.status === 'Inactive' ? '#DC2626' : '#10B981' }}></span>
+                    Status: {recipe.status || 'Active'}
+                  </span>
+
+                  {/* Category Badge */}
+                  <span style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '6px 14px', borderRadius: '14px', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Tag size={14} />
                     Category: {recipe.category}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+
+                  {/* Prep Time */}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: 'var(--color-text-secondary)', fontWeight: 600, backgroundColor: '#F3F4F6', padding: '6px 12px', borderRadius: '14px' }}>
                     <Clock size={16} color="var(--color-primary)" />
                     Prep Time: {recipe.prep_time || '20m'}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+
+                  {/* Base Servings */}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: 'var(--color-text-secondary)', fontWeight: 600, backgroundColor: '#F3F4F6', padding: '6px 12px', borderRadius: '14px' }}>
                     <Utensils size={16} color="var(--color-primary)" />
-                    Base Servings: {recipe.servings || 1}
+                    Base Servings: {recipe.servings || 1} serv
                   </span>
                 </div>
 
@@ -141,18 +176,18 @@ const RecipeViewPage = ({ recipeId }) => {
               )}
             </Card>
 
-            {/* Complete Ingredients List Table */}
+            {/* Complete Ingredients Breakdown Table with Supplier */}
             <Card padding="0">
-              <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
                   <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
-                    Complete Ingredients Breakdown
+                    Complete Ingredients & Supplier Breakdown
                   </h3>
                   <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: '4px 0 0 0' }}>
-                    Exact ingredient measurements and UOM required per serving.
+                    Exact ingredient measurements, UOM, and assigned vendor sources.
                   </p>
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-pale)', padding: '6px 14px', borderRadius: '16px' }}>
                   Total Items: {recipe.ingredients ? recipe.ingredients.length : 0}
                 </span>
               </div>
@@ -168,31 +203,69 @@ const RecipeViewPage = ({ recipeId }) => {
                       <tr>
                         <th>#</th>
                         <th>Ingredient Name</th>
+                        <th>Category</th>
                         <th>Quantity per Serving</th>
                         <th>Unit of Measure (UOM)</th>
+                        <th>Assigned Supplier</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {recipe.ingredients.map((ing, idx) => (
-                        <tr key={idx}>
-                          <td style={{ color: 'var(--color-text-muted)', fontWeight: 600, width: '40px' }}>
-                            {idx + 1}
-                          </td>
-                          <td>
-                            <strong style={{ color: 'var(--color-text-primary)', fontSize: '14px' }}>
-                              {ing.ingredient_name}
-                            </strong>
-                          </td>
-                          <td style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary-darker)' }}>
-                            {ing.quantity}
-                          </td>
-                          <td>
-                            <span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '4px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: 600 }}>
-                              {ing.unit}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {recipe.ingredients.map((ing, idx) => {
+                        const master = ing.masterIngredient || ing.master_ingredient;
+                        const masterCat = master?.category?.name || null;
+                        const supName = ing.supplier?.name || null;
+                        const supPhone = ing.supplier?.phone || null;
+                        const supEmail = ing.supplier?.email || null;
+
+                        return (
+                          <tr key={idx}>
+                            <td style={{ color: 'var(--color-text-muted)', fontWeight: 600, width: '40px' }}>
+                              {idx + 1}
+                            </td>
+                            <td>
+                              <strong style={{ color: 'var(--color-text-primary)', fontSize: '14px' }}>
+                                {ing.ingredient_name}
+                              </strong>
+                            </td>
+                            <td>
+                              {masterCat ? (
+                                <span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '3px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: 600 }}>
+                                  {masterCat}
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>General</span>
+                              )}
+                            </td>
+                            <td style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-primary-darker)' }}>
+                              {ing.quantity}
+                            </td>
+                            <td>
+                              <span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '4px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: 600 }}>
+                                {ing.unit}
+                              </span>
+                            </td>
+                            <td>
+                              {supName ? (
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <Truck size={14} color="var(--color-primary)" />
+                                    {supName}
+                                  </span>
+                                  {(supPhone || supEmail) && (
+                                    <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                                      {supPhone ? `📞 ${supPhone}` : supEmail}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: '12px', fontStyle: 'italic' }}>
+                                  Unassigned / General
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -204,11 +277,11 @@ const RecipeViewPage = ({ recipeId }) => {
               <Card>
                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ShieldAlert size={20} color="#D97706" />
-                  <span>Allergen Declarations</span>
+                  <span>Allergen Declarations & Dietary Safety Warnings</span>
                 </h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {recipe.allergens.map((allergen, idx) => (
-                    <span key={idx} style={{ backgroundColor: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A', padding: '6px 12px', borderRadius: '14px', fontWeight: 700, fontSize: '13px' }}>
+                    <span key={idx} style={{ backgroundColor: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A', padding: '6px 14px', borderRadius: '14px', fontWeight: 700, fontSize: '13px' }}>
                       ⚠️ {allergen}
                     </span>
                   ))}
@@ -221,13 +294,28 @@ const RecipeViewPage = ({ recipeId }) => {
               <Card style={{ backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#047857', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <CheckCircle2 size={20} color="#047857" />
-                  <span>HACCP CCP Preparation & Critical Limits</span>
+                  <span>HACCP CCP Preparation & Critical Control Limits</span>
                 </h3>
                 <p style={{ fontSize: '14px', color: '#065F46', margin: 0, lineHeight: 1.5 }}>
                   {recipe.haccp_notes}
                 </p>
               </Card>
             )}
+
+            {/* Audit & Specification Metadata Footer */}
+            <Card padding="16px">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                  <span>📋 Recipe ID: #{recipe.id}</span>
+                  <span>🏢 Tenant ID: #{recipe.tenant_id}</span>
+                  <span>📍 Branch ID: #{recipe.branch_id}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                  <span>📅 Created: {formatDate(recipe.created_at)}</span>
+                  <span>🔄 Last Modified: {formatDate(recipe.updated_at)}</span>
+                </div>
+              </div>
+            </Card>
           </div>
         )}
       </div>

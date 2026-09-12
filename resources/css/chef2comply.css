@@ -939,3 +939,154 @@ select:-webkit-autofill:focus {
   -webkit-text-fill-color: #071713 !important;
 }
 
+/* 8. Ireland Time Greeting Banner & Dashboard Styling */
+.ireland-greeting-card {
+  background: linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #F59E0B 100%);
+  border-radius: 20px;
+  padding: 30px 36px;
+  color: #FFFFFF;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 14px 30px -5px rgba(0, 0, 0, 0.2);
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: all 0.5s ease;
+}
+
+.ireland-greeting-card.sky-morning {
+  background: linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #F59E0B 100%);
+  box-shadow: 0 14px 30px -5px rgba(2, 132, 199, 0.35);
+}
+
+.ireland-greeting-card.sky-afternoon {
+  background: linear-gradient(135deg, #0369A1 0%, #0EA5E9 55%, #EAB308 100%);
+  box-shadow: 0 14px 30px -5px rgba(14, 165, 233, 0.35);
+}
+
+.ireland-greeting-card.sky-sunset {
+  background: linear-gradient(135deg, #C2410C 0%, #E11D48 50%, #7C3AED 100%);
+  box-shadow: 0 14px 30px -5px rgba(225, 29, 72, 0.35);
+}
+
+.ireland-greeting-card.sky-night {
+  background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #4C1D95 100%);
+  box-shadow: 0 14px 30px -5px rgba(30, 27, 75, 0.45);
+}
+
+.ireland-greeting-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.ireland-greeting-main {
+  max-width: 620px;
+}
+
+.ireland-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.ireland-location-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.ireland-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #34D399;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+  animation: pulse-emerald 2s infinite;
+}
+
+@keyframes pulse-emerald {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(52, 211, 153, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+  }
+}
+
+.ireland-greeting-title {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ireland-greeting-subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.ireland-time-card {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 14px 20px;
+  text-align: right;
+  min-width: 200px;
+}
+
+.ireland-time-clock {
+  font-size: 24px;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: 0.5px;
+  font-family: var(--font-family);
+}
+
+.ireland-time-date {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.ireland-greeting-bg-glow {
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.25) 0%, rgba(26, 107, 79, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+
