@@ -11,6 +11,20 @@ import ManagerPinModal from '../components/common/ManagerPinModal';
 import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
+const formatDateStr = (str) => {
+  if (!str) return 'N/A';
+  const d = str.split('T')[0].split('-');
+  if (d.length === 3) return `${d[2]}/${d[1]}/${d[0]}`;
+  return str;
+};
+
+const formatTimeStr = (str) => {
+  if (!str) return 'N/A';
+  const t = str.split('T')[1] ? str.split('T')[1].split(':') : str.split(':');
+  if (t.length >= 2) return `${t[0]}:${t[1]}`;
+  return str;
+};
+
 const PestControlMonitoringPage = () => {
   const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
@@ -219,8 +233,8 @@ const PestControlMonitoringPage = () => {
                 {filteredLogs.map(log => (
                   <tr key={log.id}>
                     <td>
-                      <strong style={{ color: 'var(--color-text-primary)' }}>{log.log_date}</strong>
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{log.log_time}</div>
+                      <strong style={{ color: 'var(--color-text-primary)' }}>{formatDateStr(log.log_date)}</strong>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{formatTimeStr(log.log_time)}</div>
                     </td>
                     <td>
                       {log.status === 'Passed' ? (
