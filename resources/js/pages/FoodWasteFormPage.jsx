@@ -11,8 +11,9 @@ const UNITS = ['kg', 'g', 'litres', 'portions', 'units', 'trays'];
 
 const createEmptyItem = () => ({
   id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-  itemType: 'ingredient', // 'ingredient' | 'recipe'
+  itemType: '', // '' | 'ingredient' | 'food_item' | 'recipe'
   ingredientId: '',
+  foodItemId: '',
   recipeId: '',
   foodItem: '',
   wasteTypeId: '',
@@ -22,7 +23,7 @@ const createEmptyItem = () => ({
   reasonId: '',
   reason: '',
   quantity: '',
-  unit: 'kg',
+  unit: '',
   estimatedCost: '',
   batchCode: '',
   expiryDate: '',
@@ -46,8 +47,9 @@ const FoodWasteFormPage = ({ logId }) => {
   const [sourcesMaster, setSourcesMaster] = useState([]);
   const [methodsMaster, setMethodsMaster] = useState([]);
 
-  // Master Ingredients & Master Recipes for Waste Cost Calculator
+  // Master Ingredients, Master Food Items & Master Recipes for Waste Cost Calculator
   const [masterIngredients, setMasterIngredients] = useState([]);
+  const [masterFoodItems, setMasterFoodItems] = useState([]);
   const [masterRecipes, setMasterRecipes] = useState([]);
 
   // UOM & Storage Types for Manager Hub Master Creation
@@ -106,9 +108,12 @@ const FoodWasteFormPage = ({ logId }) => {
 
     // Fetch Food Items (Manager Hub Master)
     axios.get('/api/food-items').then(res => {
+      const activeFoodItems = (res.data || []).filter(f => f.status === 'Active');
+      setMasterFoodItems(activeFoodItems);
       const fList = (res.data || []).map(f => typeof f === 'string' ? f : f.name);
       setFoodItemsList(fList.length > 0 ? fList : ['Minced Beef', 'Chicken Breast', 'Lettuce', 'Milk', 'Cooked Rice']);
     }).catch(() => {
+      setMasterFoodItems([]);
       setFoodItemsList(['Minced Beef', 'Chicken Breast', 'Lettuce', 'Milk', 'Cooked Rice']);
     });
 
@@ -173,47 +178,34 @@ const FoodWasteFormPage = ({ logId }) => {
   }, []);
 
   // Once masters load:
-  // 1. Patch items with empty IDs to use first master entry (new items)
-  // 2. Resolve names from IDs for items loaded from DB (edit mode)
+  // Resolve names from IDs for items loaded from DB (edit mode)
   useEffect(() => {
     if (typesMaster.length === 0 && sourcesMaster.length === 0 && reasonsMaster.length === 0 && methodsMaster.length === 0) return;
     setWasteItems(prev => prev.map(item => {
       const updated = { ...item };
 
-      // Resolve wasteType name from wasteTypeId, or default to first master
+      // Resolve wasteType name from wasteTypeId
       if (updated.wasteTypeId) {
         const found = typesMaster.find(t => String(t.id) === String(updated.wasteTypeId));
         if (found) updated.wasteType = found.name;
-      } else if (typesMaster.length > 0) {
-        updated.wasteTypeId = typesMaster[0].id;
-        updated.wasteType = typesMaster[0].name;
       }
 
-      // Resolve source name from sourceId, or default to first master
+      // Resolve source name from sourceId
       if (updated.sourceId) {
         const found = sourcesMaster.find(s => String(s.id) === String(updated.sourceId));
         if (found) updated.source = found.name;
-      } else if (sourcesMaster.length > 0) {
-        updated.sourceId = sourcesMaster[0].id;
-        updated.source = sourcesMaster[0].name;
       }
 
-      // Resolve reason name from reasonId, or default to first master
+      // Resolve reason name from reasonId
       if (updated.reasonId) {
         const found = reasonsMaster.find(r => String(r.id) === String(updated.reasonId));
         if (found) updated.reason = found.name;
-      } else if (reasonsMaster.length > 0) {
-        updated.reasonId = reasonsMaster[0].id;
-        updated.reason = reasonsMaster[0].name;
       }
 
-      // Resolve disposalMethod name from disposalMethodId, or default to first master
+      // Resolve disposalMethod name from disposalMethodId
       if (updated.disposalMethodId) {
         const found = methodsMaster.find(m => String(m.id) === String(updated.disposalMethodId));
         if (found) updated.disposalMethod = found.name;
-      } else if (methodsMaster.length > 0) {
-        updated.disposalMethodId = methodsMaster[0].id;
-        updated.disposalMethod = methodsMaster[0].name;
       }
 
       return updated;
@@ -252,15 +244,14 @@ const FoodWasteFormPage = ({ logId }) => {
           const loadedItems = itemsData.map(item => {
             const foodName = item.foodItem || item.food_item || item.name || '';
             let type = item.itemType || item.item_type || null;
-            if (!type || type === 'ingredient') {
-              const detected = detectItemType(foodName, masterRecipes, masterIngredients);
-              if (detected === 'recipe') type = 'recipe';
-              else if (!type) type = 'ingredient';
+            if (!type) {
+              type = detectItemType(foodName, masterFoodItems, masterRecipes, masterIngredients);
             }
             return {
               id: 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-              itemType: type,
+              itemType: type || '',
               ingredientId: item.ingredientId || item.ingredient_id || '',
+              foodItemId: item.foodItemId || item.food_item_id || '',
               recipeId: item.recipeId || item.recipe_id || '',
               foodItem: foodName,
               // Load IDs only — names will be resolved by masters-patch useEffect
@@ -273,7 +264,7 @@ const FoodWasteFormPage = ({ logId }) => {
               disposalMethodId: item.disposal_method_id || item.disposalMethodId || '',
               disposalMethod: '', // resolved by masters-patch useEffect
               quantity: item.quantity !== null && item.quantity !== undefined ? String(item.quantity) : '',
-              unit: item.unit || (type === 'recipe' ? 'portions' : 'kg'),
+              unit: item.unit || '',
               estimatedCost: item.estimatedCost !== null && item.estimatedCost !== undefined ? String(item.estimatedCost) : '',
               batchCode: item.batchCode || item.batch_code || '',
               expiryDate: formatDateStr(item.expiryDate || item.expiry_date || ''),
@@ -290,13 +281,7 @@ const FoodWasteFormPage = ({ logId }) => {
 
   /* Item Handlers */
   const handleAddItem = () => {
-    const newItem = createEmptyItem();
-    // Apply first master defaults immediately
-    if (typesMaster.length > 0) { newItem.wasteTypeId = typesMaster[0].id; newItem.wasteType = typesMaster[0].name; }
-    if (sourcesMaster.length > 0) { newItem.sourceId = sourcesMaster[0].id; newItem.source = sourcesMaster[0].name; }
-    if (reasonsMaster.length > 0) { newItem.reasonId = reasonsMaster[0].id; newItem.reason = reasonsMaster[0].name; }
-    if (methodsMaster.length > 0) { newItem.disposalMethodId = methodsMaster[0].id; newItem.disposalMethod = methodsMaster[0].name; }
-    setWasteItems(prev => [...prev, newItem]);
+    setWasteItems(prev => [...prev, createEmptyItem()]);
   };
 
   const handleRemoveItem = (id) => {
@@ -313,12 +298,21 @@ const FoodWasteFormPage = ({ logId }) => {
 
     const targetName = String(itemName).trim().toLowerCase();
 
-    if (type === 'recipe') {
+    if (type === 'food_item') {
+      const matchedFood = masterFoodItems.find(f => String(f.name).trim().toLowerCase() === targetName);
+      if (matchedFood && parseFloat(matchedFood.unit_cost) > 0) {
+        return (q * parseFloat(matchedFood.unit_cost)).toFixed(2);
+      }
+    } else if (type === 'recipe') {
       const matchedRec = masterRecipes.find(r => String(r.name).trim().toLowerCase() === targetName);
       if (matchedRec && parseFloat(matchedRec.cost_per_portion) > 0) {
         return (q * parseFloat(matchedRec.cost_per_portion)).toFixed(2);
       }
-    } else {
+      const matchedFood = masterFoodItems.find(f => String(f.name).trim().toLowerCase() === targetName);
+      if (matchedFood && parseFloat(matchedFood.unit_cost) > 0) {
+        return (q * parseFloat(matchedFood.unit_cost)).toFixed(2);
+      }
+    } else if (type === 'ingredient') {
       const matchedIng = masterIngredients.find(i => String(i.name).trim().toLowerCase() === targetName);
       if (matchedIng && parseFloat(matchedIng.unit_cost) > 0) {
         return (q * parseFloat(matchedIng.unit_cost)).toFixed(2);
@@ -327,39 +321,41 @@ const FoodWasteFormPage = ({ logId }) => {
     return '';
   };
 
-  const detectItemType = (itemName, recipeList, ingredientList) => {
-    if (!itemName) return 'ingredient';
+  const detectItemType = (itemName, foodItemsList, recipeList, ingredientList) => {
+    if (!itemName) return '';
     const target = String(itemName).trim().toLowerCase();
+    if (foodItemsList && foodItemsList.some(f => String(f.name).trim().toLowerCase() === target)) {
+      return 'food_item';
+    }
     if (recipeList && recipeList.some(r => String(r.name).trim().toLowerCase() === target)) {
       return 'recipe';
     }
     if (ingredientList && ingredientList.some(i => String(i.name).trim().toLowerCase() === target)) {
       return 'ingredient';
     }
-    return 'ingredient';
+    return '';
   };
 
   // Sync auto-cost & smart itemType detection whenever master data finishes loading
   useEffect(() => {
-    if (masterIngredients.length === 0 && masterRecipes.length === 0) return;
+    if (masterIngredients.length === 0 && masterFoodItems.length === 0 && masterRecipes.length === 0) return;
     setWasteItems(prev => prev.map(item => {
       let updated = { ...item };
-      if (item.foodItem) {
-        const detected = detectItemType(item.foodItem, masterRecipes, masterIngredients);
-        if (detected === 'recipe' && updated.itemType !== 'recipe') {
-          updated.itemType = 'recipe';
-          updated.unit = 'portions';
+      if (item.foodItem && !updated.itemType) {
+        const detected = detectItemType(item.foodItem, masterFoodItems, masterRecipes, masterIngredients);
+        if (detected) {
+          updated.itemType = detected;
         }
       }
       if (updated.foodItem && updated.quantity && parseFloat(updated.quantity) > 0) {
-        const calculatedCost = computeAutoWasteCost(updated.itemType || 'ingredient', updated.foodItem, updated.quantity);
+        const calculatedCost = computeAutoWasteCost(updated.itemType, updated.foodItem, updated.quantity);
         if (calculatedCost !== '') {
           updated.estimatedCost = calculatedCost;
         }
       }
       return updated;
     }));
-  }, [masterIngredients, masterRecipes]);
+  }, [masterIngredients, masterFoodItems, masterRecipes]);
 
   const handleItemChange = (id, field, value) => {
     setWasteItems(prev => prev.map(item => {
@@ -371,55 +367,109 @@ const FoodWasteFormPage = ({ logId }) => {
       if (field === 'wasteTypeId') {
         const found = typesMaster.find(t => String(t.id) === String(value));
         if (found) { updated.wasteTypeId = found.id; updated.wasteType = found.name; }
+        else { updated.wasteTypeId = ''; updated.wasteType = ''; }
       }
       if (field === 'sourceId') {
         const found = sourcesMaster.find(s => String(s.id) === String(value));
         if (found) { updated.sourceId = found.id; updated.source = found.name; }
+        else { updated.sourceId = ''; updated.source = ''; }
       }
       if (field === 'reasonId') {
         const found = reasonsMaster.find(r => String(r.id) === String(value));
         if (found) { updated.reasonId = found.id; updated.reason = found.name; }
+        else { updated.reasonId = ''; updated.reason = ''; }
       }
       if (field === 'disposalMethodId') {
         const found = methodsMaster.find(m => String(m.id) === String(value));
         if (found) { updated.disposalMethodId = found.id; updated.disposalMethod = found.name; }
+        else { updated.disposalMethodId = ''; updated.disposalMethod = ''; }
       }
 
       if (field === 'itemType') {
         updated.foodItem = '';
         updated.ingredientId = '';
         updated.recipeId = '';
-        updated.unit = value === 'recipe' ? 'portions' : 'kg';
+        updated.foodItemId = '';
+        updated.unit = '';
         updated.estimatedCost = '';
       }
 
       if (field === 'foodItem') {
-        if (updated.itemType === 'recipe') {
+        if (!value) {
+          updated.foodItem = '';
+          updated.foodItemId = '';
+          updated.recipeId = '';
+          updated.ingredientId = '';
+          updated.unit = '';
+          updated.estimatedCost = '';
+        } else if (updated.itemType === 'food_item') {
+          const foodItemObj = masterFoodItems.find(f => String(f.name).trim().toLowerCase() === String(value).trim().toLowerCase());
+          if (foodItemObj) {
+            updated.foodItemId = foodItemObj.id;
+            updated.recipeId = '';
+            updated.ingredientId = '';
+            updated.foodItem = foodItemObj.name;
+            const uomCode = (foodItemObj.uom?.unit_code || foodItemObj.uom?.unit_symbol || '').toLowerCase();
+            const uomName = (foodItemObj.uom?.unit_name || '').toLowerCase();
+
+            if (UNITS.includes(uomCode)) {
+              updated.unit = uomCode;
+            } else if (UNITS.includes(uomName)) {
+              updated.unit = uomName;
+            } else if (uomCode === 'kg' || uomName.includes('kilo')) {
+              updated.unit = 'kg';
+            } else if (uomCode === 'g' || uomName.includes('gram')) {
+              updated.unit = 'g';
+            } else if (uomCode === 'l' || uomName.includes('litre')) {
+              updated.unit = 'litres';
+            } else {
+              updated.unit = 'units';
+            }
+          } else {
+            updated.foodItemId = '';
+            updated.recipeId = '';
+            updated.ingredientId = '';
+            updated.foodItem = value;
+          }
+        } else if (updated.itemType === 'recipe') {
           const rec = masterRecipes.find(r => String(r.name).trim().toLowerCase() === String(value).trim().toLowerCase());
           if (rec) {
             updated.recipeId = rec.id;
+            updated.foodItemId = '';
+            updated.ingredientId = '';
             updated.foodItem = rec.name;
             updated.unit = 'portions';
           } else {
+            updated.foodItemId = '';
+            updated.recipeId = '';
+            updated.ingredientId = '';
             updated.foodItem = value;
           }
-        } else {
+        } else if (updated.itemType === 'ingredient') {
           const ing = masterIngredients.find(i => String(i.name).trim().toLowerCase() === String(value).trim().toLowerCase());
           if (ing) {
             updated.ingredientId = ing.id;
+            updated.foodItemId = '';
+            updated.recipeId = '';
             updated.foodItem = ing.name;
             if (ing.uom?.unit_code) {
               const code = ing.uom.unit_code.toLowerCase();
               if (UNITS.includes(code)) updated.unit = code;
+              else updated.unit = 'kg';
+            } else {
+              updated.unit = 'kg';
             }
           } else {
+            updated.ingredientId = '';
+            updated.foodItemId = '';
+            updated.recipeId = '';
             updated.foodItem = value;
           }
         }
       }
 
       if (['itemType', 'foodItem', 'quantity'].includes(field)) {
-        const calculatedCost = computeAutoWasteCost(updated.itemType || 'ingredient', updated.foodItem, updated.quantity);
+        const calculatedCost = computeAutoWasteCost(updated.itemType, updated.foodItem, updated.quantity);
         if (calculatedCost !== '') {
           updated.estimatedCost = calculatedCost;
         }
@@ -461,11 +511,14 @@ const FoodWasteFormPage = ({ logId }) => {
       const createdName = createdFood.name;
 
       // Add to local food items list
+      setMasterFoodItems(prev => [...prev.filter(f => f.id !== createdFood.id), createdFood]);
       setFoodItemsList(prev => [...prev.filter(f => f !== createdName), createdName]);
 
       // Set selected for active waste row
       if (wasteItems.length > 0) {
-        handleItemChange(wasteItems[wasteItems.length - 1].id, 'foodItem', createdName);
+        const lastItemId = wasteItems[wasteItems.length - 1].id;
+        handleItemChange(lastItemId, 'itemType', 'food_item');
+        handleItemChange(lastItemId, 'foodItem', createdName);
       }
 
       setNewFoodName('');
@@ -526,9 +579,25 @@ const FoodWasteFormPage = ({ logId }) => {
 
     let itemErrorMsg = null;
     wasteItems.forEach((item, idx) => {
-      if (!item.foodItem) itemErrorMsg = `Item ${idx + 1}: Please select a food item.`;
-      else if (!item.quantity || parseFloat(item.quantity) <= 0) itemErrorMsg = `Item ${idx + 1}: Please enter a valid quantity.`;
-      else if (item.reason === 'Expired raw materials' && !item.expiryDate) {
+      if (itemErrorMsg) return;
+      if (!item.itemType) {
+        itemErrorMsg = `Item ${idx + 1}: Please select an Item Category.`;
+      } else if (!item.foodItem) {
+        const catLabel = item.itemType === 'food_item' ? 'Food Item' : (item.itemType === 'recipe' ? 'Recipe' : 'Ingredient');
+        itemErrorMsg = `Item ${idx + 1}: Please select a ${catLabel}.`;
+      } else if (!item.wasteTypeId) {
+        itemErrorMsg = `Item ${idx + 1}: Please select a Waste Type.`;
+      } else if (!item.sourceId) {
+        itemErrorMsg = `Item ${idx + 1}: Please select a Waste Source / Stage.`;
+      } else if (!item.reasonId) {
+        itemErrorMsg = `Item ${idx + 1}: Please select a Waste Reason.`;
+      } else if (!item.quantity || parseFloat(item.quantity) <= 0) {
+        itemErrorMsg = `Item ${idx + 1}: Please enter a valid quantity greater than 0.`;
+      } else if (!item.unit) {
+        itemErrorMsg = `Item ${idx + 1}: Please select a Unit.`;
+      } else if (!item.disposalMethodId) {
+        itemErrorMsg = `Item ${idx + 1}: Please select a Disposal Method.`;
+      } else if (item.reason === 'Expired raw materials' && !item.expiryDate) {
         itemErrorMsg = `Item ${idx + 1}: Expiry / Use-by date is required for expired raw materials.`;
       }
     });
@@ -717,11 +786,13 @@ const FoodWasteFormPage = ({ logId }) => {
                         <label className="form-label" style={{ fontWeight: 700 }}>Item Category *</label>
                         <select
                           className="form-select"
-                          value={item.itemType || 'ingredient'}
+                          value={item.itemType || ''}
                           onChange={e => handleItemChange(item.id, 'itemType', e.target.value)}
-                          style={{ fontWeight: 600, color: 'var(--color-primary-darker)' }}
+                          style={{ fontWeight: 600, color: item.itemType ? 'var(--color-primary-darker)' : 'var(--color-text-secondary)' }}
                         >
+                          <option value="">-- Select Category --</option>
                           <option value="ingredient">🥦 Raw Ingredient</option>
+                          <option value="food_item">📦 Food Item</option>
                           <option value="recipe">🍲 Prepared Dish / Recipe</option>
                         </select>
                       </div>
@@ -731,29 +802,46 @@ const FoodWasteFormPage = ({ logId }) => {
                         <label className="form-label" style={{ fontWeight: 700 }}>Food Item / Product *</label>
                         <select
                           className="form-select"
-                          value={item.foodItem}
+                          value={item.foodItem || ''}
                           onChange={e => handleItemChange(item.id, 'foodItem', e.target.value)}
+                          disabled={!item.itemType}
                         >
-                          <option value="">-- Select {item.itemType === 'recipe' ? 'Prepared Dish' : 'Ingredient'} * --</option>
-                          {item.itemType === 'recipe' ? (
+                          {!item.itemType && <option value="">-- Select Category First --</option>}
+                          {item.itemType === 'ingredient' && (
                             <>
-                              {masterRecipes.map(r => (
-                                <option key={r.id} value={r.name}>
-                                  {r.name} {r.cost_per_portion > 0 ? `(€${r.cost_per_portion.toFixed(2)}/portion)` : ''}
-                                </option>
-                              ))}
-                              {item.foodItem && !masterRecipes.some(r => r.name === item.foodItem) && (
-                                <option value={item.foodItem}>{item.foodItem}</option>
-                              )}
-                            </>
-                          ) : (
-                            <>
+                              <option value="">-- Select Ingredient --</option>
                               {masterIngredients.map(ing => (
                                 <option key={ing.id} value={ing.name}>
-                                  {ing.name} {ing.unit_cost > 0 ? `(€${ing.unit_cost.toFixed(2)}/${ing.uom?.unit_code || 'unit'})` : ''}
+                                  {ing.name} {ing.unit_cost > 0 ? `(€${parseFloat(ing.unit_cost).toFixed(2)}/${ing.uom?.unit_code || 'unit'})` : ''}
                                 </option>
                               ))}
                               {item.foodItem && !masterIngredients.some(i => i.name === item.foodItem) && (
+                                <option value={item.foodItem}>{item.foodItem}</option>
+                              )}
+                            </>
+                          )}
+                          {item.itemType === 'food_item' && (
+                            <>
+                              <option value="">-- Select Food Item --</option>
+                              {masterFoodItems.map(f => (
+                                <option key={f.id} value={f.name}>
+                                  {f.name} {f.unit_cost > 0 ? `(€${parseFloat(f.unit_cost).toFixed(2)}/${f.uom?.unit_code || f.uom?.unit_symbol || 'unit'})` : ''}
+                                </option>
+                              ))}
+                              {item.foodItem && !masterFoodItems.some(f => f.name === item.foodItem) && (
+                                <option value={item.foodItem}>{item.foodItem}</option>
+                              )}
+                            </>
+                          )}
+                          {item.itemType === 'recipe' && (
+                            <>
+                              <option value="">-- Select Recipe --</option>
+                              {masterRecipes.map(r => (
+                                <option key={`rec_${r.id}`} value={r.name}>
+                                  {r.name} {r.cost_per_portion > 0 ? `(€${parseFloat(r.cost_per_portion).toFixed(2)}/portion)` : ''}
+                                </option>
+                              ))}
+                              {item.foodItem && !masterRecipes.some(r => r.name === item.foodItem) && (
                                 <option value={item.foodItem}>{item.foodItem}</option>
                               )}
                             </>
@@ -765,7 +853,7 @@ const FoodWasteFormPage = ({ logId }) => {
                       <div className="form-group">
                         <label className="form-label">Waste Type *</label>
                         <select className="form-select" value={String(item.wasteTypeId || '')} onChange={e => handleItemChange(item.id, 'wasteTypeId', e.target.value)}>
-                          {typesMaster.length === 0 && <option value="">Loading...</option>}
+                          <option value="">-- Select Waste Type --</option>
                           {typesMaster.map(t => (
                             <option key={t.id} value={String(t.id)}>{t.name}</option>
                           ))}
@@ -776,7 +864,7 @@ const FoodWasteFormPage = ({ logId }) => {
                       <div className="form-group">
                         <label className="form-label">Waste Source / Stage *</label>
                         <select className="form-select" value={String(item.sourceId || '')} onChange={e => handleItemChange(item.id, 'sourceId', e.target.value)}>
-                          {sourcesMaster.length === 0 && <option value="">Loading...</option>}
+                          <option value="">-- Select Waste Source / Stage --</option>
                           {sourcesMaster.map(s => (
                             <option key={s.id} value={String(s.id)}>{s.name}</option>
                           ))}
@@ -787,7 +875,7 @@ const FoodWasteFormPage = ({ logId }) => {
                       <div className="form-group">
                         <label className="form-label">Waste Reason *</label>
                         <select className="form-select" value={String(item.reasonId || '')} onChange={e => handleItemChange(item.id, 'reasonId', e.target.value)}>
-                          {reasonsMaster.length === 0 && <option value="">Loading...</option>}
+                          <option value="">-- Select Waste Reason --</option>
                           {reasonsMaster.map(r => (
                             <option key={r.id} value={String(r.id)}>{r.name}</option>
                           ))}
@@ -803,7 +891,8 @@ const FoodWasteFormPage = ({ logId }) => {
                       {/* Unit */}
                       <div className="form-group">
                         <label className="form-label">Unit *</label>
-                        <select className="form-select" value={item.unit} onChange={e => handleItemChange(item.id, 'unit', e.target.value)}>
+                        <select className="form-select" value={item.unit || ''} onChange={e => handleItemChange(item.id, 'unit', e.target.value)}>
+                          <option value="">-- Select Unit --</option>
                           {UNITS.map(u => (
                             <option key={u} value={u}>{u}</option>
                           ))}
@@ -817,21 +906,31 @@ const FoodWasteFormPage = ({ logId }) => {
                         {(() => {
                           const q = parseFloat(item.quantity);
                           if (!isNaN(q) && q > 0 && item.foodItem) {
-                            if (item.itemType === 'recipe') {
-                              const rec = masterRecipes.find(r => r.name === item.foodItem);
-                              if (rec && rec.cost_per_portion > 0) {
+                            if (item.itemType === 'food_item') {
+                              const foodObj = masterFoodItems.find(f => f.name === item.foodItem);
+                              if (foodObj && parseFloat(foodObj.unit_cost) > 0) {
+                                const uLabel = foodObj.uom?.unit_code || foodObj.uom?.unit_symbol || 'unit';
                                 return (
                                   <span style={{ fontSize: '11px', color: '#1D4ED8', display: 'block', marginTop: '4px', fontWeight: 600 }}>
-                                    ✨ Calculated: {q} portions × €{rec.cost_per_portion.toFixed(2)}/portion
+                                    ✨ Calculated: {q} {item.unit || uLabel} × €{parseFloat(foodObj.unit_cost).toFixed(2)}/{uLabel}
                                   </span>
                                 );
                               }
-                            } else {
-                              const ing = masterIngredients.find(i => i.name === item.foodItem);
-                              if (ing && ing.unit_cost > 0) {
+                            } else if (item.itemType === 'recipe') {
+                              const rec = masterRecipes.find(r => r.name === item.foodItem);
+                              if (rec && parseFloat(rec.cost_per_portion) > 0) {
                                 return (
                                   <span style={{ fontSize: '11px', color: '#1D4ED8', display: 'block', marginTop: '4px', fontWeight: 600 }}>
-                                    ✨ Calculated: {q} {item.unit} × €{ing.unit_cost.toFixed(2)}/{ing.uom?.unit_code || 'unit'}
+                                    ✨ Calculated: {q} portions × €{parseFloat(rec.cost_per_portion).toFixed(2)}/portion
+                                  </span>
+                                );
+                              }
+                            } else if (item.itemType === 'ingredient') {
+                              const ing = masterIngredients.find(i => i.name === item.foodItem);
+                              if (ing && parseFloat(ing.unit_cost) > 0) {
+                                return (
+                                  <span style={{ fontSize: '11px', color: '#1D4ED8', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                                    ✨ Calculated: {q} {item.unit || 'unit'} × €{parseFloat(ing.unit_cost).toFixed(2)}/{ing.uom?.unit_code || 'unit'}
                                   </span>
                                 );
                               }
@@ -859,7 +958,7 @@ const FoodWasteFormPage = ({ logId }) => {
                       <div className="form-group">
                         <label className="form-label">Disposal Method *</label>
                         <select className="form-select" value={String(item.disposalMethodId || '')} onChange={e => handleItemChange(item.id, 'disposalMethodId', e.target.value)}>
-                          {methodsMaster.length === 0 && <option value="">Loading...</option>}
+                          <option value="">-- Select Disposal Method --</option>
                           {methodsMaster.map(m => (
                             <option key={m.id} value={String(m.id)}>{m.name}</option>
                           ))}

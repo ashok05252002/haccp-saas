@@ -223,12 +223,12 @@ const FoodWasteViewPage = ({ logId }) => {
                               borderRadius: '6px',
                               fontSize: '11px',
                               fontWeight: 700,
-                              backgroundColor: itemType === 'recipe' ? '#F3E8FF' : '#DCFCE7',
-                              color: itemType === 'recipe' ? '#6B21A8' : '#15803D',
+                              backgroundColor: itemType === 'recipe' ? '#F3E8FF' : (itemType === 'food_item' ? '#E0F2FE' : '#DCFCE7'),
+                              color: itemType === 'recipe' ? '#6B21A8' : (itemType === 'food_item' ? '#0369A1' : '#15803D'),
                               display: 'inline-block',
                               whiteSpace: 'nowrap'
                             }}>
-                              {itemType === 'recipe' ? '🍲 Recipe' : '🥦 Ingredient'}
+                              {itemType === 'recipe' ? '🍲 Recipe' : (itemType === 'food_item' ? '📦 Food Item' : '🥦 Ingredient')}
                             </span>
                           </td>
                           <td><strong style={{ color: 'var(--color-text-primary)' }}>{foodItem}</strong></td>

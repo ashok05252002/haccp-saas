@@ -73,7 +73,8 @@ class FoodWasteLogController extends Controller
     private function normalizeLogItems(array $rawItems, $tenantId)
     {
         $ingredients = \App\Models\Ingredient::where('tenant_id', $tenantId)->get();
-        $recipes = \App\Models\Recipe::with(['ingredients.masterIngredient.uom'])->where('tenant_id', $tenantId)->get();
+        $foodItems   = \App\Models\FoodItem::where('tenant_id', $tenantId)->get();
+        $recipes     = \App\Models\Recipe::with(['ingredients.masterIngredient.uom'])->where('tenant_id', $tenantId)->get();
 
         $ingMap = [];
         $ingIdMap = [];
@@ -83,6 +84,16 @@ class FoodWasteLogController extends Controller
                 $ingMap[$key] = (float) $ing->unit_cost;
             }
             $ingIdMap[$key] = $ing->id;
+        }
+
+        $foodItemCostMap = [];
+        $foodItemIdMap   = [];
+        foreach ($foodItems as $fi) {
+            $key = strtolower(trim($fi->name));
+            if ($fi->unit_cost > 0) {
+                $foodItemCostMap[$key] = (float) $fi->unit_cost;
+            }
+            $foodItemIdMap[$key] = $fi->id;
         }
 
         $recMap = [];
@@ -106,8 +117,8 @@ class FoodWasteLogController extends Controller
             $itemKey = strtolower($itemName);
             $type = $item['itemType'] ?? $item['item_type'] ?? null;
 
-            if (empty($type) || ($type === 'ingredient' && isset($recMap[$itemKey]))) {
-                $type = isset($recMap[$itemKey]) ? 'recipe' : 'ingredient';
+            if (empty($type) || ($type === 'ingredient' && (isset($foodItemIdMap[$itemKey]) || isset($recMap[$itemKey])))) {
+                $type = isset($foodItemIdMap[$itemKey]) ? 'food_item' : (isset($recMap[$itemKey]) ? 'recipe' : 'ingredient');
             }
 
             // Resolve IDs — prefer stored ID keys; fall back to name lookup only for legacy records
@@ -141,6 +152,12 @@ class FoodWasteLogController extends Controller
                     ? (int) $item['ingredient_id']
                     : ($ingIdMap[$itemKey] ?? null));
 
+            $foodItemId = !empty($item['foodItemId'])
+                ? (int) $item['foodItemId']
+                : (!empty($item['food_item_id'])
+                    ? (int) $item['food_item_id']
+                    : ($foodItemIdMap[$itemKey] ?? null));
+
             $recipeId = !empty($item['recipeId'])
                 ? (int) $item['recipeId']
                 : (!empty($item['recipe_id'])
@@ -148,7 +165,7 @@ class FoodWasteLogController extends Controller
                     : ($recIdMap[$itemKey] ?? null));
 
             $q        = floatval($item['quantity'] ?? 0);
-            $unit     = $item['unit'] ?? ($type === 'recipe' ? 'portions' : 'kg');
+            $unit     = $item['unit'] ?? ($type === 'recipe' ? 'portions' : ($type === 'food_item' ? 'units' : 'kg'));
             $estCost  = isset($item['estimatedCost']) && $item['estimatedCost'] !== '' && $item['estimatedCost'] !== null
                 ? floatval($item['estimatedCost'])
                 : (isset($item['estimated_cost']) && $item['estimated_cost'] !== '' ? floatval($item['estimated_cost']) : null);
@@ -158,10 +175,15 @@ class FoodWasteLogController extends Controller
 
 
             if ($estCost === null || $estCost == 0) {
-                if ($type === 'recipe' || isset($recMap[$itemKey])) {
-                    $portionRate = $recMap[$itemKey] ?? 0;
-                    if ($portionRate > 0 && $q > 0) {
-                        $estCost = round($q * $portionRate, 2);
+                if ($type === 'food_item' || isset($foodItemCostMap[$itemKey])) {
+                    $unitRate = $foodItemCostMap[$itemKey] ?? 0;
+                    if ($unitRate > 0 && $q > 0) {
+                        $estCost = round($q * $unitRate, 2);
+                    }
+                } elseif ($type === 'recipe' || isset($recMap[$itemKey])) {
+                    $unitRate = $recMap[$itemKey] ?? 0;
+                    if ($unitRate > 0 && $q > 0) {
+                        $estCost = round($q * $unitRate, 2);
                     }
                 } else {
                     $unitRate = $ingMap[$itemKey] ?? 0;
@@ -175,6 +197,7 @@ class FoodWasteLogController extends Controller
                 'foodItem'           => $itemName,
                 'itemType'           => $type,
                 'ingredientId'       => $ingredientId,
+                'foodItemId'         => $foodItemId,
                 'recipeId'           => $recipeId,
                 'waste_type_id'      => $wasteTypeId ? (int) $wasteTypeId : null,
                 'source_stage_id'    => $sourceId    ? (int) $sourceId    : null,

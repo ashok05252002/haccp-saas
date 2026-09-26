@@ -247,7 +247,7 @@ const FoodWasteMonitoringPage = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                           {log.items.slice(0, 3).map((item, idx) => (
                             <span key={idx} style={{ fontSize: '12.5px', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ color: 'var(--color-text-muted)' }}>{item.itemType === 'recipe' ? '🍲' : '🥦'}</span>
+                              <span style={{ color: 'var(--color-text-muted)' }}>{item.itemType === 'recipe' ? '🍲' : (item.itemType === 'food_item' ? '📦' : '🥦')}</span>
                               <span style={{ fontWeight: 500 }}>{item.foodItem || item.food_item || '—'}</span>
                               <span style={{ color: 'var(--color-text-muted)', fontSize: '11px' }}>({item.quantity} {item.unit})</span>
                             </span>
