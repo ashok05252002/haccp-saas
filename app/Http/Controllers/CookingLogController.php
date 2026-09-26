@@ -48,7 +48,7 @@ class CookingLogController extends Controller
             'food_item' => 'required|string|max:255',
             'staff_name' => 'required|string|max:255',
             'batch_code' => 'nullable|string|max:255',
-            'probe_id' => 'nullable|string|max:255',
+            'probe_id' => 'required|string|max:255',
             'cooking_temp' => 'nullable|numeric',
             'cooking_target' => 'nullable|string',
             'cooking_method' => 'nullable|string',
@@ -78,7 +78,9 @@ class CookingLogController extends Controller
             'final_signed_at' => 'nullable|date',
         ];
 
-        $request->validate($rules);
+        $request->validate($rules, [
+            'probe_id.required' => 'Please select Probe / Thermometer Used.',
+        ]);
 
         $tenantId = Auth::user()->tenant_id;
         $branchId = Auth::user()->branch_id ?? session('active_branch_id');
@@ -148,7 +150,7 @@ class CookingLogController extends Controller
             'food_item' => 'required|string|max:255',
             'staff_name' => 'required|string|max:255',
             'batch_code' => 'nullable|string|max:255',
-            'probe_id' => 'nullable|string|max:255',
+            'probe_id' => 'required|string|max:255',
             'cooking_temp' => 'nullable|numeric',
             'cooking_target' => 'nullable|string',
             'cooking_method' => 'nullable|string',
@@ -193,7 +195,9 @@ class CookingLogController extends Controller
             $rules['amendment_reason'] = 'required|string|min:3';
         }
 
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, [
+            'probe_id.required' => 'Please select Probe / Thermometer Used.',
+        ]);
 
         $updateData = $validated;
         unset($updateData['amendment_reason']);

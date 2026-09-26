@@ -293,9 +293,84 @@ class HaccpReportController extends Controller
                             $statusStr = 'Passed';
                             $passed = true;
                         }
+                    } elseif ($modelClass === CookingLog::class) {
+                        $hasFailedCheck = false;
+
+                        // 1. Explicit failed status
+                        $statusVal = strtolower(trim(strval($log->status ?? '')));
+                        if (in_array($statusVal, ['failed', 'fail', 'needs_review', 'need_review', 'action_required', 'requires_attention'])) {
+                            $hasFailedCheck = true;
+                        }
+
+                        // 2. Stage 1: Cooking Core Temperature (CCP-3)
+                        if (!$hasFailedCheck && $log->cooking_temp !== null && $log->cooking_temp !== '' && $log->cooking_method !== 'N/A') {
+                            $cPassed = isset($log->cooking_passed) ? boolval($log->cooking_passed) : null;
+                            if ($cPassed === false || floatval($log->cooking_temp) < 75.0) {
+                                $hasFailedCheck = true;
+                            }
+                        }
+
+                        // 3. Stage 2: Blast Chilling (CCP-4) - only evaluated if stage was used
+                        if (!$hasFailedCheck && $log->chilling_end_temp !== null && $log->chilling_end_temp !== '' && $log->chilling_method !== 'N/A') {
+                            $chPassed = isset($log->chilling_passed) ? boolval($log->chilling_passed) : null;
+                            if ($chPassed === false || floatval($log->chilling_end_temp) > 3.0) {
+                                $hasFailedCheck = true;
+                            }
+                            if (!$hasFailedCheck && $log->chilling_duration_minutes !== null && intval($log->chilling_duration_minutes) > 90) {
+                                $hasFailedCheck = true;
+                            }
+                        }
+
+                        // 4. Stage 3: Cold Storage / Chiller Hold - only evaluated if stage was used
+                        if (!$hasFailedCheck && $log->chiller_temp !== null && $log->chiller_temp !== '' && $log->chiller_location !== 'N/A') {
+                            $chillerPassed = isset($log->chiller_passed) ? boolval($log->chiller_passed) : null;
+                            $chillerTemp = floatval($log->chiller_temp);
+                            if ($chillerPassed === false || $chillerTemp < 0.0 || $chillerTemp > 5.0) {
+                                $hasFailedCheck = true;
+                            }
+                        }
+
+                        // 5. Stage 4: Reheating Process - only evaluated if stage was used
+                        if (!$hasFailedCheck && $log->reheating_temp !== null && $log->reheating_temp !== '' && $log->reheating_method !== 'N/A') {
+                            $rehPassed = isset($log->reheating_passed) ? boolval($log->reheating_passed) : null;
+                            if ($rehPassed === false || floatval($log->reheating_temp) < 75.0) {
+                                $hasFailedCheck = true;
+                            }
+                        }
+
+                        // 6. Stage 5: Hot Holding & Service (CCP-5) - only evaluated if stage has data
+                        if (!$hasFailedCheck && $log->hot_holding_temp !== null && $log->hot_holding_temp !== '' && $log->hot_holding_location !== 'N/A') {
+                            $hhPassed = isset($log->hot_holding_passed) ? boolval($log->hot_holding_passed) : null;
+                            if ($hhPassed === false || floatval($log->hot_holding_temp) < 63.0) {
+                                $hasFailedCheck = true;
+                            }
+                        }
+
+                        if ($hasFailedCheck) {
+                            $statusStr = 'Needs Review';
+                            $passed = false;
+                        } else {
+                            $statusStr = 'Passed';
+                            $passed = true;
+                        }
                     } else {
-                        $statusStr = $log->status ?? 'Passed';
-                        $passed = (strtolower($statusStr) === 'passed');
+                        if (isset($log->check_passed) && ($log->check_passed === false || $log->check_passed === 0 || $log->check_passed === '0')) {
+                            $statusStr = 'Needs Review';
+                            $passed = false;
+                        } elseif (isset($log->check_passed) && ($log->check_passed === true || $log->check_passed === 1 || $log->check_passed === '1')) {
+                            $statusStr = 'Passed';
+                            $passed = true;
+                        } else {
+                            $rawStatus = $log->status ?? $log->overall_status ?? 'Passed';
+                            $statusVal = strtolower(trim(strval($rawStatus)));
+                            if (in_array($statusVal, ['failed', 'fail', 'needs_review', 'need_review', 'action_required', 'action required / unfit', 'requires_attention', 'requires attention', 'attention required'])) {
+                                $statusStr = 'Needs Review';
+                                $passed = false;
+                            } else {
+                                $statusStr = 'Passed';
+                                $passed = true;
+                            }
+                        }
                     }
 
                     $allLogs[] = [

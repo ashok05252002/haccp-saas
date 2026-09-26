@@ -378,6 +378,19 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
     };
   };
 
+  const focusProbeDropdown = () => {
+    if (currentStep !== 0) {
+      setCurrentStep(0);
+    }
+    setTimeout(() => {
+      const el = document.getElementById('field-probe-id');
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 50);
+  };
+
   const handleNext = () => {
     setError(null);
     if (currentStep === 0) {
@@ -387,6 +400,11 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       }
       if (!staffName || !staffName.trim()) {
         setError('Please select staff name.');
+        return;
+      }
+      if (!probeId || !probeId.trim()) {
+        setError('Please select Probe / Thermometer Used.');
+        focusProbeDropdown();
         return;
       }
     }
@@ -418,6 +436,12 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
     if (!staffName || !staffName.trim()) {
       setError('Please select staff name.');
+      return;
+    }
+
+    if (!probeId || !probeId.trim()) {
+      setError('Please select Probe / Thermometer Used.');
+      focusProbeDropdown();
       return;
     }
 
@@ -467,6 +491,12 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
+    if (!probeId || !probeId.trim()) {
+      setError('Please select Probe / Thermometer Used.');
+      focusProbeDropdown();
+      return;
+    }
+
     // Validate Signature
     let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
@@ -501,6 +531,13 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
   };
 
   const handleFinalSubmit = async (amendmentReason = '') => {
+    if (!probeId || !probeId.trim()) {
+      setError('Please select Probe / Thermometer Used.');
+      focusProbeDropdown();
+      setShowReasonModal(false);
+      return;
+    }
+
     setSubmitting(true);
     const payload = buildFormPayload('COMPLETED');
     payload.amendment_reason = amendmentReason;
@@ -529,6 +566,12 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
     if (!staffName || !staffName.trim()) {
       setError('Please select staff name.');
+      return;
+    }
+
+    if (!probeId || !probeId.trim()) {
+      setError('Please select Probe / Thermometer Used.');
+      focusProbeDropdown();
       return;
     }
 
@@ -699,11 +742,18 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                   <input type="text" className="form-input" placeholder="e.g. BATCH-2026-08A" value={batchCode} onChange={e => setBatchCode(e.target.value)} />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Probe / Thermometer Used</label>
+                  <label className="form-label" htmlFor="field-probe-id">Probe / Thermometer Used *</label>
                   <select
+                    id="field-probe-id"
                     className="form-input"
                     value={probeId}
-                    onChange={e => setProbeId(e.target.value)}
+                    onChange={e => {
+                      setProbeId(e.target.value);
+                      if (error && error.includes('Probe / Thermometer Used')) {
+                        setError(null);
+                      }
+                    }}
+                    required
                   >
                     <option value="">-- Select Thermometer from Master --</option>
                     {managerThermometers.map(t => (
