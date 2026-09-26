@@ -88,10 +88,6 @@ const FoodWasteFormPage = ({ logId }) => {
     // Fetch Staff List
     axios.get('/api/tenant-users').then(res => {
       setStaffList(res.data || []);
-      if (res.data && res.data.length > 0) {
-        setStaffName(res.data[0].name);
-        setSignedByStaffName(res.data[0].name);
-      }
     }).catch(() => {});
 
     // Fetch Master Ingredients for Waste Cost Calculator
@@ -358,8 +354,32 @@ const FoodWasteFormPage = ({ logId }) => {
   }, [masterIngredients, masterFoodItems, masterRecipes]);
 
   const handleItemChange = (id, field, value) => {
+    setErrors(prev => {
+      if (!prev || Object.keys(prev).length === 0) return prev;
+      const next = { ...prev };
+      delete next.items;
+      delete next[`${field}_${id}`];
+      if (field === 'itemType') delete next[`itemCategory_${id}`];
+      if (field === 'foodItem') delete next[`foodItem_${id}`];
+      if (field === 'wasteTypeId') delete next[`wasteTypeId_${id}`];
+      if (field === 'sourceId') delete next[`sourceId_${id}`];
+      if (field === 'reasonId') delete next[`reasonId_${id}`];
+      if (field === 'quantity') delete next[`quantity_${id}`];
+      if (field === 'unit') delete next[`unit_${id}`];
+      if (field === 'disposalMethodId') delete next[`disposalMethodId_${id}`];
+      if (field === 'expiryDate') delete next[`expiryDate_${id}`];
+      return next;
+    });
+
     setWasteItems(prev => prev.map(item => {
       if (item.id !== id) return item;
+
+      // Prevent negative values for quantity
+      if (field === 'quantity') {
+        if (value !== '' && (String(value).includes('-') || parseFloat(value) < 0)) {
+          return item;
+        }
+      }
 
       let updated = { ...item, [field]: value };
 
@@ -469,9 +489,12 @@ const FoodWasteFormPage = ({ logId }) => {
       }
 
       if (['itemType', 'foodItem', 'quantity'].includes(field)) {
-        const calculatedCost = computeAutoWasteCost(updated.itemType, updated.foodItem, updated.quantity);
-        if (calculatedCost !== '') {
+        const q = parseFloat(updated.quantity);
+        if (updated.foodItem && !isNaN(q) && q > 0) {
+          const calculatedCost = computeAutoWasteCost(updated.itemType, updated.foodItem, updated.quantity);
           updated.estimatedCost = calculatedCost;
+        } else {
+          updated.estimatedCost = '';
         }
       }
 
@@ -569,47 +592,126 @@ const FoodWasteFormPage = ({ logId }) => {
   const hasSevereReason = wasteItems.some(i => severeReasons.includes(i.reason));
   const passed = !hasSevereReason;
 
+  const focusAndScrollToField = (elementId) => {
+    setTimeout(() => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (typeof el.focus === 'function') {
+          try {
+            el.focus({ preventScroll: true });
+          } catch (e) {
+            el.focus();
+          }
+        }
+      }
+    }, 50);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const newErrors = {};
 
-    if (!staffName) newErrors.staffName = 'Staff member is required.';
-    if (!signedByStaffName) newErrors.signedBy = 'Signed by staff member is required.';
-    if (!signature) newErrors.signature = 'Signature is required.';
-
-    let itemErrorMsg = null;
-    wasteItems.forEach((item, idx) => {
-      if (itemErrorMsg) return;
-      if (!item.itemType) {
-        itemErrorMsg = `Item ${idx + 1}: Please select an Item Category.`;
-      } else if (!item.foodItem) {
-        const catLabel = item.itemType === 'food_item' ? 'Food Item' : (item.itemType === 'recipe' ? 'Recipe' : 'Ingredient');
-        itemErrorMsg = `Item ${idx + 1}: Please select a ${catLabel}.`;
-      } else if (!item.wasteTypeId) {
-        itemErrorMsg = `Item ${idx + 1}: Please select a Waste Type.`;
-      } else if (!item.sourceId) {
-        itemErrorMsg = `Item ${idx + 1}: Please select a Waste Source / Stage.`;
-      } else if (!item.reasonId) {
-        itemErrorMsg = `Item ${idx + 1}: Please select a Waste Reason.`;
-      } else if (!item.quantity || parseFloat(item.quantity) <= 0) {
-        itemErrorMsg = `Item ${idx + 1}: Please enter a valid quantity greater than 0.`;
-      } else if (!item.unit) {
-        itemErrorMsg = `Item ${idx + 1}: Please select a Unit.`;
-      } else if (!item.disposalMethodId) {
-        itemErrorMsg = `Item ${idx + 1}: Please select a Disposal Method.`;
-      } else if (item.reason === 'Expired raw materials' && !item.expiryDate) {
-        itemErrorMsg = `Item ${idx + 1}: Expiry / Use-by date is required for expired raw materials.`;
-      }
-    });
-
-    if (itemErrorMsg) {
-      newErrors.items = itemErrorMsg;
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    // 1. Staff Member *
+    if (!staffName || !staffName.trim()) {
+      setErrors({ staffName: 'Please select Staff Member.' });
+      focusAndScrollToField('field-staff-member');
       return;
     }
+
+    // 2 - 9. Validate Waste Items in exact order
+    for (let idx = 0; idx < wasteItems.length; idx++) {
+      const item = wasteItems[idx];
+      const prefix = wasteItems.length > 1 ? `Item ${idx + 1}: ` : '';
+
+      // 2. Item Category *
+      if (!item.itemType) {
+        const msg = `${prefix}Please select Item Category.`;
+        setErrors({ items: msg, [`itemCategory_${item.id}`]: 'Please select Item Category.' });
+        focusAndScrollToField(`field-item-category-${item.id}`);
+        return;
+      }
+
+      // 3. Food Item / Product *
+      if (!item.foodItem) {
+        const msg = `${prefix}Please select Food Item / Product.`;
+        setErrors({ items: msg, [`foodItem_${item.id}`]: 'Please select Food Item / Product.' });
+        focusAndScrollToField(`field-food-item-${item.id}`);
+        return;
+      }
+
+      // 4. Waste Type *
+      if (!item.wasteTypeId) {
+        const msg = `${prefix}Please select Waste Type.`;
+        setErrors({ items: msg, [`wasteTypeId_${item.id}`]: 'Please select Waste Type.' });
+        focusAndScrollToField(`field-waste-type-${item.id}`);
+        return;
+      }
+
+      // 5. Waste Source / Stage *
+      if (!item.sourceId) {
+        const msg = `${prefix}Please select Waste Source / Stage.`;
+        setErrors({ items: msg, [`sourceId_${item.id}`]: 'Please select Waste Source / Stage.' });
+        focusAndScrollToField(`field-waste-source-${item.id}`);
+        return;
+      }
+
+      // 6. Waste Reason *
+      if (!item.reasonId) {
+        const msg = `${prefix}Please select Waste Reason.`;
+        setErrors({ items: msg, [`reasonId_${item.id}`]: 'Please select Waste Reason.' });
+        focusAndScrollToField(`field-waste-reason-${item.id}`);
+        return;
+      }
+
+      // 7. Quantity / Weight *
+      const q = parseFloat(item.quantity);
+      if (!item.quantity || isNaN(q) || q <= 0) {
+        const msg = `${prefix}Please enter Quantity / Weight greater than 0.`;
+        setErrors({ items: msg, [`quantity_${item.id}`]: 'Please enter Quantity / Weight greater than 0.' });
+        focusAndScrollToField(`field-quantity-${item.id}`);
+        return;
+      }
+
+      // 8. Unit *
+      if (!item.unit) {
+        const msg = `${prefix}Please select Unit.`;
+        setErrors({ items: msg, [`unit_${item.id}`]: 'Please select Unit.' });
+        focusAndScrollToField(`field-unit-${item.id}`);
+        return;
+      }
+
+      // 9. Disposal Method *
+      if (!item.disposalMethodId) {
+        const msg = `${prefix}Please select Disposal Method.`;
+        setErrors({ items: msg, [`disposalMethodId_${item.id}`]: 'Please select Disposal Method.' });
+        focusAndScrollToField(`field-disposal-method-${item.id}`);
+        return;
+      }
+
+      // Expiry Date (if reason is 'Expired raw materials')
+      if (item.reason === 'Expired raw materials' && !item.expiryDate) {
+        const msg = `${prefix}Please provide Expiry / Use-by date.`;
+        setErrors({ items: msg, [`expiryDate_${item.id}`]: 'Please provide Expiry / Use-by date.' });
+        focusAndScrollToField(`field-expiry-date-${item.id}`);
+        return;
+      }
+    }
+
+    // 10. Signed By *
+    if (!signedByStaffName || !signedByStaffName.trim()) {
+      setErrors({ signedBy: 'Please select Signed By.' });
+      focusAndScrollToField('field-signed-by');
+      return;
+    }
+
+    // 11. Signature *
+    if (!signature) {
+      setErrors({ signature: 'Please provide Signature.' });
+      focusAndScrollToField('field-signature');
+      return;
+    }
+
+    setErrors({});
 
     setSubmitting(true);
     try {
@@ -663,7 +765,7 @@ const FoodWasteFormPage = ({ logId }) => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* Guidance Info Banner */}
           <div style={{ display: 'flex', gap: '12px', padding: '14px 18px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', color: '#1E40AF', fontSize: '13px', lineHeight: '1.6' }}>
             <Info size={20} style={{ flexShrink: 0, marginTop: '2px', color: '#2563EB' }} />
@@ -683,24 +785,46 @@ const FoodWasteFormPage = ({ logId }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
               <div className="form-group">
                 <label className="form-label">Date *</label>
-                <input className="form-input" type="date" value={logDate} onChange={e => setLogDate(e.target.value)} required />
+                <input id="field-log-date" className="form-input" type="date" value={logDate} onChange={e => setLogDate(e.target.value)} />
               </div>
               <div className="form-group">
                 <label className="form-label">Time *</label>
-                <input className="form-input" type="time" value={logTime} onChange={e => setLogTime(e.target.value)} required />
+                <input id="field-log-time" className="form-input" type="time" value={logTime} onChange={e => setLogTime(e.target.value)} />
               </div>
               <div className="form-group">
                 <label className="form-label">Staff Member *</label>
                 {staffList.length > 0 ? (
-                  <select className="form-select" value={staffName} onChange={e => { setStaffName(e.target.value); if (!signedByStaffName) setSignedByStaffName(e.target.value); }}>
+                  <select
+                    id="field-staff-member"
+                    className="form-select"
+                    value={staffName}
+                    onChange={e => {
+                      setStaffName(e.target.value);
+                      setErrors(prev => ({ ...prev, staffName: null }));
+                    }}
+                  >
+                    <option value="">-- Select Staff Member --</option>
                     {staffList.map(s => (
                       <option key={s.id} value={s.name}>{s.name}</option>
                     ))}
+                    {staffName && !staffList.some(s => s.name === staffName) && (
+                      <option value={staffName}>{staffName}</option>
+                    )}
                   </select>
                 ) : (
-                  <input className="form-input" type="text" placeholder="Staff Name" value={staffName} onChange={e => { setStaffName(e.target.value); setSignedByStaffName(e.target.value); }} required />
+                  <input
+                    id="field-staff-member"
+                    className="form-input"
+                    type="text"
+                    placeholder="-- Select Staff Member --"
+                    value={staffName}
+                    onChange={e => {
+                      setStaffName(e.target.value);
+                      setErrors(prev => ({ ...prev, staffName: null }));
+                    }}
+                  />
                 )}
-                {errors.staffName && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.staffName}</span>}
+                {errors.staffName && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors.staffName}</span>}
               </div>
             </div>
 
@@ -785,6 +909,7 @@ const FoodWasteFormPage = ({ logId }) => {
                       <div className="form-group">
                         <label className="form-label" style={{ fontWeight: 700 }}>Item Category *</label>
                         <select
+                          id={`field-item-category-${item.id}`}
                           className="form-select"
                           value={item.itemType || ''}
                           onChange={e => handleItemChange(item.id, 'itemType', e.target.value)}
@@ -795,12 +920,14 @@ const FoodWasteFormPage = ({ logId }) => {
                           <option value="food_item">📦 Food Item</option>
                           <option value="recipe">🍲 Prepared Dish / Recipe</option>
                         </select>
+                        {errors[`itemCategory_${item.id}`] && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors[`itemCategory_${item.id}`]}</span>}
                       </div>
 
                       {/* Step 2: Food Item / Product */}
                       <div className="form-group">
                         <label className="form-label" style={{ fontWeight: 700 }}>Food Item / Product *</label>
                         <select
+                          id={`field-food-item-${item.id}`}
                           className="form-select"
                           value={item.foodItem || ''}
                           onChange={e => handleItemChange(item.id, 'foodItem', e.target.value)}
@@ -847,56 +974,96 @@ const FoodWasteFormPage = ({ logId }) => {
                             </>
                           )}
                         </select>
+                        {errors[`foodItem_${item.id}`] && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors[`foodItem_${item.id}`]}</span>}
                       </div>
 
                       {/* Waste Type */}
                       <div className="form-group">
                         <label className="form-label">Waste Type *</label>
-                        <select className="form-select" value={String(item.wasteTypeId || '')} onChange={e => handleItemChange(item.id, 'wasteTypeId', e.target.value)}>
+                        <select
+                          id={`field-waste-type-${item.id}`}
+                          className="form-select"
+                          value={String(item.wasteTypeId || '')}
+                          onChange={e => handleItemChange(item.id, 'wasteTypeId', e.target.value)}
+                        >
                           <option value="">-- Select Waste Type --</option>
                           {typesMaster.map(t => (
                             <option key={t.id} value={String(t.id)}>{t.name}</option>
                           ))}
                         </select>
+                        {errors[`wasteTypeId_${item.id}`] && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors[`wasteTypeId_${item.id}`]}</span>}
                       </div>
 
                       {/* Waste Source */}
                       <div className="form-group">
                         <label className="form-label">Waste Source / Stage *</label>
-                        <select className="form-select" value={String(item.sourceId || '')} onChange={e => handleItemChange(item.id, 'sourceId', e.target.value)}>
+                        <select
+                          id={`field-waste-source-${item.id}`}
+                          className="form-select"
+                          value={String(item.sourceId || '')}
+                          onChange={e => handleItemChange(item.id, 'sourceId', e.target.value)}
+                        >
                           <option value="">-- Select Waste Source / Stage --</option>
                           {sourcesMaster.map(s => (
                             <option key={s.id} value={String(s.id)}>{s.name}</option>
                           ))}
                         </select>
+                        {errors[`sourceId_${item.id}`] && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors[`sourceId_${item.id}`]}</span>}
                       </div>
 
                       {/* Waste Reason */}
                       <div className="form-group">
                         <label className="form-label">Waste Reason *</label>
-                        <select className="form-select" value={String(item.reasonId || '')} onChange={e => handleItemChange(item.id, 'reasonId', e.target.value)}>
+                        <select
+                          id={`field-waste-reason-${item.id}`}
+                          className="form-select"
+                          value={String(item.reasonId || '')}
+                          onChange={e => handleItemChange(item.id, 'reasonId', e.target.value)}
+                        >
                           <option value="">-- Select Waste Reason --</option>
                           {reasonsMaster.map(r => (
                             <option key={r.id} value={String(r.id)}>{r.name}</option>
                           ))}
                         </select>
+                        {errors[`reasonId_${item.id}`] && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors[`reasonId_${item.id}`]}</span>}
                       </div>
 
                       {/* Quantity */}
                       <div className="form-group">
                         <label className="form-label">Quantity / Weight *</label>
-                        <input className="form-input" type="number" step="0.01" placeholder="e.g. 2.5" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', e.target.value)} required />
+                        <input
+                          id={`field-quantity-${item.id}`}
+                          className="form-input"
+                          type="number"
+                          step="any"
+                          min="0.001"
+                          placeholder="e.g. 2.5"
+                          value={item.quantity}
+                          onChange={e => handleItemChange(item.id, 'quantity', e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                              e.preventDefault();
+                            }
+                          }}
+                        />
+                        {errors[`quantity_${item.id}`] && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors[`quantity_${item.id}`]}</span>}
                       </div>
 
                       {/* Unit */}
                       <div className="form-group">
                         <label className="form-label">Unit *</label>
-                        <select className="form-select" value={item.unit || ''} onChange={e => handleItemChange(item.id, 'unit', e.target.value)}>
+                        <select
+                          id={`field-unit-${item.id}`}
+                          className="form-select"
+                          value={item.unit || ''}
+                          onChange={e => handleItemChange(item.id, 'unit', e.target.value)}
+                        >
                           <option value="">-- Select Unit --</option>
                           {UNITS.map(u => (
                             <option key={u} value={u}>{u}</option>
                           ))}
                         </select>
+                        {errors[`unit_${item.id}`] && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors[`unit_${item.id}`]}</span>}
                       </div>
 
                       {/* Estimated Cost */}
@@ -951,18 +1118,31 @@ const FoodWasteFormPage = ({ logId }) => {
                         <label className="form-label">
                           Expiry Date {item.reason === 'Expired raw materials' ? '*' : ''}
                         </label>
-                        <input className="form-input" type="date" value={item.expiryDate} onChange={e => handleItemChange(item.id, 'expiryDate', e.target.value)} />
+                        <input
+                          id={`field-expiry-date-${item.id}`}
+                          className="form-input"
+                          type="date"
+                          value={item.expiryDate}
+                          onChange={e => handleItemChange(item.id, 'expiryDate', e.target.value)}
+                        />
+                        {errors[`expiryDate_${item.id}`] && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors[`expiryDate_${item.id}`]}</span>}
                       </div>
 
                       {/* Disposal Method */}
                       <div className="form-group">
                         <label className="form-label">Disposal Method *</label>
-                        <select className="form-select" value={String(item.disposalMethodId || '')} onChange={e => handleItemChange(item.id, 'disposalMethodId', e.target.value)}>
+                        <select
+                          id={`field-disposal-method-${item.id}`}
+                          className="form-select"
+                          value={String(item.disposalMethodId || '')}
+                          onChange={e => handleItemChange(item.id, 'disposalMethodId', e.target.value)}
+                        >
                           <option value="">-- Select Disposal Method --</option>
                           {methodsMaster.map(m => (
                             <option key={m.id} value={String(m.id)}>{m.name}</option>
                           ))}
                         </select>
+                        {errors[`disposalMethodId_${item.id}`] && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors[`disposalMethodId_${item.id}`]}</span>}
                       </div>
                     </div>
 
@@ -1028,12 +1208,14 @@ const FoodWasteFormPage = ({ logId }) => {
               </div>
 
               {/* Status Banner */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', backgroundColor: passed ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${passed ? '#A7F3D0' : '#F8B4B4'}`, borderRadius: '8px', color: passed ? '#047857' : '#9B1C1C', fontSize: '13.5px', fontWeight: 500, marginTop: '16px' }}>
-                {passed ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-                <span>
-                  Evaluation: <strong>{passed ? 'Passed (Routine waste recorded)' : 'Attention Required (Temperature abuse, expired food, or contamination risk noted)'}</strong>
-                </span>
-              </div>
+              {(!passed || isEdit) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', backgroundColor: passed ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${passed ? '#A7F3D0' : '#F8B4B4'}`, borderRadius: '8px', color: passed ? '#047857' : '#9B1C1C', fontSize: '13.5px', fontWeight: 500, marginTop: '16px' }}>
+                  {passed ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+                  <span>
+                    Evaluation: <strong>{passed ? 'Passed (Routine waste recorded)' : 'Attention Required (Temperature abuse, expired food, or contamination risk noted)'}</strong>
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Signature */}
@@ -1041,21 +1223,51 @@ const FoodWasteFormPage = ({ logId }) => {
               <div className="form-group" style={{ maxWidth: '400px', marginBottom: '20px' }}>
                 <label className="form-label">Signed By *</label>
                 {staffList.length > 0 ? (
-                  <select className="form-select" value={signedByStaffName} onChange={e => setSignedByStaffName(e.target.value)}>
+                  <select
+                    id="field-signed-by"
+                    className="form-select"
+                    value={signedByStaffName}
+                    onChange={e => {
+                      setSignedByStaffName(e.target.value);
+                      setErrors(prev => ({ ...prev, signedBy: null }));
+                    }}
+                  >
+                    <option value="">-- Select Staff Member --</option>
                     {staffList.map(s => (
                       <option key={s.id} value={s.name}>{s.name}</option>
                     ))}
+                    {signedByStaffName && !staffList.some(s => s.name === signedByStaffName) && (
+                      <option value={signedByStaffName}>{signedByStaffName}</option>
+                    )}
                   </select>
                 ) : (
-                  <input className="form-input" type="text" placeholder="Signed By Name" value={signedByStaffName} onChange={e => setSignedByStaffName(e.target.value)} required />
+                  <input
+                    id="field-signed-by"
+                    className="form-input"
+                    type="text"
+                    placeholder="-- Select Staff Member --"
+                    value={signedByStaffName}
+                    onChange={e => {
+                      setSignedByStaffName(e.target.value);
+                      setErrors(prev => ({ ...prev, signedBy: null }));
+                    }}
+                  />
                 )}
-                {errors.signedBy && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.signedBy}</span>}
+                {errors.signedBy && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors.signedBy}</span>}
               </div>
 
               <div className="form-group">
                 <label className="form-label">Signature *</label>
-                <SignaturePad value={signature} onChange={setSignature} />
-                {errors.signature && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.signature}</span>}
+                <div id="field-signature" tabIndex={-1} style={{ outline: 'none' }}>
+                  <SignaturePad
+                    value={signature}
+                    onChange={sig => {
+                      setSignature(sig);
+                      setErrors(prev => ({ ...prev, signature: null }));
+                    }}
+                  />
+                </div>
+                {errors.signature && <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errors.signature}</span>}
               </div>
             </div>
           </Card>
