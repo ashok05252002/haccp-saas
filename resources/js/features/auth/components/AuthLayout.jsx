@@ -2,18 +2,59 @@ import React from 'react';
 
 const AuthLayout = ({ branding, children }) => {
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.brandingSide}>
-          {branding}
-        </div>
-        <div style={styles.formSide}>
-          <div style={styles.formWrapper}>
-            {children}
+    <>
+      <style>{`
+        .auth-container {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          max-width: 960px;
+          min-height: 580px;
+          background-color: #fff;
+          border-radius: var(--radius-xl);
+          box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+          overflow: hidden;
+        }
+        .auth-branding {
+          display: none;
+        }
+        .auth-form-side {
+          flex: 1;
+          padding: 40px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        @media (min-width: 768px) {
+          .auth-container {
+            flex-direction: row;
+          }
+          .auth-branding {
+            display: flex;
+            flex: 1;
+            background: linear-gradient(135deg, #1A6B4F 0%, #0E3D2E 100%);
+            padding: 48px 40px;
+            align-items: center;
+            justify-content: center;
+          }
+          .auth-form-side {
+            padding: 48px 40px;
+          }
+        }
+      `}</style>
+      <div style={styles.page}>
+        <div className="auth-container">
+          <div className="auth-branding">
+            {branding}
+          </div>
+          <div className="auth-form-side">
+            <div style={styles.formWrapper}>
+              {children}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -25,31 +66,6 @@ const styles = {
     justifyContent: 'center',
     backgroundColor: 'var(--color-page-bg)',
     padding: '20px',
-  },
-  container: {
-    display: 'flex',
-    width: '100%',
-    maxWidth: '960px',
-    minHeight: '580px',
-    backgroundColor: '#fff',
-    borderRadius: 'var(--radius-xl)',
-    boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
-    overflow: 'hidden',
-  },
-  brandingSide: {
-    flex: 1,
-    background: 'linear-gradient(135deg, #1A6B4F 0%, #0E3D2E 100%)',
-    padding: '48px 40px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  formSide: {
-    flex: 1,
-    padding: '48px 40px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   formWrapper: {
     width: '100%',
