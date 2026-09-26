@@ -15,7 +15,16 @@ class FoodItem extends Model
         'name',
         'uom_id',
         'storage_type_id',
+        'cost_price',
+        'cost_quantity',
+        'unit_cost',
         'status',
+    ];
+
+    protected $casts = [
+        'cost_price'    => 'float',
+        'cost_quantity' => 'float',
+        'unit_cost'     => 'float',
     ];
 
     public function tenant()

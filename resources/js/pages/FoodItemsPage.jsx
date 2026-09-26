@@ -112,14 +112,23 @@ const FoodItemsPage = () => {
     }
 
     try {
+      const payload = {
+        name: itemForm.name,
+        uom_id: itemForm.uom_id,
+        storage_type_id: itemForm.storage_type_id,
+        cost_price: itemForm.cost_price !== '' ? parseFloat(itemForm.cost_price) : null,
+        cost_quantity: itemForm.cost_price !== '' ? (parseFloat(itemForm.cost_quantity) || 1) : null,
+        status: itemForm.status,
+      };
+
       if (itemEditId) {
-        await axios.put(`/api/food-items/${itemEditId}`, itemForm);
+        await axios.put(`/api/food-items/${itemEditId}`, payload);
         setSuccess('Food item updated successfully!');
       } else {
-        await axios.post('/api/food-items', itemForm);
+        await axios.post('/api/food-items', payload);
         setSuccess('Food item added successfully!');
       }
-      setItemForm({ name: '', uom_id: '', storage_type_id: '', status: 'Active' });
+      setItemForm({ name: '', uom_id: '', storage_type_id: '', cost_price: '', cost_quantity: '1', status: 'Active' });
       setItemModalOpen(false);
       setItemEditId(null);
       fetchData();
@@ -139,6 +148,8 @@ const FoodItemsPage = () => {
       name: item.name,
       uom_id: item.uom_id ? String(item.uom_id) : '',
       storage_type_id: item.storage_type_id ? String(item.storage_type_id) : '',
+      cost_price: item.cost_price !== null && item.cost_price !== undefined ? String(item.cost_price) : '',
+      cost_quantity: item.cost_quantity !== null && item.cost_quantity !== undefined ? String(item.cost_quantity) : '1',
       status: item.status || 'Active',
     });
     setItemFormError('');
@@ -177,7 +188,7 @@ const FoodItemsPage = () => {
 
   const openAddFoodItemModal = () => {
     setItemEditId(null);
-    setItemForm({ name: '', uom_id: '', storage_type_id: '', status: 'Active' });
+    setItemForm({ name: '', uom_id: '', storage_type_id: '', cost_price: '', cost_quantity: '1', status: 'Active' });
     setItemFormError('');
     setItemModalOpen(true);
   };
@@ -417,6 +428,8 @@ const FoodItemsPage = () => {
                       <th >Food Item Name</th>
                       <th >Default UOM</th>
                       <th >Storage Type</th>
+                      <th >Package Price</th>
+                      <th >Unit Cost</th>
                       <th >Status</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
@@ -437,6 +450,24 @@ const FoodItemsPage = () => {
                             <span style={styles.storageTypeBadge}>
                               {storageTypeText}
                             </span>
+                          </td>
+                          <td>
+                            {item.cost_price !== null && item.cost_price !== undefined ? (
+                              <span style={{ fontSize: '13px', color: 'var(--color-text-primary)', fontWeight: 500 }}>
+                                €{parseFloat(item.cost_price).toFixed(2)} <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>for {parseFloat(item.cost_quantity || 1)} {item.uom?.unit_code || ''}</span>
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '13px', color: '#9CA3AF' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            {item.unit_cost !== null && item.unit_cost !== undefined ? (
+                              <strong style={{ fontSize: '13px', color: 'var(--color-primary)' }}>
+                                €{parseFloat(item.unit_cost).toFixed(2)}<span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 400 }}>/{item.uom?.unit_code || ''}</span>
+                              </strong>
+                            ) : (
+                              <span style={{ fontSize: '13px', color: '#9CA3AF' }}>—</span>
+                            )}
                           </td>
                           <td >
                             <span style={{
@@ -614,6 +645,79 @@ const FoodItemsPage = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Pricing Details */}
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#F9FAFB',
+              borderRadius: '8px',
+              border: '1px solid var(--color-border-light)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              marginBottom: '16px'
+            }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                Purchase Pricing & Package Quantity <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 400 }}>(Optional)</span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontSize: '12px' }}>Purchase Price (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="form-input"
+                    value={itemForm.cost_price || ''}
+                    onChange={(e) => setItemForm({ ...itemForm, cost_price: e.target.value })}
+                    placeholder="e.g. 15.00"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontSize: '12px' }}>Package Quantity</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0.001"
+                    className="form-input"
+                    value={itemForm.cost_quantity || ''}
+                    onChange={(e) => setItemForm({ ...itemForm, cost_quantity: e.target.value })}
+                    placeholder="e.g. 5"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              {/* Live Rate Preview */}
+              {itemForm.cost_price !== '' && !isNaN(parseFloat(itemForm.cost_price)) && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  backgroundColor: '#EFF6FF',
+                  borderRadius: '6px',
+                  border: '1px solid #BFDBFE',
+                  fontSize: '12px',
+                  color: '#1E40AF'
+                }}>
+                  <span>Calculated Unit Rate:</span>
+                  <strong>
+                    {(() => {
+                      const p = parseFloat(itemForm.cost_price);
+                      const q = parseFloat(itemForm.cost_quantity) || 1;
+                      if (isNaN(p) || q <= 0) return '—';
+                      const selectedUom = uomList.find(u => String(u.id) === String(itemForm.uom_id));
+                      const unitLabel = selectedUom ? selectedUom.unit_code : 'unit';
+                      return `€${(p / q).toFixed(2)} / ${unitLabel}`;
+                    })()}
+                  </strong>
+                </div>
+              )}
             </div>
 
             {/* Status Active Toggle */}
