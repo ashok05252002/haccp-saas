@@ -157,14 +157,14 @@ const Sidebar = () => {
         padding: isMinimized ? '16px 0' : '16px 20px',
         alignItems: 'center'
       }}>
-        <div style={{...styles.userInfo, justifyContent: isMinimized ? 'center' : 'flex-start', width: isMinimized ? '100%' : 'auto'}}>
+        <div style={{...styles.userInfo, justifyContent: isMinimized ? 'center' : 'flex-start', width: isMinimized ? '100%' : 'auto', minWidth: 0}}>
           <div style={styles.userAvatar} title={isMinimized ? user?.name : undefined}>
             <User size={18} color="rgba(255,255,255,0.8)" />
           </div>
           {!isMinimized && (
-            <div>
-              <div style={styles.userName}>{user?.name || 'User'}</div>
-              <div style={styles.userRole}>
+            <div style={{ minWidth: 0 }}>
+              <div style={styles.userName} title={user?.name || 'User'}>{user?.name || 'User'}</div>
+              <div style={styles.userRole} title={user?.role === 'super_admin' ? 'Super Admin' : (user?.role === 'client' ? 'Client Admin' : 'Branch Manager')}>
                 {user?.role === 'super_admin' ? 'Super Admin' : (user?.role === 'client' ? 'Client Admin' : 'Branch Manager')}
               </div>
             </div>
@@ -347,11 +347,15 @@ const styles = {
     fontWeight: 600,
     color: '#fff',
     whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   userRole: {
     fontSize: '11px',
     color: 'rgba(255,255,255,0.55)',
     whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   logoutBtn: {
     width: 32,

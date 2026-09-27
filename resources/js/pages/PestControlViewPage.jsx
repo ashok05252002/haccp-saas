@@ -9,18 +9,23 @@ import ManagerPinModal from '../components/common/ManagerPinModal';
 import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
-const formatDateStr = (str) => {
-  if (!str) return 'N/A';
-  const d = str.split('T')[0].split('-');
-  if (d.length === 3) return `${d[2]}/${d[1]}/${d[0]}`;
-  return str;
+const formatSafeDate = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  const ymd = dateStr.split('T')[0];
+  const parts = ymd.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
 };
 
-const formatTimeStr = (str) => {
-  if (!str) return 'N/A';
-  const t = str.split('T')[1] ? str.split('T')[1].split(':') : str.split(':');
-  if (t.length >= 2) return `${t[0]}:${t[1]}`;
-  return str;
+const formatSafeTime = (timeStr) => {
+  if (!timeStr) return 'N/A';
+  let t = timeStr;
+  if (t.includes('T')) {
+    t = t.split('T')[1];
+  }
+  return t.substring(0, 5);
 };
 
 const PestControlViewPage = ({ logId }) => {
@@ -64,7 +69,7 @@ const PestControlViewPage = ({ logId }) => {
 
   return (
     <PageLayout>
-      <Head title={`Pest Log - ${formatDateStr(log.log_date)}`} />
+      <Head title={`Pest Log - ${formatSafeDate(log.log_date)}`} />
 
       <div>
         <button onClick={() => router.visit('/haccp-logs/pest-control')} className="back-btn" style={{ marginBottom: '16px' }}>
@@ -79,7 +84,7 @@ const PestControlViewPage = ({ logId }) => {
               <StatusBadge status={log.status} />
             </div>
             <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-              Logged on {formatDateStr(log.log_date)} at {formatTimeStr(log.log_time)} by {log.staff_name}
+              Logged on {formatSafeDate(log.log_date)} at {formatSafeTime(log.log_time)} by {log.staff_name}
             </p>
           </div>
 
@@ -98,7 +103,7 @@ const PestControlViewPage = ({ logId }) => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
             <div>
               <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Date & Time</span>
-              <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{formatDateStr(log.log_date)} at {formatTimeStr(log.log_time)}</strong>
+              <strong style={{ fontSize: '15px', color: 'var(--color-text-primary)' }}>{formatSafeDate(log.log_date)} at {formatSafeTime(log.log_time)}</strong>
             </div>
 
             <div>

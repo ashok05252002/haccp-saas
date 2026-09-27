@@ -77,15 +77,8 @@ const PestControlFormPage = ({ logId }) => {
     axios.get(`/api/pest-control-logs/${logId}`).then(res => {
       const data = res.data;
       if (data) {
-        if (data.log_date) {
-          const d = data.log_date.split('T')[0];
-          setLogDate(d);
-        }
-        if (data.log_time) {
-          const t = data.log_time.split('T')[1] ? data.log_time.split('T')[1].split(':') : data.log_time.split(':');
-          if (t.length >= 2) setLogTime(`${t[0]}:${t[1]}`);
-          else setLogTime(data.log_time);
-        }
+        if (data.log_date) setLogDate(data.log_date);
+        if (data.log_time) setLogTime(data.log_time);
         if (data.staff_name) setStaffName(data.staff_name);
         if (data.pest_activity_observed !== undefined) {
           setIsPestFree(!Boolean(data.pest_activity_observed));
