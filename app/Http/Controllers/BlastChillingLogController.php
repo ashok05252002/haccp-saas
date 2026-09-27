@@ -68,18 +68,21 @@ class BlastChillingLogController extends Controller
             return response()->json(['message' => 'Unauthorized tenant context.'], 403);
         }
 
-        // Auto-evaluate CCP-4 Limit: End Temp <= 3.0°C and Duration <= 90 mins
+        // Auto-evaluate CCP-4 Limit: End Temp <= 5.0°C AND Duration <= 150 mins
         $endTemp = (float) $request->end_temp;
-        $duration = $request->duration_minutes ? (int) $request->duration_minutes : 0;
-        $checkPassed = ($endTemp <= 3.0) && ($duration === 0 || $duration <= 90);
+        $duration = $request->duration_minutes !== null ? (int) $request->duration_minutes : null;
+        $checkPassed = ($endTemp <= 5.0) && ($duration !== null && $duration <= 150);
 
-        if (!$checkPassed && empty($request->corrective_action)) {
-            return response()->json([
-                'message' => 'The given data was invalid.',
-                'errors'  => [
-                    'corrective_action' => ['Corrective action is mandatory when CCP-4 limit is not met.']
-                ]
-            ], 422);
+        if (!$checkPassed) {
+            $trimmedCa = trim(strval($request->corrective_action ?? ''));
+            if ($trimmedCa === '' || strtolower($trimmedCa) === 'n/a' || strtolower($trimmedCa) === 'na') {
+                return response()->json([
+                    'message' => 'The given data was invalid.',
+                    'errors'  => [
+                        'corrective_action' => ['Mandatory Corrective Action is required when blast chilling limit is failed. It cannot be empty or N/A.']
+                    ]
+                ], 422);
+            }
         }
 
         $log = BlastChillingLog::create([
@@ -135,8 +138,20 @@ class BlastChillingLogController extends Controller
             $originalData = $log->toArray();
 
             $endTemp = (float) $request->end_temp;
-            $duration = $request->duration_minutes ? (int) $request->duration_minutes : 0;
-            $checkPassed = ($endTemp <= 3.0) && ($duration === 0 || $duration <= 90);
+            $duration = $request->duration_minutes !== null ? (int) $request->duration_minutes : null;
+            $checkPassed = ($endTemp <= 5.0) && ($duration !== null && $duration <= 150);
+
+            if (!$checkPassed) {
+                $trimmedCa = trim(strval($request->corrective_action ?? ''));
+                if ($trimmedCa === '' || strtolower($trimmedCa) === 'n/a' || strtolower($trimmedCa) === 'na') {
+                    return response()->json([
+                        'message' => 'The given data was invalid.',
+                        'errors'  => [
+                            'corrective_action' => ['Mandatory Corrective Action is required when blast chilling limit is failed. It cannot be empty or N/A.']
+                        ]
+                    ], 422);
+                }
+            }
 
             $log->update([
                 'log_date'            => $request->log_date,

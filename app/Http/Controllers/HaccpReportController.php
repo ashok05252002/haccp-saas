@@ -353,6 +353,18 @@ class HaccpReportController extends Controller
                             $statusStr = 'Passed';
                             $passed = true;
                         }
+                    } elseif ($modelClass === BlastChillingLog::class) {
+                        $endTemp = $log->end_temp !== null ? (float)$log->end_temp : null;
+                        $duration = $log->duration_minutes !== null ? (int)$log->duration_minutes : null;
+                        $isPassed = ($endTemp !== null && $endTemp <= 5.0) && ($duration !== null && $duration <= 150);
+
+                        if ($isPassed) {
+                            $statusStr = 'Passed';
+                            $passed = true;
+                        } else {
+                            $statusStr = 'Needs Review';
+                            $passed = false;
+                        }
                     } else {
                         if (isset($log->check_passed) && ($log->check_passed === false || $log->check_passed === 0 || $log->check_passed === '0')) {
                             $statusStr = 'Needs Review';
@@ -984,7 +996,14 @@ class HaccpReportController extends Controller
                 ]
             ];
         } elseif ($logType === 'blast-chilling') {
-            $statusResult = $log->end_temp !== null ? ($log->check_passed ? 'PASSED' : 'FAILED') : 'N/A';
+            $endTemp = $log->end_temp !== null ? (float)$log->end_temp : null;
+            $duration = $log->duration_minutes !== null ? (int)$log->duration_minutes : null;
+            $isPassed = ($endTemp !== null && $endTemp <= 5.0) && ($duration !== null && $duration <= 150);
+            $statusResult = ($endTemp !== null && $duration !== null)
+                ? ($isPassed ? 'PASS' : 'FAIL')
+                : ($log->check_passed ? 'PASS' : 'FAIL');
+
+            $actualResultStr = ($log->end_temp !== null ? ($log->end_temp . '°C') : 'N/A') . ' in ' . ($log->duration_minutes !== null ? ($log->duration_minutes . ' mins') : 'N/A');
 
             $sections = [
                 [
@@ -1008,8 +1027,9 @@ class HaccpReportController extends Controller
                         ['label' => 'End Time', 'value' => $log->chilling_end_time ?? 'N/A'],
                         ['label' => 'Start Temperature', 'value' => $log->start_temp !== null ? ($log->start_temp . ' °C') : 'N/A'],
                         ['label' => 'End Temperature', 'value' => $log->end_temp !== null ? ($log->end_temp . ' °C') : 'N/A'],
-                        ['label' => 'Chilling Duration', 'value' => $log->duration_minutes ? ($log->duration_minutes . ' mins') : 'N/A'],
-                        ['label' => 'Target Requirement', 'value' => 'Cool to ≤ 8°C (within 90 mins)'],
+                        ['label' => 'Chilling Duration', 'value' => $log->duration_minutes !== null ? ($log->duration_minutes . ' mins') : 'N/A'],
+                        ['label' => 'Configured Limit', 'value' => '≤5°C within 150 mins'],
+                        ['label' => 'Actual Result', 'value' => $actualResultStr],
                         ['label' => 'Result', 'value' => $statusResult],
                     ]
                 ],

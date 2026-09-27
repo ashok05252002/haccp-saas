@@ -166,13 +166,16 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
     }
   };
 
-  // Live CCP-4 Limit Validation Check: End Temp <= 3.0°C and Duration <= 90 mins
+  // Live CCP-4 Limit Validation Check: End Temp <= 5.0°C and Duration <= 150 mins
   const validateBlastChilling = () => {
     if (endTemp === '' || endTemp === null) return null;
     const end = parseFloat(endTemp);
     if (isNaN(end)) return false;
-    const duration = parseInt(durationMinutes || 0, 10);
-    return end <= 3.0 && (duration === 0 || duration <= 90);
+    if (end > 5.0) return false;
+    if (durationMinutes === '' || durationMinutes === null) return null;
+    const duration = parseFloat(durationMinutes);
+    if (isNaN(duration)) return false;
+    return end <= 5.0 && duration <= 150;
   };
 
   // Open Quick Add Food Item Modal & Load Options
@@ -252,6 +255,19 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
   };
 
   const handleFinalSubmit = async (amendmentReason = '') => {
+    const end = parseFloat(endTemp);
+    const dur = durationMinutes !== '' && durationMinutes !== null ? parseFloat(durationMinutes) : NaN;
+    const isPassed = (!isNaN(end) && end <= 5.0) && (!isNaN(dur) && dur <= 150);
+
+    if (!isPassed) {
+      const trimmedAction = (correctiveAction || '').trim();
+      if (!trimmedAction || trimmedAction.toLowerCase() === 'n/a' || trimmedAction.toLowerCase() === 'na') {
+        setError('Mandatory Corrective Action is required when blast chilling limit is failed. It cannot be empty or N/A.');
+        setShowReasonModal(false);
+        return;
+      }
+    }
+
     let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
       signatureData = sigPad.current.getCanvas().toDataURL('image/png');
@@ -311,10 +327,16 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
-    const isPassed = validateBlastChilling();
-    if (isPassed === false && !correctiveAction.trim()) {
-      setError('Mandatory Corrective Action is required when CCP-4 limit is failed.');
-      return;
+    const end = parseFloat(endTemp);
+    const dur = durationMinutes !== '' && durationMinutes !== null ? parseFloat(durationMinutes) : NaN;
+    const isPassed = (!isNaN(end) && end <= 5.0) && (!isNaN(dur) && dur <= 150);
+
+    if (!isPassed) {
+      const trimmedAction = (correctiveAction || '').trim();
+      if (!trimmedAction || trimmedAction.toLowerCase() === 'n/a' || trimmedAction.toLowerCase() === 'na') {
+        setError('Mandatory Corrective Action is required when blast chilling limit is failed. It cannot be empty or N/A.');
+        return;
+      }
     }
 
     let signatureData = existingSignature;
@@ -358,7 +380,7 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#155E75', fontWeight: 500, marginTop: '8px' }}>
           <ShieldCheck size={16} />
-          <span><strong>Required Standard:</strong> Rapidly cool cooked food from ≥63°C to ≤3°C within 90 minutes max.</span>
+          <span><strong>Required Standard:</strong> Rapidly cool cooked food from ≥63°C to ≤5°C within 150 minutes max.</span>
         </div>
       </div>
 
@@ -613,8 +635,8 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
               {isCcpPassed ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
               <span>
                 {isCcpPassed
-                  ? `CCP-4 Limit Passed: End Temp ${endTemp}°C ≤ 3.0°C within ${durationMinutes || 0} mins`
-                  : `CCP-4 LIMIT BREACH: End Temp (${endTemp}°C) > 3.0°C or Duration (${durationMinutes || 0} mins) > 90 mins!`}
+                  ? `CCP-4 Limit Passed: End Temp ${endTemp}°C ≤ 5°C within ${durationMinutes || 0} mins`
+                  : `FAILED: Blast chilling limit exceeded. Required: End Temperature ≤ 5°C within 150 minutes.`}
               </span>
             </div>
           )}
@@ -623,7 +645,7 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
           {isCcpPassed === false && (
             <div style={{ marginTop: '16px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', padding: '16px', borderRadius: '8px' }}>
               <label className="form-label" style={{ color: '#991B1B', fontWeight: 700 }}>
-                Mandatory Corrective Action Taken *
+                Mandatory Corrective Action Required *
               </label>
               <textarea
                 className="form-textarea"

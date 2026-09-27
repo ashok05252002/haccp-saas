@@ -46,7 +46,7 @@ const HaccpLogsSidebarPage = () => {
       key: 'haccp.blast-chilling',
       href: '/haccp-logs/blast-chilling',
       title: 'Blast Chilling',
-      desc: 'CCP-4 rapid cooling cycle monitoring (from ≥63°C to ≤3°C within 90 minutes).',
+      desc: 'CCP-4 rapid cooling cycle monitoring (from ≥63°C to ≤5°C within 150 minutes).',
       icon: Snowflake,
     },
     {

@@ -48,7 +48,7 @@ export const haccpModules = [
     description: 'Log blast chilling cycles to verify rapid cooling compliance.',
     badge: 'CCP-4',
     badgeType: 'ccp',
-    target: 'Target: From ≥63°C to ≤3°C within 90 min',
+    target: 'Target: From ≥63°C to ≤5°C within 150 min',
     icon: 'Snowflake',
     color: 'cyan',
     iconColor: 'var(--color-cyan)',

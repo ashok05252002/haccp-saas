@@ -51,7 +51,9 @@ const BlastChillingViewPage = ({ logId }) => {
     );
   }
 
-  const isPassed = log.check_passed ?? true;
+  const endTemp = log.end_temp !== null && log.end_temp !== undefined ? parseFloat(log.end_temp) : null;
+  const duration = log.duration_minutes !== null && log.duration_minutes !== undefined ? parseFloat(log.duration_minutes) : null;
+  const isPassed = (endTemp !== null && endTemp <= 5.0) && (duration !== null && duration <= 150);
 
   return (
     <PageLayout>
@@ -90,11 +92,11 @@ const BlastChillingViewPage = ({ logId }) => {
               <div>
                 {isPassed ? (
                   <span className="badge badge-success" style={{ fontSize: '14px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle size={16} /> CCP-4 Passed
+                    <CheckCircle size={16} /> PASS
                   </span>
                 ) : (
                   <span className="badge badge-error" style={{ fontSize: '14px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <AlertTriangle size={16} /> Limit Failed
+                    <AlertTriangle size={16} /> FAIL
                   </span>
                 )}
               </div>
@@ -134,7 +136,7 @@ const BlastChillingViewPage = ({ logId }) => {
               </div>
 
               <div style={{ backgroundColor: '#ffffff', padding: '14px', borderRadius: '8px', border: '1px solid #CFFAFE' }}>
-                <label style={{ fontSize: '11px', color: '#155E75', fontWeight: 700, textTransform: 'uppercase' }}>End Temperature (Target ≤ 3.0°C)</label>
+                <label style={{ fontSize: '11px', color: '#155E75', fontWeight: 700, textTransform: 'uppercase' }}>End Temperature (Target ≤ 5.0°C)</label>
                 <div style={{ fontSize: '18px', fontWeight: 800, marginTop: '4px', color: isPassed ? '#047857' : '#B91C1C' }}>
                   {log.end_temp !== null ? `${log.end_temp} °C` : 'N/A'}
                 </div>
@@ -149,10 +151,30 @@ const BlastChillingViewPage = ({ logId }) => {
             </div>
 
             {(log.chilling_start_time || log.chilling_end_time) && (
-              <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '8px', border: '1px solid #CFFAFE', fontSize: '13px', color: '#155E75' }}>
+              <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '8px', border: '1px solid #CFFAFE', fontSize: '13px', color: '#155E75', marginBottom: '16px' }}>
                 <strong>Cycle Times:</strong> {log.chilling_start_time || '--:--'} → {log.chilling_end_time || '--:--'}
               </div>
             )}
+
+            {/* Audit / Report Result Display */}
+            <div style={{ backgroundColor: '#ffffff', padding: '16px 20px', borderRadius: '8px', border: '1px solid #CFFAFE', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div>
+                <span style={{ fontSize: '11px', color: '#155E75', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Configured Limit</span>
+                <strong style={{ fontSize: '14px', color: '#0E7490' }}>≤5°C within 150 mins</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', color: '#155E75', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Actual Result</span>
+                <strong style={{ fontSize: '14px', color: '#0E7490' }}>
+                  {log.end_temp !== null ? `${log.end_temp}°C` : 'N/A'} in {log.duration_minutes !== null ? `${log.duration_minutes} mins` : 'N/A'}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', color: '#155E75', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Result</span>
+                <strong style={{ fontSize: '14px', color: isPassed ? '#047857' : '#B91C1C' }}>
+                  {isPassed ? 'PASS' : 'FAIL'}
+                </strong>
+              </div>
+            </div>
           </div>
 
           {/* Corrective Action Section if applicable */}

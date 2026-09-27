@@ -56,7 +56,7 @@ const BlastChillingMonitoringPage = () => {
           <div>
             <h1 className="page-title">Blast Chilling & Rapid Cooling Logs</h1>
             <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-              CCP-4 Monitoring — Rapid cooling compliance from ≥63°C to ≤3°C within 90 mins.
+              CCP-4 Monitoring — Rapid cooling compliance from ≥63°C to ≤5°C within 150 mins.
             </p>
           </div>
           <Button variant="primary" icon={Plus} onClick={() => router.visit('/haccp-logs/blast-chilling/add')}>
@@ -110,7 +110,9 @@ const BlastChillingMonitoringPage = () => {
               </thead>
               <tbody>
                 {filteredLogs.map(log => {
-                  const isPassed = log.check_passed ?? true;
+                  const endTemp = log.end_temp !== null && log.end_temp !== undefined ? parseFloat(log.end_temp) : null;
+                  const duration = log.duration_minutes !== null && log.duration_minutes !== undefined ? parseFloat(log.duration_minutes) : null;
+                  const isPassed = (endTemp !== null && endTemp <= 5.0) && (duration !== null && duration <= 150);
                   return (
                     <tr key={log.id}>
                       <td>

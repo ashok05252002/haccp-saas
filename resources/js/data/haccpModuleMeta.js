@@ -32,8 +32,8 @@ export const haccpModuleMeta = {
     id: 'blast-chilling',
     title: 'Blast Chilling',
     referenceBadges: ['CCP-4', 'Codex HACCP Principle 2', 'EC 852/2004 Annex II Ch.9', 'ISO 22000 §8.5.4'],
-    description: 'Rapid chilling must reduce food from ≥63°C to ≤3°C within 90 minutes to prevent bacterial growth.',
-    requiredStandard: 'From ≥63°C to ≤3°C within 90 min',
+    description: 'Rapid chilling must reduce food from ≥63°C to ≤5°C within 150 minutes to prevent bacterial growth.',
+    requiredStandard: 'From ≥63°C to ≤5°C within 150 min',
     schema: formSchemas['blast-chilling'],
   },
   'hot-holding': {
