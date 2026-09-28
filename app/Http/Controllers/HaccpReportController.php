@@ -680,7 +680,7 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Probe ID', 'value' => $log->probe_id ?? '-'],
                         ['label' => 'Status', 'value' => $log->status ?? 'COMPLETED'],
-                        ['label' => 'Final Signed Off At', 'value' => $log->final_signed_at ? Carbon::parse($log->final_signed_at)->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -745,7 +745,7 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Final Signed Timestamp', 'value' => $log->final_signed_at ? Carbon::parse($log->final_signed_at)->toIso8601String() : null],
+                        ['label' => 'Signed At', 'value' => $log->final_signed_at ? Carbon::parse($log->final_signed_at)->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -777,6 +777,7 @@ class HaccpReportController extends Controller
                         ['label' => 'Equipment Type', 'value' => $zoneType],
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Status', 'value' => $statusResult],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -800,7 +801,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -844,7 +844,7 @@ class HaccpReportController extends Controller
                         ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
                         ['label' => 'Supplier Name', 'value' => $supplierName],
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -870,7 +870,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -907,7 +906,7 @@ class HaccpReportController extends Controller
                         ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
                         ['label' => 'Cleaning Area / Zone', 'value' => $areaName],
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -926,7 +925,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -975,7 +973,7 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? $log->signed_by_staff_name ?? '-'],
                         ['label' => 'Target Temperature Threshold', 'value' => '≥ 63.0 °C (CCP-5)'],
                         ['label' => 'Compliance Status', 'value' => $log->status ?? 'Passed'],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -994,7 +992,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member / Signee', 'value' => $log->signed_by_staff_name ?? $log->staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -1019,7 +1016,7 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Probe ID', 'value' => $log->probe_id ?? '-'],
                         ['label' => 'Compliance Status', 'value' => $statusResult],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -1049,7 +1046,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -1068,7 +1064,7 @@ class HaccpReportController extends Controller
                         ['label' => 'Cooling Method', 'value' => $log->cooling_method ?? 'N/A'],
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Compliance Status', 'value' => $statusResult],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -1096,7 +1092,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -1114,7 +1109,7 @@ class HaccpReportController extends Controller
                         ['label' => 'Defrost / Thawing Method', 'value' => $log->defrost_method ?? 'N/A'],
                         ['label' => 'Staff Member', 'value' => $log->signed_by_staff_name ?? '-'],
                         ['label' => 'Compliance Status', 'value' => $log->status ?? 'Passed'],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -1140,7 +1135,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->signed_by_staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -1158,7 +1152,7 @@ class HaccpReportController extends Controller
                         ['label' => 'Serial Number', 'value' => $log->probe_serial_number ?? 'N/A'],
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Calibration Status', 'value' => $calibResult],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -1181,7 +1175,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -1197,8 +1190,8 @@ class HaccpReportController extends Controller
                         ['label' => 'Destination / Dispatch Unit', 'value' => $log->destination ?? 'N/A'],
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Status', 'value' => $log->status ?? 'Passed'],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
-                        ['label' => 'Last Updated', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Updated At', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -1222,7 +1215,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -1236,8 +1228,8 @@ class HaccpReportController extends Controller
                         ['label' => 'Fryer Station / Name', 'value' => $log->fryer_station ?? '-'],
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Status', 'value' => $log->status ?? 'Passed'],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
-                        ['label' => 'Last Updated', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Updated At', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -1275,7 +1267,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Signed By', 'value' => $log->signed_by_staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -1307,8 +1298,8 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Contractor Name', 'value' => $log->contractor_name ?? 'N/A'],
                         ['label' => 'Status', 'value' => $log->status ?? 'Passed'],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
-                        ['label' => 'Last Updated', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Updated At', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -1343,7 +1334,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Signed By', 'value' => $log->signed_by_staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -1377,8 +1367,8 @@ class HaccpReportController extends Controller
                         ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Overall Fitness Status', 'value' => $log->overall_status ?? 'N/A'],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
-                        ['label' => 'Last Updated', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Updated At', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -1399,7 +1389,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Staff Signature Image', 'value' => $log->signature ?? null],
                         ['label' => 'Manager Signature', 'value' => !empty($log->manager_signature)],
                         ['label' => 'Manager Signature Image', 'value' => $log->manager_signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];
@@ -1413,8 +1402,8 @@ class HaccpReportController extends Controller
                         ['label' => 'Training Task / Title', 'value' => $log->task_title ?? '-'],
                         ['label' => 'Trainer Name', 'value' => $log->trainer_name ?? 'N/A'],
                         ['label' => 'Status', 'value' => $log->status ?? 'Passed'],
-                        ['label' => 'Recorded At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
-                        ['label' => 'Last Updated', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
+                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
+                        ['label' => 'Updated At', 'value' => $log->updated_at ? $log->updated_at->toIso8601String() : null],
                     ]
                 ],
                 [
@@ -1443,7 +1432,6 @@ class HaccpReportController extends Controller
                         ['label' => 'Signed By', 'value' => $log->signed_by_staff_name ?? '-'],
                         ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
                         ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                        ['label' => 'Recorded Timestamp', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
                 ]
             ];

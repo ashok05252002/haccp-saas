@@ -116,6 +116,33 @@ const HaccpLogDetailDrawer = ({
     );
   };
 
+  const formatTime = (timeStr) => {
+    if (!timeStr) return '';
+    const parts = String(timeStr).trim().split(':');
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    }
+    return String(timeStr);
+  };
+
+  const formatTimestamp = (val) => {
+    if (!val) return '';
+    const str = String(val).trim();
+    const isoRegex = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/;
+    if (isoRegex.test(str)) {
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day} at ${hours}:${minutes}`;
+      }
+    }
+    return str;
+  };
+
   const renderFieldValue = (value, label = '') => {
     if (value === null || value === undefined || value === '') {
       return <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontSize: '13px' }}>N/A</span>;
@@ -148,6 +175,13 @@ const HaccpLogDetailDrawer = ({
         );
       }
       return <pre style={{ margin: 0, fontSize: '12px', whiteSpace: 'pre-wrap' }}>{JSON.stringify(value, null, 2)}</pre>;
+    }
+
+    if (typeof value === 'string') {
+      const formatted = formatTimestamp(value);
+      if (formatted !== value) {
+        return <span style={{ fontSize: '14px', color: 'var(--color-text-primary)', fontWeight: 500 }}>{formatted}</span>;
+      }
     }
 
     return <span style={{ fontSize: '14px', color: 'var(--color-text-primary)', fontWeight: 500 }}>{String(value)}</span>;
@@ -313,7 +347,7 @@ const HaccpLogDetailDrawer = ({
           }}
         >
           <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
-            {data?.log?.log_date ? `Logged on ${data.log.log_date} at ${data.log.log_time || '12:00'}` : 'Log Record View'}
+            {data?.log?.log_date ? `Logged on ${data.log.log_date} at ${formatTime(data.log.log_time || '12:00')}` : 'Log Record View'}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -518,7 +552,7 @@ const HaccpLogDetailDrawer = ({
                           </div>
 
                           <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                            {audit.created_at ? new Date(audit.created_at).toLocaleString() : 'Date N/A'}
+                            {audit.created_at ? formatTimestamp(audit.created_at) : 'Date N/A'}
                           </div>
                         </div>
 
@@ -562,11 +596,11 @@ const HaccpLogDetailDrawer = ({
                                     {formatFieldName(fieldName)}:
                                   </strong>
                                   <span style={{ color: '#DC2626', textDecoration: 'line-through' }}>
-                                    {diff?.old !== null && diff?.old !== undefined && diff?.old !== '' ? String(diff.old) : 'None'}
+                                    {diff?.old !== null && diff?.old !== undefined && diff?.old !== '' ? (typeof diff.old === 'string' ? formatTimestamp(diff.old) : String(diff.old)) : 'None'}
                                   </span>
                                   <span style={{ color: '#6B7280' }}>➔</span>
                                   <span style={{ color: '#059669', fontWeight: 600 }}>
-                                    {diff?.new !== null && diff?.new !== undefined && diff?.new !== '' ? String(diff.new) : 'None'}
+                                    {diff?.new !== null && diff?.new !== undefined && diff?.new !== '' ? (typeof diff.new === 'string' ? formatTimestamp(diff.new) : String(diff.new)) : 'None'}
                                   </span>
                                 </div>
                               ))}
