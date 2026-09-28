@@ -226,7 +226,8 @@ const CookingTemperatureMonitoringPage = () => {
               <tbody>
                 {filteredCompletedLogs.map(log => {
                   const isCookingOk = log.cooking_passed ?? true;
-                  const isChillingOk = log.chilling_passed ?? true;
+                  const hasChilling = log.chilling_end_temp !== null && log.chilling_end_temp !== '' && log.chilling_duration_minutes !== null && log.chilling_duration_minutes !== '' && log.chilling_method !== 'N/A';
+                  const isChillingOk = hasChilling ? (parseFloat(log.chilling_end_temp) <= 5.0 && parseInt(log.chilling_duration_minutes, 10) <= 150) : (log.chilling_passed ?? true);
 
                   return (
                     <tr key={log.id}>

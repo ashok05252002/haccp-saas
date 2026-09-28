@@ -310,13 +310,11 @@ class HaccpReportController extends Controller
                             }
                         }
 
-                        // 3. Stage 2: Blast Chilling (CCP-4) - only evaluated if stage was used
-                        if (!$hasFailedCheck && $log->chilling_end_temp !== null && $log->chilling_end_temp !== '' && $log->chilling_method !== 'N/A') {
-                            $chPassed = isset($log->chilling_passed) ? boolval($log->chilling_passed) : null;
-                            if ($chPassed === false || floatval($log->chilling_end_temp) > 3.0) {
-                                $hasFailedCheck = true;
-                            }
-                            if (!$hasFailedCheck && $log->chilling_duration_minutes !== null && intval($log->chilling_duration_minutes) > 90) {
+                        // 3. Stage 2: Blast Chilling (CCP-4) - only evaluated when actual end temperature and duration values are present
+                        if (!$hasFailedCheck && $log->chilling_end_temp !== null && $log->chilling_end_temp !== '' && $log->chilling_duration_minutes !== null && $log->chilling_duration_minutes !== '' && $log->chilling_method !== 'N/A') {
+                            $chEndTemp = floatval($log->chilling_end_temp);
+                            $chDuration = intval($log->chilling_duration_minutes);
+                            if ($chEndTemp > 5.0 || $chDuration > 150) {
                                 $hasFailedCheck = true;
                             }
                         }
@@ -668,6 +666,9 @@ class HaccpReportController extends Controller
         $sections = [];
 
         if ($logType === 'cooking-temperature') {
+            $hasChilling = ($log->chilling_end_temp !== null && $log->chilling_end_temp !== '' && $log->chilling_duration_minutes !== null && $log->chilling_duration_minutes !== '' && ($log->chilling_method ?? '') !== 'N/A');
+            $chillingPassed = $hasChilling ? (floatval($log->chilling_end_temp) <= 5.0 && intval($log->chilling_duration_minutes) <= 150) : null;
+
             $sections = [
                 [
                     'title' => 'Overview & Batch Details',
@@ -695,13 +696,15 @@ class HaccpReportController extends Controller
                 [
                     'title' => 'Stage 2: Blast Chilling (CCP-4)',
                     'fields' => [
+                        ['label' => 'Configured Limit', 'value' => '≤5°C within 150 mins'],
+                        ['label' => 'Actual Result', 'value' => $hasChilling ? ($log->chilling_end_temp . '°C in ' . $log->chilling_duration_minutes . ' mins') : 'N/A'],
+                        ['label' => 'Result', 'value' => $hasChilling ? ($chillingPassed ? 'PASS' : 'FAIL') : 'N/A'],
                         ['label' => 'Chilling Method', 'value' => $log->chilling_method ?? 'N/A'],
                         ['label' => 'Start Time', 'value' => $log->chilling_start_time ?? 'N/A'],
                         ['label' => 'End Time', 'value' => $log->chilling_end_time ?? 'N/A'],
                         ['label' => 'Start Temp', 'value' => $log->chilling_start_temp !== null ? $log->chilling_start_temp . ' °C' : 'N/A'],
                         ['label' => 'End Temp', 'value' => $log->chilling_end_temp !== null ? $log->chilling_end_temp . ' °C' : 'N/A'],
-                        ['label' => 'Duration', 'value' => $log->chilling_duration_minutes ? $log->chilling_duration_minutes . ' mins' : 'N/A'],
-                        ['label' => 'Result', 'value' => $log->chilling_end_temp !== null ? ($log->chilling_passed ? 'PASSED' : 'FAILED') : 'N/A'],
+                        ['label' => 'Duration', 'value' => $log->chilling_duration_minutes !== null ? $log->chilling_duration_minutes . ' mins' : 'N/A'],
                         ['label' => 'Blast Chilling Corrective Action', 'value' => $log->chilling_corrective_action ?? null],
                     ]
                 ],

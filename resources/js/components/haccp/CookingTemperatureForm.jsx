@@ -285,16 +285,23 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
     }
   }, [chillingStartTime, chillingEndTime]);
 
+  const isChillingCorrectiveActionValid = (action) => {
+    if (!action) return false;
+    const trimmed = String(action).trim();
+    if (!trimmed) return false;
+    const lower = trimmed.toLowerCase();
+    if (lower === 'n/a' || lower === 'na') return false;
+    return true;
+  };
+
   const validateChilling = () => {
     if (chillingNa) return true;
-    if (!chillingEndTemp) return null;
+    if (chillingEndTemp === '' || chillingEndTemp === null || chillingEndTemp === undefined) return null;
+    if (chillingDurationMinutes === '' || chillingDurationMinutes === null || chillingDurationMinutes === undefined) return null;
     const end = parseFloat(chillingEndTemp);
-    if (isNaN(end)) return false;
-    const duration = parseInt(chillingDurationMinutes || 0, 10);
-    if (end <= 3.0 && (duration === 0 || duration <= 90)) {
-      return true;
-    }
-    return false;
+    const duration = parseFloat(chillingDurationMinutes);
+    if (isNaN(end) || isNaN(duration)) return null;
+    return end <= 5.0 && duration <= 150;
   };
 
   const validateChiller = () => {
@@ -409,6 +416,13 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       }
     }
 
+    if (currentStep === 2) {
+      if (!chillingNa && validateChilling() === false && !isChillingCorrectiveActionValid(chillingCorrectiveAction)) {
+        setError('Mandatory Corrective Action Required');
+        return;
+      }
+    }
+
     // Auto-save local draft progress on step transition
     if (draftKey && foodItem) {
       cookingDraftService.saveDraft(draftKey, {
@@ -497,6 +511,11 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
+    if (!chillingNa && validateChilling() === false && !isChillingCorrectiveActionValid(chillingCorrectiveAction)) {
+      setError('Mandatory Corrective Action Required');
+      return;
+    }
+
     // Validate Signature
     let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
@@ -538,6 +557,12 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
+    if (!chillingNa && validateChilling() === false && !isChillingCorrectiveActionValid(chillingCorrectiveAction)) {
+      setError('Mandatory Corrective Action Required');
+      setShowReasonModal(false);
+      return;
+    }
+
     setSubmitting(true);
     const payload = buildFormPayload('COMPLETED');
     payload.amendment_reason = amendmentReason;
@@ -572,6 +597,11 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
     if (!probeId || !probeId.trim()) {
       setError('Please select Probe / Thermometer Used.');
       focusProbeDropdown();
+      return;
+    }
+
+    if (!chillingNa && validateChilling() === false && !isChillingCorrectiveActionValid(chillingCorrectiveAction)) {
+      setError('Mandatory Corrective Action Required');
       return;
     }
 
@@ -857,7 +887,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
               {!chillingNa ? (
                 <>
                   <div style={{ fontSize: '14px', color: '#0E7490', marginBottom: '20px', fontWeight: 500 }}>
-                    Target Requirement: Rapidly cool cooked food from <strong>≥ 63°C to ≤ 3°C</strong> within <strong>90 minutes max</strong>.
+                    Configured Limit: ≤5°C within 150 mins
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
@@ -883,13 +913,13 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
                     </div>
                   </div>
 
-                  {chillingEndTemp !== '' && (
+                  {validateChilling() !== null && (
                     <div style={{ marginTop: '16px', padding: '12px 16px', borderRadius: '8px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: validateChilling() ? '#ECFDF5' : '#FEF2F2', color: validateChilling() ? '#047857' : '#B91C1C', border: validateChilling() ? '1px solid #A7F3D0' : '1px solid #FECACA' }}>
                       {validateChilling() ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
                       <span>
                         {validateChilling()
-                          ? `CCP-4 Limit Passed (End Temp ${chillingEndTemp}°C ≤ 3°C, Duration ${chillingDurationMinutes ? chillingDurationMinutes + ' mins' : '< 90 mins'})`
-                          : `FAILED: Blast chilling limit exceeded! (End Temp > 3°C or Duration > 90 mins)`}
+                          ? `CCP-4 Limit Passed (Configured Limit: ≤5°C within 150 mins | Actual Result: ${chillingEndTemp}°C in ${chillingDurationMinutes} mins | Result: PASS)`
+                          : `FAILED: Blast chilling limit exceeded. Required: End Temperature ≤ 5°C within 150 minutes.`}
                       </span>
                     </div>
                   )}

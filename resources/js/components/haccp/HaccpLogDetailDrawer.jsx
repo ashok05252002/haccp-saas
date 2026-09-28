@@ -23,7 +23,7 @@ const HaccpLogDetailDrawer = ({
     if (!statusStr) return null;
     const normalized = String(statusStr).toUpperCase().trim();
 
-    if (normalized === 'PASSED' || normalized === 'COMPLETED') {
+    if (normalized === 'PASSED' || normalized === 'COMPLETED' || normalized === 'PASS') {
       return (
         <span style={{
           display: 'inline-flex',
@@ -43,7 +43,7 @@ const HaccpLogDetailDrawer = ({
       );
     }
 
-    if (normalized === 'FAILED' || normalized === 'NEEDS REVIEW') {
+    if (normalized === 'FAILED' || normalized === 'NEEDS REVIEW' || normalized === 'FAIL') {
       return (
         <span style={{
           display: 'inline-flex',

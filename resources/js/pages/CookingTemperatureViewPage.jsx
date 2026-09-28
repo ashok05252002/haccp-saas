@@ -87,7 +87,7 @@ const CookingTemperatureViewPage = ({ logId }) => {
         fontWeight: 700
       }}>
         {passed ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
-        <span>{passed ? 'PASSED' : 'FAILED'}</span>
+        <span>{passed ? 'PASS' : 'FAIL'}</span>
       </div>
     );
   };
@@ -230,46 +230,69 @@ const CookingTemperatureViewPage = ({ logId }) => {
             </div>
 
             {/* Stage 2: Blast Chilling (CCP-4) */}
-            <div style={{ backgroundColor: '#ECFEFF', border: '1px solid #CFFAFE', borderRadius: '12px', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Snowflake size={22} color="#0891B2" />
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#155E75' }}>Stage 2: Blast Chilling (CCP-4)</h3>
-                </div>
-                {renderStageBadge(log.chilling_end_temp, log.chilling_passed)}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', fontSize: '14px' }}>
-                <div>
-                  <span style={{ color: '#0E7490', fontWeight: 500 }}>Method:</span>
-                  <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>{log.chilling_method || 'N/A'}</div>
-                </div>
-                <div>
-                  <span style={{ color: '#0E7490', fontWeight: 500 }}>Chilling Times:</span>
-                  <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>
-                    {log.chilling_start_time && log.chilling_end_time ? `${log.chilling_start_time} - ${log.chilling_end_time}` : log.chilling_start_time || 'N/A'}
-                  </div>
-                </div>
-                <div>
-                  <span style={{ color: '#0E7490', fontWeight: 500 }}>Start Temp:</span>
-                  <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>{log.chilling_start_temp !== null ? `${log.chilling_start_temp} °C` : 'N/A'}</div>
-                </div>
-                <div>
-                  <span style={{ color: '#0E7490', fontWeight: 500 }}>End Temp:</span>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#155E75', marginTop: '2px' }}>{log.chilling_end_temp !== null ? `${log.chilling_end_temp} °C` : 'N/A'}</div>
-                </div>
-                <div>
-                  <span style={{ color: '#0E7490', fontWeight: 500 }}>Duration:</span>
-                  <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>{log.chilling_duration_minutes ? `${log.chilling_duration_minutes} mins` : 'N/A'}</div>
-                </div>
-              </div>
+            {(() => {
+              const hasChillingData = log.chilling_end_temp !== null && log.chilling_end_temp !== '' && log.chilling_duration_minutes !== null && log.chilling_duration_minutes !== '' && log.chilling_method !== 'N/A';
+              const chillingPassed = hasChillingData ? (parseFloat(log.chilling_end_temp) <= 5.0 && parseInt(log.chilling_duration_minutes, 10) <= 150) : null;
 
-              {log.chilling_corrective_action && (
-                <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed #A5F3FC', color: '#991B1B', fontSize: '13px' }}>
-                  <strong>Blast Chilling Corrective Action Taken:</strong>
-                  <p style={{ margin: '4px 0 0 0', fontWeight: 600 }}>{log.chilling_corrective_action}</p>
+              return (
+                <div style={{ backgroundColor: '#ECFEFF', border: '1px solid #CFFAFE', borderRadius: '12px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Snowflake size={22} color="#0891B2" />
+                      <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#155E75' }}>Stage 2: Blast Chilling (CCP-4)</h3>
+                    </div>
+                    {renderStageBadge(hasChillingData ? log.chilling_end_temp : null, chillingPassed)}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', fontSize: '14px' }}>
+                    <div>
+                      <span style={{ color: '#0E7490', fontWeight: 500 }}>Configured Limit:</span>
+                      <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>≤5°C within 150 mins</div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#0E7490', fontWeight: 500 }}>Actual Result:</span>
+                      <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>
+                        {hasChillingData ? `${log.chilling_end_temp}°C in ${log.chilling_duration_minutes} mins` : 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#0E7490', fontWeight: 500 }}>Result:</span>
+                      <div style={{ fontWeight: 700, color: hasChillingData ? (chillingPassed ? '#047857' : '#B91C1C') : '#6B7280', marginTop: '2px' }}>
+                        {hasChillingData ? (chillingPassed ? 'PASS' : 'FAIL') : 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#0E7490', fontWeight: 500 }}>Method:</span>
+                      <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>{log.chilling_method || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#0E7490', fontWeight: 500 }}>Chilling Times:</span>
+                      <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>
+                        {log.chilling_start_time && log.chilling_end_time ? `${log.chilling_start_time} - ${log.chilling_end_time}` : log.chilling_start_time || 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#0E7490', fontWeight: 500 }}>Start Temp:</span>
+                      <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>{log.chilling_start_temp !== null ? `${log.chilling_start_temp} °C` : 'N/A'}</div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#0E7490', fontWeight: 500 }}>End Temp:</span>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#155E75', marginTop: '2px' }}>{log.chilling_end_temp !== null ? `${log.chilling_end_temp} °C` : 'N/A'}</div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#0E7490', fontWeight: 500 }}>Duration:</span>
+                      <div style={{ fontWeight: 600, color: '#155E75', marginTop: '2px' }}>{log.chilling_duration_minutes ? `${log.chilling_duration_minutes} mins` : 'N/A'}</div>
+                    </div>
+                  </div>
+
+                  {log.chilling_corrective_action && (
+                    <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed #A5F3FC', color: '#991B1B', fontSize: '13px' }}>
+                      <strong>Blast Chilling Corrective Action Taken:</strong>
+                      <p style={{ margin: '4px 0 0 0', fontWeight: 600 }}>{log.chilling_corrective_action}</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
             {/* Stage 3: Chiller Hold */}
             <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '20px' }}>

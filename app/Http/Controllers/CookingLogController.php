@@ -90,6 +90,25 @@ class CookingLogController extends Controller
 
         $finalSignedAt = ($status === 'COMPLETED') ? ($request->final_signed_at ?? now()) : null;
 
+        // Auto-evaluate blast chilling result if both end temp and duration are provided
+        $hasChillingData = ($request->chilling_end_temp !== null && $request->chilling_end_temp !== '' && $request->chilling_duration_minutes !== null && $request->chilling_duration_minutes !== '' && ($request->chilling_method ?? '') !== 'N/A');
+        $chillingPassed = $request->chilling_passed ?? true;
+        if ($hasChillingData) {
+            $endTemp = floatval($request->chilling_end_temp);
+            $duration = intval($request->chilling_duration_minutes);
+            $chillingPassed = ($endTemp <= 5.0 && $duration <= 150);
+
+            if (!$chillingPassed && $status === 'COMPLETED') {
+                $ca = trim(strval($request->chilling_corrective_action ?? ''));
+                $caLower = strtolower($ca);
+                if ($ca === '' || $caLower === 'n/a' || $caLower === 'na') {
+                    return response()->json([
+                        'message' => 'Mandatory Corrective Action Required for failed blast chilling step.'
+                    ], 422);
+                }
+            }
+        }
+
         $log = CookingLog::create([
             'tenant_id' => $tenantId,
             'branch_id' => $branchId,
@@ -110,7 +129,7 @@ class CookingLogController extends Controller
             'chilling_start_temp' => $request->chilling_start_temp,
             'chilling_end_temp' => $request->chilling_end_temp,
             'chilling_duration_minutes' => $request->chilling_duration_minutes,
-            'chilling_passed' => $request->chilling_passed ?? true,
+            'chilling_passed' => $hasChillingData ? $chillingPassed : ($request->chilling_passed ?? true),
             'chilling_corrective_action' => $request->chilling_corrective_action,
             'chiller_location' => $request->chiller_location,
             'chiller_temp' => $request->chiller_temp,
@@ -202,6 +221,30 @@ class CookingLogController extends Controller
         $updateData = $validated;
         unset($updateData['amendment_reason']);
         $updateData['status'] = $targetStatus;
+
+        // Auto-evaluate blast chilling result if both end temp and duration are provided
+        $checkEndTemp = array_key_exists('chilling_end_temp', $updateData) ? $updateData['chilling_end_temp'] : $log->chilling_end_temp;
+        $checkDuration = array_key_exists('chilling_duration_minutes', $updateData) ? $updateData['chilling_duration_minutes'] : $log->chilling_duration_minutes;
+        $checkMethod = array_key_exists('chilling_method', $updateData) ? $updateData['chilling_method'] : $log->chilling_method;
+        $checkCA = array_key_exists('chilling_corrective_action', $updateData) ? $updateData['chilling_corrective_action'] : $log->chilling_corrective_action;
+
+        $hasChillingData = ($checkEndTemp !== null && $checkEndTemp !== '' && $checkDuration !== null && $checkDuration !== '' && $checkMethod !== 'N/A');
+        if ($hasChillingData) {
+            $endTemp = floatval($checkEndTemp);
+            $duration = intval($checkDuration);
+            $chillingPassed = ($endTemp <= 5.0 && $duration <= 150);
+            $updateData['chilling_passed'] = $chillingPassed;
+
+            if (!$chillingPassed && $targetStatus === 'COMPLETED') {
+                $ca = trim(strval($checkCA ?? ''));
+                $caLower = strtolower($ca);
+                if ($ca === '' || $caLower === 'n/a' || $caLower === 'na') {
+                    return response()->json([
+                        'message' => 'Mandatory Corrective Action Required for failed blast chilling step.'
+                    ], 422);
+                }
+            }
+        }
 
         // Final Sign-Off timestamp
         if ($isExistingInProgress && $targetStatus === 'COMPLETED') {
