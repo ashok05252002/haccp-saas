@@ -193,7 +193,8 @@ const HaccpLogDetailDrawer = ({
       );
     }
 
-    if (label.toLowerCase() === 'result' || label.toLowerCase() === 'status') {
+    const lblLower = label.toLowerCase().trim();
+    if (lblLower === 'result' || lblLower === 'status' || lblLower === 'evaluation / result' || lblLower === 'evaluation' || lblLower.includes('compliance')) {
       return renderBadge(value);
     }
 

@@ -400,6 +400,25 @@ class HaccpReportController extends Controller
                             $statusStr = 'Needs Review';
                             $passed = false;
                         }
+                    } elseif ($modelClass === ThawingLog::class) {
+                        $hasFailedCheck = false;
+                        $rawStatus = $log->status ?? 'Passed';
+                        $statusVal = strtolower(trim(strval($rawStatus)));
+                        if (in_array($statusVal, ['failed', 'fail', 'needs_review', 'need_review', 'action_required', 'action required / unfit', 'requires_attention'])) {
+                            $hasFailedCheck = true;
+                        }
+                        if (!$hasFailedCheck && $log->defrost_temp !== null && $log->defrost_temp !== '') {
+                            if (floatval($log->defrost_temp) > 5.0) {
+                                $hasFailedCheck = true;
+                            }
+                        }
+                        if ($hasFailedCheck) {
+                            $statusStr = 'Needs Review';
+                            $passed = false;
+                        } else {
+                            $statusStr = 'Passed';
+                            $passed = true;
+                        }
                     } else {
                         if (isset($log->check_passed) && ($log->check_passed === false || $log->check_passed === 0 || $log->check_passed === '0')) {
                             $statusStr = 'Needs Review';
@@ -605,6 +624,92 @@ class HaccpReportController extends Controller
                         ];
                     }
 
+                    $thawingSummary = null;
+                    if ($modelClass === ThawingLog::class) {
+                        $cleanStartDate = $log->start_date ? (is_object($log->start_date) ? $log->start_date->format('Y-m-d') : explode('T', strval($log->start_date))[0]) : null;
+                        $cleanStartTime = $log->start_time ? trim(strval($log->start_time)) : null;
+                        if ($cleanStartTime && strpos($cleanStartTime, 'T') !== false) {
+                            $cleanStartTime = explode('T', $cleanStartTime)[1];
+                        }
+                        if ($cleanStartTime && strlen($cleanStartTime) > 5) {
+                            $cleanStartTime = substr($cleanStartTime, 0, 5);
+                        }
+
+                        $cleanCompDate = $log->completed_date ? (is_object($log->completed_date) ? $log->completed_date->format('Y-m-d') : explode('T', strval($log->completed_date))[0]) : null;
+                        $cleanCompTime = $log->completed_time ? trim(strval($log->completed_time)) : null;
+                        if ($cleanCompTime && strpos($cleanCompTime, 'T') !== false) {
+                            $cleanCompTime = explode('T', $cleanCompTime)[1];
+                        }
+                        if ($cleanCompTime && strlen($cleanCompTime) > 5) {
+                            $cleanCompTime = substr($cleanCompTime, 0, 5);
+                        }
+
+                        $startDisplay = null;
+                        if ($cleanStartDate && $cleanStartTime) {
+                            $startDisplay = "{$cleanStartDate} at {$cleanStartTime}";
+                        } elseif ($cleanStartDate) {
+                            $startDisplay = $cleanStartDate;
+                        } elseif ($cleanStartTime) {
+                            $startDisplay = $cleanStartTime;
+                        }
+
+                        $completedDisplay = null;
+                        if ($cleanCompDate && $cleanCompTime) {
+                            $completedDisplay = "{$cleanCompDate} at {$cleanCompTime}";
+                        } elseif ($cleanCompDate) {
+                            $completedDisplay = $cleanCompDate;
+                        } elseif ($cleanCompTime) {
+                            $completedDisplay = $cleanCompTime;
+                        }
+
+                        $tempDisplay = null;
+                        if ($log->defrost_temp !== null && $log->defrost_temp !== '') {
+                            $tempDisplay = floatval($log->defrost_temp) . '°C';
+                        }
+
+                        $thEvaluation = $log->status ?? ($passed ? 'Passed' : 'Needs Review');
+                        $evalLower = strtolower(trim(strval($thEvaluation)));
+                        if (in_array($evalLower, ['failed', 'fail', 'needs_review', 'need_review', 'action_required', 'action required / unfit', 'requires_attention'])) {
+                            $thEvaluation = 'Needs Review';
+                        } elseif (in_array($evalLower, ['passed', 'pass'])) {
+                            $thEvaluation = 'Passed';
+                        }
+
+                        $thComments = $log->comments ? trim(strval($log->comments)) : null;
+                        if ($thComments !== null) {
+                            $lowerC = strtolower($thComments);
+                            if (in_array($lowerC, ['n/a', 'null', 'none', 'none recorded.', 'no comment provided.', 'no comments', ''])) {
+                                $thComments = null;
+                            }
+                        }
+
+                        $thFoodItem = $log->food_item_name ? trim(strval($log->food_item_name)) : null;
+                        if ($thFoodItem !== null && in_array(strtolower($thFoodItem), ['n/a', 'null', ''])) {
+                            $thFoodItem = null;
+                        }
+
+                        $thDefrostMethod = $log->defrost_method ? trim(strval($log->defrost_method)) : null;
+                        if ($thDefrostMethod !== null && in_array(strtolower($thDefrostMethod), ['n/a', 'null', ''])) {
+                            $thDefrostMethod = null;
+                        }
+
+                        $thStorageLocation = $log->storage_location ? trim(strval($log->storage_location)) : null;
+                        if ($thStorageLocation !== null && in_array(strtolower($thStorageLocation), ['n/a', 'null', ''])) {
+                            $thStorageLocation = null;
+                        }
+
+                        $thawingSummary = [
+                            'foodItem' => $thFoodItem,
+                            'defrostMethod' => $thDefrostMethod,
+                            'storageLocation' => $thStorageLocation,
+                            'defrostStart' => $startDisplay,
+                            'defrostCompleted' => $completedDisplay,
+                            'temperature' => $tempDisplay,
+                            'evaluation' => $thEvaluation,
+                            'comments' => $thComments,
+                        ];
+                    }
+
                     $allLogs[] = [
                         'id' => $log->id,
                         'moduleId' => $moduleId,
@@ -625,6 +730,7 @@ class HaccpReportController extends Controller
                         'storageUnit' => $storageUnitDisplay,
                         'recordedTemperature' => $recordedTempDisplay,
                         'deliverySummary' => $deliverySummary,
+                        'thawingSummary' => $thawingSummary,
                         'supplier' => $deliverySummary['supplier'] ?? null,
                         'vehicleSafe' => $deliverySummary['vehicleSafe'] ?? null,
                         'deliveredProducts' => $deliverySummary['products'] ?? [],
@@ -636,8 +742,15 @@ class HaccpReportController extends Controller
                             'supplier' => $deliverySummary['supplier'] ?? null,
                             'vehicleSafe' => $deliverySummary['vehicleSafe'] ?? null,
                             'deliveredProducts' => $deliverySummary['products'] ?? [],
+                            'thawingSummary' => $thawingSummary,
+                            'foodItem' => $thFoodItem ?? ($log->food_item_name ?? null),
+                            'defrostMethod' => $thDefrostMethod ?? ($log->defrost_method ?? null),
+                            'storageLocation' => $thStorageLocation ?? ($log->storage_location ?? null),
+                            'defrostStart' => $startDisplay ?? null,
+                            'defrostCompleted' => $completedDisplay ?? null,
+                            'defrostTemp' => $tempDisplay ?? null,
                             'items' => $log->items ?? null,
-                            'generalComments' => $log->general_comments ?? $log->notes ?? $log->comment ?? null,
+                            'generalComments' => $thComments ?? ($log->general_comments ?? $log->notes ?? $log->comment ?? $log->comments ?? null),
                             'signedBy' => $log->signed_by_staff_name ?? null,
                             'quantitySummary' => $log->quantity_summary ?? null,
                             'mainReason' => $log->main_reason ?? null,
@@ -1374,47 +1487,102 @@ class HaccpReportController extends Controller
                 ]
             ];
         } elseif ($logType === 'thawing') {
-            $startDateTime = trim(($log->start_date ? (is_object($log->start_date) ? $log->start_date->format('Y-m-d') : strval($log->start_date)) : '') . ' ' . ($log->start_time ?? ''));
-            $completedDateTime = trim(($log->completed_date ? (is_object($log->completed_date) ? $log->completed_date->format('Y-m-d') : strval($log->completed_date)) : '') . ' ' . ($log->completed_time ?? ''));
+            $sDate = $log->start_date ? (is_object($log->start_date) ? $log->start_date->format('Y-m-d') : explode('T', strval($log->start_date))[0]) : '';
+            $sTime = $log->start_time ? trim(strval($log->start_time)) : '';
+            if (strpos($sTime, 'T') !== false) $sTime = explode('T', $sTime)[1];
+            if (strlen($sTime) > 5) $sTime = substr($sTime, 0, 5);
+            $startDateTime = ($sDate && $sTime) ? "{$sDate} at {$sTime}" : ($sDate ?: $sTime);
+
+            $cDate = $log->completed_date ? (is_object($log->completed_date) ? $log->completed_date->format('Y-m-d') : explode('T', strval($log->completed_date))[0]) : '';
+            $cTime = $log->completed_time ? trim(strval($log->completed_time)) : '';
+            if (strpos($cTime, 'T') !== false) $cTime = explode('T', $cTime)[1];
+            if (strlen($cTime) > 5) $cTime = substr($cTime, 0, 5);
+            $completedDateTime = ($cDate && $cTime) ? "{$cDate} at {$cTime}" : ($cDate ?: $cTime);
+
+            $logDate = $log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : explode('T', strval($log->log_date))[0]) : '';
+            $logTime = $log->log_time ? trim(strval($log->log_time)) : '';
+            if (strpos($logTime, 'T') !== false) $logTime = explode('T', $logTime)[1];
+            if (strlen($logTime) > 5) $logTime = substr($logTime, 0, 5);
+            $dateTimeDisplay = ($logDate && $logTime) ? "{$logDate} at {$logTime}" : ($logDate ?: $logTime);
+
+            $cleanComments = null;
+            if (!empty($log->comments)) {
+                $cVal = trim(strval($log->comments));
+                $cLower = strtolower($cVal);
+                if (!in_array($cLower, ['null', 'n/a', 'none', 'none recorded.', 'no comment provided.', 'no comments', ''])) {
+                    $cleanComments = $cVal;
+                }
+            }
+
+            $thTempDisplay = null;
+            if ($log->defrost_temp !== null && $log->defrost_temp !== '') {
+                $thTempDisplay = floatval($log->defrost_temp) . '°C';
+            }
+
+            $thStatusDisplay = $log->status ?? 'Passed';
+            $evalLower = strtolower(trim(strval($thStatusDisplay)));
+            if (in_array($evalLower, ['failed', 'fail', 'needs_review', 'need_review', 'action_required', 'action required / unfit', 'requires_attention'])) {
+                $thStatusDisplay = 'Needs Review';
+            } elseif (in_array($evalLower, ['passed', 'pass'])) {
+                $thStatusDisplay = 'Passed';
+            }
+
+            $overviewFields = [
+                ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                ['label' => 'Date & Time', 'value' => $dateTimeDisplay ?: '-'],
+                ['label' => 'Food Product / Item', 'value' => $log->food_item_name ?? '-'],
+                ['label' => 'Defrosting Method', 'value' => $log->defrost_method ?? '-'],
+            ];
+            if (!empty($log->storage_location) && !in_array(strtolower(trim($log->storage_location)), ['null', 'n/a'])) {
+                $overviewFields[] = ['label' => 'Storage / Location', 'value' => $log->storage_location];
+            }
+            $overviewFields[] = ['label' => 'Staff / Inspector', 'value' => $log->signed_by_staff_name ?? ($log->staff_name ?? '-')];
+            $overviewFields[] = ['label' => 'Evaluation / Result', 'value' => $thStatusDisplay];
+            $overviewFields[] = ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null];
+
+            $processFields = [];
+            if (!empty($log->storage_location) && !in_array(strtolower(trim($log->storage_location)), ['null', 'n/a'])) {
+                $processFields[] = ['label' => 'Storage / Location', 'value' => $log->storage_location];
+            }
+            if ($startDateTime !== '') {
+                $processFields[] = ['label' => 'Defrost Start Date & Time', 'value' => $startDateTime];
+            }
+            if ($completedDateTime !== '') {
+                $processFields[] = ['label' => 'Defrost Completed Date & Time', 'value' => $completedDateTime];
+            }
+            if ($thTempDisplay !== null) {
+                $processFields[] = ['label' => 'Temperature After Defrosting', 'value' => $thTempDisplay];
+            }
+            $processFields[] = ['label' => 'Target Requirement', 'value' => 'Thaw under refrigeration (≤ 5°C) or controlled defrost'];
+            $processFields[] = ['label' => 'Evaluation / Result', 'value' => $thStatusDisplay];
 
             $sections = [
                 [
                     'title' => 'Overview & Food Details',
-                    'fields' => [
-                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
-                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
-                        ['label' => 'Food Item', 'value' => $log->food_item_name ?? '-'],
-                        ['label' => 'Defrost / Thawing Method', 'value' => $log->defrost_method ?? 'N/A'],
-                        ['label' => 'Staff Member', 'value' => $log->signed_by_staff_name ?? '-'],
-                        ['label' => 'Compliance Status', 'value' => $log->status ?? 'Passed'],
-                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
-                    ]
+                    'fields' => $overviewFields,
                 ],
                 [
                     'title' => 'Thawing Process Details',
-                    'fields' => [
-                        ['label' => 'Storage Location', 'value' => $log->storage_location ?? 'N/A'],
-                        ['label' => 'Start Date & Time', 'value' => $startDateTime !== '' ? $startDateTime : 'N/A'],
-                        ['label' => 'Completion Date & Time', 'value' => $completedDateTime !== '' ? $completedDateTime : 'N/A'],
-                        ['label' => 'Defrost Temperature', 'value' => $log->defrost_temp !== null ? ($log->defrost_temp . ' °C') : 'N/A'],
-                        ['label' => 'Target Requirement', 'value' => 'Thaw under refrigeration (≤ 8°C) or controlled defrost'],
-                        ['label' => 'Compliance Result', 'value' => $log->status ?? 'Passed'],
-                    ]
+                    'fields' => $processFields,
                 ],
-                [
+            ];
+
+            if ($cleanComments) {
+                $sections[] = [
                     'title' => 'Observations & Corrective Actions',
                     'fields' => [
-                        ['label' => 'Staff Comments / Notes', 'value' => $log->comments ?? 'None recorded.'],
-                    ]
+                        ['label' => 'Comments / Notes', 'value' => $cleanComments],
+                    ],
+                ];
+            }
+
+            $sections[] = [
+                'title' => 'Verification & Signatures',
+                'fields' => [
+                    ['label' => 'Staff / Inspector', 'value' => $log->signed_by_staff_name ?? ($log->staff_name ?? '-')],
+                    ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                    ['label' => 'Signature Image', 'value' => $log->signature ?? null],
                 ],
-                [
-                    'title' => 'Verification & Signatures',
-                    'fields' => [
-                        ['label' => 'Staff Member', 'value' => $log->signed_by_staff_name ?? '-'],
-                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
-                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                    ]
-                ]
             ];
         } elseif ($logType === 'probe-calibration') {
             $probeName = $log->probe_name ?? ('Probe ID #' . ($log->probe_id ?? 'N/A'));

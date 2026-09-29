@@ -226,6 +226,82 @@ const getDeliveryProducts = (log) => {
   return [];
 };
 
+const getThawingDetails = (log) => {
+  const summary = log?.thawingSummary || log?.formData?.thawingSummary || {};
+  const rawLog = log?.formData?.rawLog || {};
+
+  const cleanVal = (v) => {
+    if (v === null || v === undefined) return null;
+    const s = String(v).trim();
+    if (s === '' || s.toLowerCase() === 'null' || s.toLowerCase() === 'n/a') return null;
+    return s;
+  };
+
+  const foodItem = cleanVal(summary.foodItem || log?.formData?.foodItem || rawLog.food_item_name);
+  const defrostMethod = cleanVal(summary.defrostMethod || log?.formData?.defrostMethod || rawLog.defrost_method);
+  const storageLocation = cleanVal(summary.storageLocation || log?.formData?.storageLocation || rawLog.storage_location);
+
+  // Defrost Start
+  let defrostStart = cleanVal(summary.defrostStart);
+  if (!defrostStart) {
+    const sDate = rawLog.start_date ? String(rawLog.start_date).split('T')[0] : '';
+    let sTime = rawLog.start_time ? String(rawLog.start_time).trim() : '';
+    if (sTime.includes('T')) sTime = sTime.split('T')[1];
+    if (sTime.length > 5) sTime = sTime.substring(0, 5);
+    if (sDate && sTime) {
+      defrostStart = `${sDate} at ${sTime}`;
+    } else if (sDate) {
+      defrostStart = sDate;
+    } else if (sTime) {
+      defrostStart = sTime;
+    }
+  }
+
+  // Defrost Completed
+  let defrostCompleted = cleanVal(summary.defrostCompleted);
+  if (!defrostCompleted) {
+    const cDate = rawLog.completed_date ? String(rawLog.completed_date).split('T')[0] : '';
+    let cTime = rawLog.completed_time ? String(rawLog.completed_time).trim() : '';
+    if (cTime.includes('T')) cTime = cTime.split('T')[1];
+    if (cTime.length > 5) cTime = cTime.substring(0, 5);
+    if (cDate && cTime) {
+      defrostCompleted = `${cDate} at ${cTime}`;
+    } else if (cDate) {
+      defrostCompleted = cDate;
+    } else if (cTime) {
+      defrostCompleted = cTime;
+    }
+  }
+
+  // Temperature
+  let temperature = cleanVal(summary.temperature);
+  if (!temperature) {
+    const rawTemp = rawLog.defrost_temp ?? log?.formData?.defrost_temp ?? log?.formData?.defrostTemp;
+    if (rawTemp !== undefined && rawTemp !== null && String(rawTemp).trim() !== '' && String(rawTemp).toLowerCase() !== 'null') {
+      temperature = `${parseFloat(rawTemp)}°C`;
+    }
+  }
+
+  // Evaluation / Result
+  let evaluation = cleanVal(summary.evaluation || rawLog.status || log?.status);
+  if (evaluation) {
+    const evalLower = evaluation.toLowerCase().trim();
+    if (evalLower === 'pass' || evalLower === 'passed') evaluation = 'Passed';
+    else if (evalLower === 'fail' || evalLower === 'failed' || evalLower === 'needs_review' || evalLower === 'need_review' || evalLower === 'action_required') evaluation = 'Needs Review';
+  }
+
+  return {
+    foodItem,
+    defrostMethod,
+    storageLocation,
+    defrostStart,
+    defrostCompleted,
+    temperature,
+    evaluation,
+    hasAny: Boolean(foodItem || defrostMethod || storageLocation || defrostStart || defrostCompleted || temperature || evaluation)
+  };
+};
+
 const HaccpReportsPage = () => {
   const todayObj = new Date();
   const todayStr = todayObj.toISOString().split('T')[0];
@@ -856,10 +932,100 @@ const HaccpReportsPage = () => {
                         })()
                       )}
 
+                      {/* Thawing / Defrosting Process Details */}
+                      {log.moduleId === 'thawing' && (() => {
+                        const thawing = getThawingDetails(log);
+                        if (!thawing.hasAny) return null;
+
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                              Thawing / Defrosting Details:
+                            </span>
+                            <div
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                gap: '12px',
+                                backgroundColor: '#F9FAFB',
+                                border: '1px solid var(--color-border-light)',
+                                borderRadius: '8px',
+                                padding: '12px 14px',
+                                fontSize: '13px',
+                              }}
+                            >
+                              {thawing.foodItem && (
+                                <div>
+                                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Food Product / Item</span>
+                                  <strong style={{ color: 'var(--color-primary)' }}>{thawing.foodItem}</strong>
+                                </div>
+                              )}
+
+                              {thawing.defrostMethod && (
+                                <div>
+                                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Defrosting Method</span>
+                                  <strong style={{ color: 'var(--color-text-primary)' }}>{thawing.defrostMethod}</strong>
+                                </div>
+                              )}
+
+                              {thawing.storageLocation && (
+                                <div>
+                                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Storage / Location</span>
+                                  <strong style={{ color: 'var(--color-text-primary)' }}>{thawing.storageLocation}</strong>
+                                </div>
+                              )}
+
+                              {thawing.defrostStart && (
+                                <div>
+                                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Defrost Start</span>
+                                  <strong style={{ color: 'var(--color-text-primary)' }}>{thawing.defrostStart}</strong>
+                                </div>
+                              )}
+
+                              {thawing.defrostCompleted && (
+                                <div>
+                                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Defrost Completed</span>
+                                  <strong style={{ color: 'var(--color-text-primary)' }}>{thawing.defrostCompleted}</strong>
+                                </div>
+                              )}
+
+                              {thawing.temperature && (
+                                <div>
+                                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Temperature After Defrosting</span>
+                                  <strong style={{ color: parseFloat(thawing.temperature) > 5 ? '#DC2626' : 'var(--color-text-primary)' }}>{thawing.temperature}</strong>
+                                </div>
+                              )}
+
+                              {thawing.evaluation && (
+                                <div>
+                                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Evaluation / Result</span>
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '3px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 700,
+                                      color: thawing.evaluation === 'Passed' ? '#065F46' : '#991B1B',
+                                      backgroundColor: thawing.evaluation === 'Passed' ? '#ECFDF5' : '#FEF2F2',
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      marginTop: '2px',
+                                    }}
+                                  >
+                                    {thawing.evaluation}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* Form Details Summary - only show if actual content exists */}
-                      {hasValidComment(log.formData?.generalComments) && (
+                      {hasValidComment(log.formData?.generalComments || log.thawingSummary?.comments || log.formData?.rawLog?.comments) && (
                         <div style={{ padding: '10px 14px', backgroundColor: '#F9FAFB', borderRadius: '8px', border: '1px solid var(--color-border-light)', fontSize: '13px' }}>
-                          <strong>Comments / Observations:</strong> {String(log.formData.generalComments).trim()}
+                          <strong>Comments / Observations:</strong> {String(log.formData?.generalComments || log.thawingSummary?.comments || log.formData?.rawLog?.comments).trim()}
                         </div>
                       )}
 
