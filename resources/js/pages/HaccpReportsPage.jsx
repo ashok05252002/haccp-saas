@@ -113,6 +113,75 @@ const hasValidComment = (comment) => {
   );
 };
 
+const getDeliverySupplier = (log) => {
+  if (log?.supplier) return log.supplier;
+  if (log?.deliverySummary?.supplier) return log.deliverySummary.supplier;
+  if (log?.formData?.supplier) return log.formData.supplier;
+  const rawSupplier = log?.formData?.rawLog?.supplier;
+  if (rawSupplier?.name) return rawSupplier.name;
+  if (log?.formData?.rawLog?.supplier_name) return log.formData.rawLog.supplier_name;
+  return null;
+};
+
+const getDeliveryVehicle = (log) => {
+  if (log?.vehicleSafe) return log.vehicleSafe;
+  if (log?.deliverySummary?.vehicleSafe) return log.deliverySummary.vehicleSafe;
+  if (log?.formData?.vehicleSafe) return log.formData.vehicleSafe;
+  const vSafe = log?.formData?.rawLog?.vehicle_safe ?? log?.vehicle_safe;
+  if (vSafe !== undefined && vSafe !== null) {
+    if (vSafe === true || vSafe === 1 || vSafe === '1' || String(vSafe).toLowerCase() === 'true') {
+      return 'Clean & Safe';
+    }
+    if (vSafe === false || vSafe === 0 || vSafe === '0' || String(vSafe).toLowerCase() === 'false') {
+      return 'Unsafe / Unclean';
+    }
+  }
+  return null;
+};
+
+const formatDisplayDate = (dateVal) => {
+  if (!dateVal || dateVal === '-') return '-';
+  const cleanStr = String(dateVal).split('T')[0].split(' ')[0].trim();
+  const parts = cleanStr.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
+    const d = new Date(cleanStr + 'T00:00:00');
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+  }
+  return cleanStr;
+};
+
+const formatProductTemp = (temp) => {
+  if (temp === null || temp === undefined || temp === '' || temp === '-') return '-';
+  const str = String(temp).trim();
+  if (str.includes('°C')) return str;
+  const num = parseFloat(str);
+  return isNaN(num) ? str : `${num}°C`;
+};
+
+const getDeliveryProducts = (log) => {
+  if (Array.isArray(log?.deliveredProducts) && log.deliveredProducts.length > 0) {
+    return log.deliveredProducts;
+  }
+  if (Array.isArray(log?.deliverySummary?.products) && log.deliverySummary.products.length > 0) {
+    return log.deliverySummary.products;
+  }
+  if (Array.isArray(log?.formData?.deliveredProducts) && log.formData.deliveredProducts.length > 0) {
+    return log.formData.deliveredProducts;
+  }
+  const rawProducts = log?.formData?.rawLog?.products;
+  if (Array.isArray(rawProducts) && rawProducts.length > 0) {
+    return rawProducts.map((p) => ({
+      food: p.food_item?.name || p.foodItem?.name || p.name || 'Unknown Product',
+      batchCode: p.batch_number || p.batch_code || '-',
+      useByDate: p.use_by_date || '-',
+      temperature: (p.temperature !== null && p.temperature !== '') ? `${p.temperature}°C` : '-',
+    }));
+  }
+  return [];
+};
+
 const HaccpReportsPage = () => {
   const todayObj = new Date();
   const todayStr = todayObj.toISOString().split('T')[0];
@@ -534,6 +603,25 @@ const HaccpReportsPage = () => {
                           </div>
                         )}
 
+                        {/* Delivery Intake Fields */}
+                        {log.moduleId === 'delivery-intake' && (
+                          <>
+                            {getDeliverySupplier(log) && (
+                              <div>
+                                <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Supplier</span>
+                                <strong style={{ color: 'var(--color-text-primary)' }}>{getDeliverySupplier(log)}</strong>
+                              </div>
+                            )}
+
+                            {getDeliveryVehicle(log) && (
+                              <div>
+                                <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Delivery Vehicle</span>
+                                <strong style={{ color: 'var(--color-text-primary)' }}>{getDeliveryVehicle(log)}</strong>
+                              </div>
+                            )}
+                          </>
+                        )}
+
                         {log.formData?.holdingUnit && (
                           <div>
                             <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Station / Unit</span>
@@ -728,6 +816,37 @@ const HaccpReportsPage = () => {
                       {hasValidComment(log.formData?.generalComments) && (
                         <div style={{ padding: '10px 14px', backgroundColor: '#F9FAFB', borderRadius: '8px', border: '1px solid var(--color-border-light)', fontSize: '13px' }}>
                           <strong>Comments / Observations:</strong> {String(log.formData.generalComments).trim()}
+                        </div>
+                      )}
+
+                      {/* Delivered Foods Table for Delivery Intake */}
+                      {log.moduleId === 'delivery-intake' && getDeliveryProducts(log).length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                            Delivered Foods / Products:
+                          </span>
+                          <div style={{ overflowX: 'auto', border: '1px solid var(--color-border-light)', borderRadius: '8px' }}>
+                            <table className="data-table" style={{ fontSize: '12.5px', width: '100%' }}>
+                              <thead>
+                                <tr>
+                                  <th>Food</th>
+                                  <th>Batch Code</th>
+                                  <th>Use By Date</th>
+                                  <th>Temperature</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {getDeliveryProducts(log).map((prod, pIdx) => (
+                                  <tr key={pIdx}>
+                                    <td><strong>{prod.food || '-'}</strong></td>
+                                    <td>{prod.batchCode || '-'}</td>
+                                    <td>{formatDisplayDate(prod.useByDate)}</td>
+                                    <td>{formatProductTemp(prod.temperature)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       )}
 

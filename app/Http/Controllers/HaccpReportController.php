@@ -559,6 +559,49 @@ class HaccpReportController extends Controller
                         }
                     }
 
+                    $deliverySummary = null;
+                    if ($modelClass === DeliveryIntakeLog::class) {
+                        $supplierName = $log->supplier ? $log->supplier->name : ($log->supplier_name ?? null);
+
+                        $vehicleSafeDisplay = null;
+                        if ($log->vehicle_safe !== null) {
+                            $vehicleSafeDisplay = $log->vehicle_safe ? 'Clean & Safe' : 'Unsafe / Unclean';
+                        }
+
+                        $packagingIntactDisplay = null;
+                        if ($log->packaging_intact !== null) {
+                            $packagingIntactDisplay = $log->packaging_intact ? 'Intact & Sealed' : 'Damaged / Unsealed';
+                        }
+
+                        $deliveredProducts = [];
+                        if ($log->products && $log->products->count() > 0) {
+                            foreach ($log->products as $prod) {
+                                $foodName = $prod->foodItem ? $prod->foodItem->name : ($prod->food_name ?? 'Unknown Product');
+
+                                $tempFormatted = '-';
+                                if ($prod->temperature !== null && $prod->temperature !== '') {
+                                    $tempFormatted = floatval($prod->temperature) . '°C';
+                                }
+
+                                $deliveredProducts[] = [
+                                    'id' => $prod->id,
+                                    'food' => $foodName,
+                                    'batchCode' => $prod->batch_number ?: '-',
+                                    'useByDate' => $prod->use_by_date ? (is_object($prod->use_by_date) ? $prod->use_by_date->format('Y-m-d') : strval($prod->use_by_date)) : '-',
+                                    'temperature' => $tempFormatted,
+                                    'quantity' => $prod->quantity ?? null,
+                                ];
+                            }
+                        }
+
+                        $deliverySummary = [
+                            'supplier' => $supplierName,
+                            'vehicleSafe' => $vehicleSafeDisplay,
+                            'packagingIntact' => $packagingIntactDisplay,
+                            'products' => $deliveredProducts,
+                        ];
+                    }
+
                     $allLogs[] = [
                         'id' => $log->id,
                         'moduleId' => $moduleId,
@@ -578,11 +621,18 @@ class HaccpReportController extends Controller
                         'cookingSummary' => $cookingSummary,
                         'storageUnit' => $storageUnitDisplay,
                         'recordedTemperature' => $recordedTempDisplay,
+                        'deliverySummary' => $deliverySummary,
+                        'supplier' => $deliverySummary['supplier'] ?? null,
+                        'vehicleSafe' => $deliverySummary['vehicleSafe'] ?? null,
+                        'deliveredProducts' => $deliverySummary['products'] ?? [],
                         'formData' => [
                             'holdingUnit' => $log->holding_unit ?? null,
                             'storageUnit' => $storageUnitDisplay,
                             'recordedTemperature' => $recordedTempDisplay,
                             'temperature' => $log->temperature ?? null,
+                            'supplier' => $deliverySummary['supplier'] ?? null,
+                            'vehicleSafe' => $deliverySummary['vehicleSafe'] ?? null,
+                            'deliveredProducts' => $deliverySummary['products'] ?? [],
                             'items' => $log->items ?? null,
                             'generalComments' => $log->general_comments ?? $log->notes ?? $log->comment ?? null,
                             'signedBy' => $log->signed_by_staff_name ?? null,
@@ -1017,7 +1067,7 @@ class HaccpReportController extends Controller
             ];
         } elseif ($logType === 'delivery-intake') {
             $supplierName = $log->supplier ? $log->supplier->name : 'N/A';
-            $vehicleStatus = $log->vehicle_safe === null ? 'N/A' : ($log->vehicle_safe ? 'PASSED (Clean & Safe)' : 'FAILED (Unsafe/Unclean)');
+            $vehicleStatus = $log->vehicle_safe === null ? 'N/A' : ($log->vehicle_safe ? 'Clean & Safe' : 'Unsafe / Unclean');
             $packagingStatus = $log->packaging_intact === null ? 'N/A' : ($log->packaging_intact ? 'PASSED (Intact & Sealed)' : 'FAILED (Damaged/Unsealed)');
 
             $productFields = [];
@@ -1029,9 +1079,9 @@ class HaccpReportController extends Controller
                     $storageTypeName = ($prod->foodItem && $prod->foodItem->storageType) ? $prod->foodItem->storageType->name : '';
 
                     $qtyText = $prod->quantity !== null ? ($prod->quantity . ($uomName ? ' ' . $uomName : '')) : 'N/A';
-                    $tempText = $prod->temperature !== null ? ($prod->temperature . ' °C') : 'N/A';
+                    $tempText = ($prod->temperature !== null && $prod->temperature !== '') ? (floatval($prod->temperature) . '°C') : 'N/A';
                     $batchText = $prod->batch_number ?? 'N/A';
-                    $expiryText = $prod->use_by_date ?? 'N/A';
+                    $expiryText = $prod->use_by_date ? (is_object($prod->use_by_date) ? $prod->use_by_date->format('Y-m-d') : strval($prod->use_by_date)) : 'N/A';
 
                     $summaryText = "{$itemName} | Qty: {$qtyText} | Temp: {$tempText} | Batch: {$batchText} | Expiry: {$expiryText}" . ($storageTypeName ? " | Storage: {$storageTypeName}" : "");
 
@@ -1053,7 +1103,8 @@ class HaccpReportController extends Controller
                     'fields' => [
                         ['label' => 'Log Record ID', 'value' => '#' . $log->id],
                         ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
-                        ['label' => 'Supplier Name', 'value' => $supplierName],
+                        ['label' => 'Supplier', 'value' => $supplierName],
+                        ['label' => 'Delivery Vehicle', 'value' => $vehicleStatus],
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
                     ]
@@ -1061,7 +1112,7 @@ class HaccpReportController extends Controller
                 [
                     'title' => 'Vehicle & Packaging Hygiene Checks',
                     'fields' => [
-                        ['label' => 'Vehicle Cleanliness & Condition', 'value' => $vehicleStatus],
+                        ['label' => 'Delivery Vehicle', 'value' => $vehicleStatus],
                         ['label' => 'Packaging Condition & Seals', 'value' => $packagingStatus],
                     ]
                 ],
@@ -1069,19 +1120,23 @@ class HaccpReportController extends Controller
                     'title' => 'Delivered Products & Temperature Checks',
                     'fields' => $productFields
                 ],
-                [
+            ];
+
+            if (!empty($log->comment) && trim($log->comment) !== '') {
+                $sections[] = [
                     'title' => 'Observations & Corrective Actions',
                     'fields' => [
-                        ['label' => 'Staff Comments / Notes', 'value' => $log->comment ?? 'No comment provided.'],
+                        ['label' => 'Staff Comments / Notes', 'value' => trim($log->comment)],
                     ]
-                ],
-                [
-                    'title' => 'Verification & Signatures',
-                    'fields' => [
-                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
-                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
-                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                    ]
+                ];
+            }
+
+            $sections[] = [
+                'title' => 'Verification & Signatures',
+                'fields' => [
+                    ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                    ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                    ['label' => 'Signature Image', 'value' => $log->signature ?? null],
                 ]
             ];
         } elseif ($logType === 'cleaning') {
