@@ -114,12 +114,56 @@ const hasValidComment = (comment) => {
 };
 
 const getDeliverySupplier = (log) => {
-  if (log?.supplier) return log.supplier;
-  if (log?.deliverySummary?.supplier) return log.deliverySummary.supplier;
-  if (log?.formData?.supplier) return log.formData.supplier;
-  const rawSupplier = log?.formData?.rawLog?.supplier;
-  if (rawSupplier?.name) return rawSupplier.name;
-  if (log?.formData?.rawLog?.supplier_name) return log.formData.rawLog.supplier_name;
+  // 1. Related supplier object: log.supplier.name, deliveryLog.supplier.name
+  if (log?.supplier && typeof log.supplier === 'object' && log.supplier.name) {
+    const s = String(log.supplier.name).trim();
+    if (s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'null') return s;
+  }
+  if (log?.deliveryLog?.supplier && typeof log.deliveryLog.supplier === 'object' && log.deliveryLog.supplier.name) {
+    const s = String(log.deliveryLog.supplier.name).trim();
+    if (s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'null') return s;
+  }
+  const rawSupplier = log?.formData?.rawLog?.supplier || log?.formData?.rawLog?.deliveryLog?.supplier;
+  if (rawSupplier && typeof rawSupplier === 'object' && rawSupplier.name) {
+    const s = String(rawSupplier.name).trim();
+    if (s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'null') return s;
+  }
+  if (log?.deliverySummary?.supplier) {
+    const s = String(log.deliverySummary.supplier).trim();
+    if (s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'null') return s;
+  }
+
+  // 2. Stored supplier_id relation: supplier_id -> suppliers table/name
+  if (typeof log?.supplier === 'string') {
+    const s = log.supplier.trim();
+    if (s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'null') return s;
+  }
+  if (typeof log?.deliveryLog?.supplier === 'string') {
+    const s = log.deliveryLog.supplier.trim();
+    if (s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'null') return s;
+  }
+  if (typeof log?.formData?.supplier === 'string') {
+    const s = log.formData.supplier.trim();
+    if (s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'null') return s;
+  }
+
+  // 3. Stored supplier name field, if available: supplier_name, supplier, vendor_name
+  const nameCandidate = log?.supplier_name ||
+    log?.deliveryLog?.supplier_name ||
+    log?.formData?.supplier_name ||
+    log?.formData?.rawLog?.supplier_name ||
+    log?.formData?.rawLog?.deliveryLog?.supplier_name ||
+    log?.vendor_name ||
+    log?.deliveryLog?.vendor_name ||
+    log?.formData?.vendor_name ||
+    log?.formData?.rawLog?.vendor_name ||
+    log?.formData?.rawLog?.deliveryLog?.vendor_name;
+
+  if (nameCandidate && String(nameCandidate).trim() !== '') {
+    const s = String(nameCandidate).trim();
+    if (s && s.toLowerCase() !== 'n/a' && s.toLowerCase() !== 'null') return s;
+  }
+
   return null;
 };
 

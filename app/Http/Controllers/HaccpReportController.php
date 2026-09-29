@@ -21,12 +21,15 @@ use App\Models\FryerOilLog;
 use App\Models\TemperatureLog;
 use App\Models\ThawingLog;
 use App\Models\HaccpLogAmendment;
+use App\Models\Supplier;
 
 class HaccpReportController extends Controller
 {
     public function index(Request $request)
     {
-        $tenantId = Auth::user() ? Auth::user()->tenant_id : null;
+        $user = Auth::user();
+        $tenantId = $user ? $user->tenant_id : null;
+        $branchId = $user ? ($user->branch_id ?? session('active_branch_id')) : null;
         if (!$tenantId) {
             return response()->json([
                 'totalEntries' => 0,
@@ -82,7 +85,7 @@ class HaccpReportController extends Controller
         $activeModules = [];
 
         // Helper to process module logs
-        $processLogs = function ($modelClass, $moduleId, $moduleName) use ($tenantId, $fromDate, $toDate, $selectedModuleIds, &$allLogs, &$activeModules) {
+        $processLogs = function ($modelClass, $moduleId, $moduleName) use ($tenantId, $branchId, $fromDate, $toDate, $selectedModuleIds, &$allLogs, &$activeModules) {
             if (!empty($selectedModuleIds) && !in_array($moduleId, $selectedModuleIds)) {
                 return;
             }
@@ -561,7 +564,7 @@ class HaccpReportController extends Controller
 
                     $deliverySummary = null;
                     if ($modelClass === DeliveryIntakeLog::class) {
-                        $supplierName = $log->supplier ? $log->supplier->name : ($log->supplier_name ?? null);
+                        $supplierName = $this->resolveDeliverySupplier($log, $tenantId, $log->branch_id ?? $branchId);
 
                         $vehicleSafeDisplay = null;
                         if ($log->vehicle_safe !== null) {
@@ -1066,9 +1069,9 @@ class HaccpReportController extends Controller
                 ]
             ];
         } elseif ($logType === 'delivery-intake') {
-            $supplierName = $log->supplier ? $log->supplier->name : 'N/A';
-            $vehicleStatus = $log->vehicle_safe === null ? 'N/A' : ($log->vehicle_safe ? 'Clean & Safe' : 'Unsafe / Unclean');
-            $packagingStatus = $log->packaging_intact === null ? 'N/A' : ($log->packaging_intact ? 'PASSED (Intact & Sealed)' : 'FAILED (Damaged/Unsealed)');
+            $supplierName = $this->resolveDeliverySupplier($log, $tenantId, $log->branch_id ?? $branchId);
+            $vehicleStatus = $log->vehicle_safe === null ? null : ($log->vehicle_safe ? 'Clean & Safe' : 'Unsafe / Unclean');
+            $packagingStatus = $log->packaging_intact === null ? null : ($log->packaging_intact ? 'PASSED (Intact & Sealed)' : 'FAILED (Damaged/Unsealed)');
 
             $productFields = [];
             if ($log->products && $log->products->count() > 0) {
@@ -1097,24 +1100,33 @@ class HaccpReportController extends Controller
                 ];
             }
 
+            $overviewFields = [
+                ['label' => 'Log Record ID', 'value' => '#' . $log->id],
+                ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
+            ];
+
+            if (!empty($supplierName)) {
+                $overviewFields[] = ['label' => 'Supplier', 'value' => $supplierName];
+            }
+
+            if (!empty($vehicleStatus)) {
+                $overviewFields[] = ['label' => 'Delivery Vehicle', 'value' => $vehicleStatus];
+            }
+
+            $overviewFields[] = ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'];
+            $overviewFields[] = ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null];
+
             $sections = [
                 [
                     'title' => 'Overview & Delivery Details',
-                    'fields' => [
-                        ['label' => 'Log Record ID', 'value' => '#' . $log->id],
-                        ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
-                        ['label' => 'Supplier', 'value' => $supplierName],
-                        ['label' => 'Delivery Vehicle', 'value' => $vehicleStatus],
-                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
-                        ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
-                    ]
+                    'fields' => $overviewFields,
                 ],
                 [
                     'title' => 'Vehicle & Packaging Hygiene Checks',
-                    'fields' => [
-                        ['label' => 'Delivery Vehicle', 'value' => $vehicleStatus],
-                        ['label' => 'Packaging Condition & Seals', 'value' => $packagingStatus],
-                    ]
+                    'fields' => array_values(array_filter([
+                        $vehicleStatus ? ['label' => 'Delivery Vehicle', 'value' => $vehicleStatus] : null,
+                        $packagingStatus ? ['label' => 'Packaging Condition & Seals', 'value' => $packagingStatus] : null,
+                    ])),
                 ],
                 [
                     'title' => 'Delivered Products & Temperature Checks',
@@ -1774,5 +1786,70 @@ class HaccpReportController extends Controller
             'sections' => $sections,
             'auditHistory' => $auditHistory,
         ]);
+    }
+
+    protected function resolveDeliverySupplier($log, $tenantId, $branchId = null)
+    {
+        // 1. Related supplier object: log.supplier.name, deliveryLog.supplier.name
+        if ($log->relationLoaded('supplier') && $log->supplier && !empty($log->supplier->name)) {
+            $name = trim(strval($log->supplier->name));
+            if ($name !== '' && strtolower($name) !== 'n/a' && strtolower($name) !== 'null') {
+                return $name;
+            }
+        }
+        if (isset($log->supplier) && is_object($log->supplier) && !empty($log->supplier->name)) {
+            $name = trim(strval($log->supplier->name));
+            if ($name !== '' && strtolower($name) !== 'n/a' && strtolower($name) !== 'null') {
+                return $name;
+            }
+        }
+        if (isset($log->deliveryLog) && is_object($log->deliveryLog)) {
+            if (isset($log->deliveryLog->supplier) && is_object($log->deliveryLog->supplier) && !empty($log->deliveryLog->supplier->name)) {
+                $name = trim(strval($log->deliveryLog->supplier->name));
+                if ($name !== '' && strtolower($name) !== 'n/a' && strtolower($name) !== 'null') {
+                    return $name;
+                }
+            }
+        }
+
+        // 2. Stored supplier_id relation, if available: supplier_id -> suppliers table/name
+        $supplierId = $log->supplier_id ?? (isset($log->deliveryLog) && is_object($log->deliveryLog) ? ($log->deliveryLog->supplier_id ?? null) : null);
+        if (!empty($supplierId)) {
+            $query = Supplier::where('tenant_id', $tenantId);
+            $effectiveBranchId = $branchId ?? ($log->branch_id ?? (isset($log->deliveryLog) && is_object($log->deliveryLog) ? ($log->deliveryLog->branch_id ?? null) : null));
+            if ($effectiveBranchId) {
+                $query->where(function ($sub) use ($effectiveBranchId) {
+                    $sub->where('branch_id', $effectiveBranchId)->orWhereNull('branch_id');
+                });
+            }
+            $supplierRecord = $query->find($supplierId);
+            if ($supplierRecord && !empty($supplierRecord->name)) {
+                $name = trim(strval($supplierRecord->name));
+                if ($name !== '' && strtolower($name) !== 'n/a' && strtolower($name) !== 'null') {
+                    return $name;
+                }
+            }
+        }
+
+        // 3. Stored supplier name field, if available: supplier_name, supplier, vendor_name
+        $candidates = [
+            $log->supplier_name ?? null,
+            (isset($log->supplier) && is_string($log->supplier)) ? $log->supplier : null,
+            $log->vendor_name ?? null,
+            isset($log->deliveryLog) && is_object($log->deliveryLog) ? ($log->deliveryLog->supplier_name ?? null) : null,
+            isset($log->deliveryLog) && is_object($log->deliveryLog) && isset($log->deliveryLog->supplier) && is_string($log->deliveryLog->supplier) ? $log->deliveryLog->supplier : null,
+            isset($log->deliveryLog) && is_object($log->deliveryLog) ? ($log->deliveryLog->vendor_name ?? null) : null,
+        ];
+
+        foreach ($candidates as $cand) {
+            if ($cand !== null && $cand !== '') {
+                $name = trim(strval($cand));
+                if ($name !== '' && strtolower($name) !== 'n/a' && strtolower($name) !== 'null') {
+                    return $name;
+                }
+            }
+        }
+
+        return null;
     }
 }

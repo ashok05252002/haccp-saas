@@ -457,6 +457,24 @@ const HaccpLogDetailDrawer = ({
                         return true;
                       }
 
+                      // Supplier: hide raw IDs, and only show if an actual supplier exists
+                      if (labelLower === 'supplier_id' || labelLower === 'supplier id') {
+                        return false;
+                      }
+                      if (
+                        labelLower === 'supplier' ||
+                        labelLower === 'supplier name' ||
+                        labelLower === 'supplier_name' ||
+                        labelLower === 'vendor' ||
+                        labelLower === 'vendor name' ||
+                        labelLower === 'vendor_name'
+                      ) {
+                        if (val === null || val === undefined || String(val).trim() === '') return false;
+                        const strVal = String(val).trim().toLowerCase();
+                        if (strVal === 'null' || strVal === 'n/a') return false;
+                        return true;
+                      }
+
                       // Comments / Notes / Observations: only show if actual content exists
                       if (labelLower.includes('comment') || labelLower.includes('note') || labelLower.includes('observation')) {
                         if (val === null || val === undefined || String(val).trim() === '') return false;
@@ -529,7 +547,7 @@ const HaccpLogDetailDrawer = ({
                               marginBottom: '3px',
                             }}
                           >
-                            {field.label}
+                            {['supplier name', 'supplier_name', 'vendor name', 'vendor_name', 'vendor'].includes(field.label.toLowerCase().trim()) ? 'Supplier' : field.label}
                           </label>
                           <div>{renderFieldValue(field.value, field.label)}</div>
                         </div>
