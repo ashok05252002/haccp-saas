@@ -27,6 +27,52 @@ const ALL_MODULE_OPTIONS = [
   { id: 'health-declaration', name: 'Staff Health Declaration' },
 ];
 
+const formatDate = (dateVal) => {
+  if (!dateVal) return 'N/A';
+  const str = String(dateVal).trim();
+  if (str.includes('T')) {
+    return str.split('T')[0];
+  }
+  if (str.includes(' ')) {
+    return str.split(' ')[0];
+  }
+  return str;
+};
+
+const formatTime = (timeStr) => {
+  if (!timeStr) return '';
+  let t = String(timeStr).trim();
+  if (t.includes('T')) {
+    t = t.split('T')[1];
+  }
+  const parts = t.split(':');
+  if (parts.length >= 2) {
+    return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+  }
+  return t;
+};
+
+const formatTimestamp = (val) => {
+  if (!val) return '';
+  const str = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}(?:T00:00(?::00)?(?:\.0+)?(?:Z|[+-]00:?00)?)?$/.test(str) && (str.includes('T00:00') || !str.includes('T'))) {
+    return str.split('T')[0];
+  }
+  const isoRegex = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/;
+  if (isoRegex.test(str)) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day} at ${hours}:${minutes}`;
+    }
+  }
+  return str;
+};
+
 const HaccpReportsPage = () => {
   const todayObj = new Date();
   const todayStr = todayObj.toISOString().split('T')[0];
@@ -378,7 +424,7 @@ const HaccpReportsPage = () => {
                             )}
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                            Log Record ID: #{log.id} • Date: <strong>{log.date}</strong> at {log.time}
+                            Log Record ID: #{log.id} • Date: <strong>{formatDate(log.date)}</strong> at {formatTime(log.time)}
                           </div>
                         </div>
 
@@ -387,33 +433,236 @@ const HaccpReportsPage = () => {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '13.5px' }}>
+                      {/* Mandatory Display Fields Grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', fontSize: '13px', backgroundColor: '#F9FAFB', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
                         <div>
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Inspector / Staff</span>
-                          <strong style={{ color: 'var(--color-text-primary)' }}>{log.staffName}</strong>
+                          <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Logged On / Checked At</span>
+                          <strong style={{ color: 'var(--color-text-primary)' }}>
+                            {formatDate(log.date)} at {formatTime(log.time)}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Updated At</span>
+                          {log.updated_at ? (
+                            <strong style={{ color: 'var(--color-text-primary)' }}>{formatTimestamp(log.updated_at)}</strong>
+                          ) : (
+                            <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontSize: '13px' }}>Null</span>
+                          )}
+                        </div>
+
+                        <div>
+                          <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Staff / Inspector</span>
+                          <strong style={{ color: 'var(--color-text-primary)' }}>{log.staffName || 'Staff'}</strong>
+                        </div>
+
+                        <div>
+                          <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Signature Status</span>
+                          {log.signature ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: '#065F46',
+                                backgroundColor: '#ECFDF5',
+                                padding: '2px 6px',
+                                borderRadius: '4px'
+                              }}>
+                                <CheckCircle2 size={12} /> Signed
+                              </span>
+                            </div>
+                          ) : (
+                            <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontSize: '13px' }}>Not Recorded</span>
+                          )}
                         </div>
 
                         {log.formData?.holdingUnit && (
                           <div>
-                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Station / Unit</span>
-                            <strong>{log.formData.holdingUnit}</strong>
+                            <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Station / Unit</span>
+                            <strong style={{ color: 'var(--color-text-primary)' }}>{log.formData.holdingUnit}</strong>
                           </div>
                         )}
 
                         {log.formData?.mainReason && (
                           <div>
-                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Primary Waste Reason</span>
-                            <strong>{log.formData.mainReason}</strong>
+                            <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Primary Waste Reason</span>
+                            <strong style={{ color: 'var(--color-text-primary)' }}>{log.formData.mainReason}</strong>
                           </div>
                         )}
 
                         {log.formData?.taskTitle && (
                           <div>
-                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>Training Task</span>
-                            <strong>{log.formData.taskTitle}</strong>
+                            <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Training Task</span>
+                            <strong style={{ color: 'var(--color-text-primary)' }}>{log.formData.taskTitle}</strong>
                           </div>
                         )}
                       </div>
+
+                      {/* Amendment Reason Alert Box */}
+                      {log.latest_amendment_reason && (
+                        <div
+                          style={{
+                            backgroundColor: '#FFFBEB',
+                            color: '#92400E',
+                            borderLeft: '4px solid #F59E0B',
+                            padding: '10px 14px',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '3px',
+                          }}
+                        >
+                          <div>
+                            <strong>Amendment Reason:</strong> {log.latest_amendment_reason}
+                          </div>
+                          {(log.latest_amended_by || log.latest_amended_at) && (
+                            <div style={{ fontSize: '11.5px', color: '#B45309' }}>
+                              Amended {log.latest_amended_by ? `by ${log.latest_amended_by}` : ''} {log.latest_amended_at ? `on ${formatTimestamp(log.latest_amended_at)}` : ''}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Cooking Temperature Multi-Stage Filled Summaries */}
+                      {log.moduleId === 'cooking-temperature' && (log.cookingSummary || log.formData?.cookingSummary) && (
+                        (() => {
+                          const summary = log.cookingSummary || log.formData?.cookingSummary;
+                          const hasAnyStage = summary && (summary.foodDetails || summary.cooking || summary.blastChilling || summary.chillerHold || summary.reheating || summary.hotHolding);
+                          if (!hasAnyStage) return null;
+
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                                Filled Stage Summaries:
+                              </span>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '10px' }}>
+                                {/* Food Details */}
+                                {summary.foodDetails && (
+                                  <div style={{ backgroundColor: '#F9FAFB', border: '1px solid var(--color-border-light)', borderRadius: '8px', padding: '10px 12px', fontSize: '12.5px' }}>
+                                    <div style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '4px' }}>
+                                      Food Details
+                                    </div>
+                                    <div><strong>Product:</strong> {summary.foodDetails.foodItem || '-'}</div>
+                                    {summary.foodDetails.batchCode && (
+                                      <div><strong>Batch / Lot:</strong> {summary.foodDetails.batchCode}</div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Cooking (CCP-3) */}
+                                {summary.cooking && (
+                                  <div style={{ backgroundColor: '#F9FAFB', border: '1px solid var(--color-border-light)', borderRadius: '8px', padding: '10px 12px', fontSize: '12.5px' }}>
+                                    <div style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span>Cooking (CCP-3)</span>
+                                      <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        padding: '1px 6px',
+                                        borderRadius: '4px',
+                                        backgroundColor: summary.cooking.passed ? '#ECFDF5' : '#FEF2F2',
+                                        color: summary.cooking.passed ? '#065F46' : '#991B1B'
+                                      }}>
+                                        {summary.cooking.result}
+                                      </span>
+                                    </div>
+                                    <div><strong>Core Temp:</strong> {summary.cooking.temp}</div>
+                                    {summary.cooking.target && <div><strong>Target:</strong> {summary.cooking.target}</div>}
+                                    {summary.cooking.method && <div><strong>Method:</strong> {summary.cooking.method}</div>}
+                                  </div>
+                                )}
+
+                                {/* Blast Chilling (CCP-4) */}
+                                {summary.blastChilling && (
+                                  <div style={{ backgroundColor: '#F9FAFB', border: '1px solid var(--color-border-light)', borderRadius: '8px', padding: '10px 12px', fontSize: '12.5px' }}>
+                                    <div style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span>Blast Chilling (CCP-4)</span>
+                                      <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        padding: '1px 6px',
+                                        borderRadius: '4px',
+                                        backgroundColor: summary.blastChilling.passed ? '#ECFDF5' : '#FEF2F2',
+                                        color: summary.blastChilling.passed ? '#065F46' : '#991B1B'
+                                      }}>
+                                        {summary.blastChilling.result}
+                                      </span>
+                                    </div>
+                                    {summary.blastChilling.startTemp && <div><strong>Start:</strong> {summary.blastChilling.startTemp}</div>}
+                                    <div><strong>End:</strong> {summary.blastChilling.endTemp} in {summary.blastChilling.duration}</div>
+                                  </div>
+                                )}
+
+                                {/* Chiller Hold */}
+                                {summary.chillerHold && (
+                                  <div style={{ backgroundColor: '#F9FAFB', border: '1px solid var(--color-border-light)', borderRadius: '8px', padding: '10px 12px', fontSize: '12.5px' }}>
+                                    <div style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span>Chiller Hold</span>
+                                      <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        padding: '1px 6px',
+                                        borderRadius: '4px',
+                                        backgroundColor: summary.chillerHold.passed ? '#ECFDF5' : '#FEF2F2',
+                                        color: summary.chillerHold.passed ? '#065F46' : '#991B1B'
+                                      }}>
+                                        {summary.chillerHold.result}
+                                      </span>
+                                    </div>
+                                    <div><strong>Temp:</strong> {summary.chillerHold.temp}</div>
+                                    {summary.chillerHold.location && <div><strong>Unit:</strong> {summary.chillerHold.location}</div>}
+                                  </div>
+                                )}
+
+                                {/* Reheating */}
+                                {summary.reheating && (
+                                  <div style={{ backgroundColor: '#F9FAFB', border: '1px solid var(--color-border-light)', borderRadius: '8px', padding: '10px 12px', fontSize: '12.5px' }}>
+                                    <div style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span>Reheating</span>
+                                      <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        padding: '1px 6px',
+                                        borderRadius: '4px',
+                                        backgroundColor: summary.reheating.passed ? '#ECFDF5' : '#FEF2F2',
+                                        color: summary.reheating.passed ? '#065F46' : '#991B1B'
+                                      }}>
+                                        {summary.reheating.result}
+                                      </span>
+                                    </div>
+                                    <div><strong>Reheated Temp:</strong> {summary.reheating.temp}</div>
+                                    {summary.reheating.method && <div><strong>Method:</strong> {summary.reheating.method}</div>}
+                                  </div>
+                                )}
+
+                                {/* Hot Holding */}
+                                {summary.hotHolding && (
+                                  <div style={{ backgroundColor: '#F9FAFB', border: '1px solid var(--color-border-light)', borderRadius: '8px', padding: '10px 12px', fontSize: '12.5px' }}>
+                                    <div style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span>Hot Holding / Final (CCP-5)</span>
+                                      <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        padding: '1px 6px',
+                                        borderRadius: '4px',
+                                        backgroundColor: summary.hotHolding.passed ? '#ECFDF5' : '#FEF2F2',
+                                        color: summary.hotHolding.passed ? '#065F46' : '#991B1B'
+                                      }}>
+                                        {summary.hotHolding.result}
+                                      </span>
+                                    </div>
+                                    <div><strong>Holding Temp:</strong> {summary.hotHolding.temp}</div>
+                                    {summary.hotHolding.location && <div><strong>Location:</strong> {summary.hotHolding.location}</div>}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()
+                      )}
 
                       {/* Form Details Summary */}
                       {log.formData?.generalComments && (

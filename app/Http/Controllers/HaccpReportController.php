@@ -116,6 +116,40 @@ class HaccpReportController extends Controller
                     $activeModules[$moduleId] = true;
                 }
 
+                $moduleAuditTypes = [
+                    'cooking-temperature' => ['cooking_temperature', 'cooking-temperature'],
+                    'temperature' => ['temperature_log', 'temperature'],
+                    'delivery-intake' => ['delivery_intake', 'delivery-intake'],
+                    'cleaning' => ['cleaning_sanitation', 'cleaning'],
+                    'hot-holding' => ['hot_holding', 'hot-holding'],
+                    'blast-chilling' => ['blast_chilling', 'blast-chilling'],
+                    'cooling-process' => ['cooling_process', 'cooling-process'],
+                    'thawing' => ['thawing'],
+                    'probe-calibration' => ['probe_calibration', 'probe-calibration'],
+                    'food-dispatch' => ['food_dispatch', 'food-dispatch'],
+                    'fryer-oil' => ['fryer_oil', 'fryer-oil'],
+                    'pest-control' => ['pest_control', 'pest-control'],
+                    'staff-training' => ['staff_training', 'staff-training'],
+                    'health-declaration' => ['health_declaration', 'health-declaration'],
+                    'food-waste' => ['food_waste', 'food-waste'],
+                ];
+
+                $logIds = $logs->pluck('id')->toArray();
+                $latestAmendments = [];
+                if (!empty($logIds)) {
+                    $auditTypes = $moduleAuditTypes[$moduleId] ?? [$moduleId, str_replace('-', '_', $moduleId)];
+                    $amendments = HaccpLogAmendment::where('tenant_id', $tenantId)
+                        ->whereIn('log_type', $auditTypes)
+                        ->whereIn('log_id', $logIds)
+                        ->orderBy('created_at', 'desc')
+                        ->get();
+                    foreach ($amendments as $am) {
+                        if (!isset($latestAmendments[$am->log_id])) {
+                            $latestAmendments[$am->log_id] = $am;
+                        }
+                    }
+                }
+
                 foreach ($logs as $log) {
                     $statusStr = 'Passed';
                     $passed = true;
@@ -383,16 +417,142 @@ class HaccpReportController extends Controller
                         }
                     }
 
+                    $rawDate = is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date ?? '');
+                    if (strpos($rawDate, 'T') !== false) {
+                        $rawDate = explode('T', $rawDate)[0];
+                    }
+                    if (strpos($rawDate, ' ') !== false) {
+                        $rawDate = explode(' ', $rawDate)[0];
+                    }
+                    $cleanDate = $rawDate;
+
+                    $cleanTime = $log->log_time ?? ($log->created_at ? $log->created_at->format('H:i') : '12:00');
+                    if (is_string($cleanTime)) {
+                        if (strpos($cleanTime, 'T') !== false) {
+                            $cleanTime = explode('T', $cleanTime)[1];
+                        }
+                        $parts = explode(':', trim($cleanTime));
+                        if (count($parts) >= 2) {
+                            $cleanTime = str_pad($parts[0], 2, '0', STR_PAD_LEFT) . ':' . str_pad($parts[1], 2, '0', STR_PAD_LEFT);
+                        }
+                    }
+
+                    $hasAmendment = isset($latestAmendments[$log->id]);
+                    $latestAmendment = $hasAmendment ? $latestAmendments[$log->id] : null;
+
+                    $isSameCreatedUpdated = ($log->created_at && $log->updated_at && abs($log->updated_at->timestamp - $log->created_at->timestamp) < 2);
+
+                    $isReallyUpdated = false;
+                    $effectiveUpdatedAt = null;
+
+                    if ($hasAmendment) {
+                        $isReallyUpdated = true;
+                        $effectiveUpdatedAt = $latestAmendment->created_at 
+                            ? $latestAmendment->created_at->toIso8601String() 
+                            : ($log->updated_at ? $log->updated_at->toIso8601String() : null);
+                    } elseif (!$isSameCreatedUpdated && $log->updated_at && $log->created_at && $log->updated_at->timestamp > $log->created_at->timestamp) {
+                        $isReallyUpdated = true;
+                        $effectiveUpdatedAt = $log->updated_at->toIso8601String();
+                    }
+
+                    $cookingSummary = null;
+                    if ($modelClass === CookingLog::class) {
+                        $cookingSummary = [];
+
+                        // Food Details
+                        if (!empty($log->food_item) || !empty($log->batch_code)) {
+                            $cookingSummary['foodDetails'] = [
+                                'title' => 'Food Details',
+                                'foodItem' => $log->food_item ?: null,
+                                'batchCode' => $log->batch_code ?: null,
+                            ];
+                        }
+
+                        // Cooking (CCP-3)
+                        if ($log->cooking_temp !== null && $log->cooking_temp !== '' && ($log->cooking_method ?? '') !== 'N/A') {
+                            $cPassed = isset($log->cooking_passed) ? boolval($log->cooking_passed) : (floatval($log->cooking_temp) >= 75.0);
+                            $cookingSummary['cooking'] = [
+                                'title' => 'Cooking (CCP-3)',
+                                'temp' => $log->cooking_temp . ' °C',
+                                'target' => $log->cooking_target ?: '≥ 75°C',
+                                'method' => ($log->cooking_method && $log->cooking_method !== 'N/A') ? $log->cooking_method : null,
+                                'result' => $cPassed ? 'Passed' : 'Failed',
+                                'passed' => $cPassed,
+                            ];
+                        }
+
+                        // Blast Chilling (CCP-4)
+                        if ($log->chilling_end_temp !== null && $log->chilling_end_temp !== '' && $log->chilling_duration_minutes !== null && $log->chilling_duration_minutes !== '' && ($log->chilling_method ?? '') !== 'N/A') {
+                            $chEndTemp = floatval($log->chilling_end_temp);
+                            $chDuration = intval($log->chilling_duration_minutes);
+                            $bPassed = ($chEndTemp <= 5.0 && $chDuration <= 150);
+                            $cookingSummary['blastChilling'] = [
+                                'title' => 'Blast Chilling (CCP-4)',
+                                'startTemp' => $log->chilling_start_temp !== null && $log->chilling_start_temp !== '' ? $log->chilling_start_temp . ' °C' : null,
+                                'endTemp' => $chEndTemp . ' °C',
+                                'duration' => $chDuration . ' mins',
+                                'result' => $bPassed ? 'Pass' : 'Fail',
+                                'passed' => $bPassed,
+                            ];
+                        }
+
+                        // Chiller Hold
+                        if ($log->chiller_temp !== null && $log->chiller_temp !== '' && ($log->chiller_location ?? '') !== 'N/A') {
+                            $chillerTemp = floatval($log->chiller_temp);
+                            $chPassed = isset($log->chiller_passed) ? boolval($log->chiller_passed) : ($chillerTemp >= 0.0 && $chillerTemp <= 5.0);
+                            $cookingSummary['chillerHold'] = [
+                                'title' => 'Chiller Hold',
+                                'temp' => $chillerTemp . ' °C',
+                                'location' => ($log->chiller_location && $log->chiller_location !== 'N/A') ? $log->chiller_location : null,
+                                'result' => $chPassed ? 'Passed' : 'Failed',
+                                'passed' => $chPassed,
+                            ];
+                        }
+
+                        // Reheating
+                        if ($log->reheating_temp !== null && $log->reheating_temp !== '' && ($log->reheating_method ?? '') !== 'N/A') {
+                            $rehTemp = floatval($log->reheating_temp);
+                            $rehPassed = isset($log->reheating_passed) ? boolval($log->reheating_passed) : ($rehTemp >= 75.0);
+                            $cookingSummary['reheating'] = [
+                                'title' => 'Reheating',
+                                'temp' => $rehTemp . ' °C',
+                                'method' => ($log->reheating_method && $log->reheating_method !== 'N/A') ? $log->reheating_method : null,
+                                'result' => $rehPassed ? 'Passed' : 'Failed',
+                                'passed' => $rehPassed,
+                            ];
+                        }
+
+                        // Hot Holding
+                        if ($log->hot_holding_temp !== null && $log->hot_holding_temp !== '' && ($log->hot_holding_location ?? '') !== 'N/A') {
+                            $hhTemp = floatval($log->hot_holding_temp);
+                            $hhPassed = isset($log->hot_holding_passed) ? boolval($log->hot_holding_passed) : ($hhTemp >= 63.0);
+                            $cookingSummary['hotHolding'] = [
+                                'title' => 'Hot Holding / Final (CCP-5)',
+                                'temp' => $hhTemp . ' °C',
+                                'location' => ($log->hot_holding_location && $log->hot_holding_location !== 'N/A') ? $log->hot_holding_location : null,
+                                'result' => $hhPassed ? 'Passed' : 'Failed',
+                                'passed' => $hhPassed,
+                            ];
+                        }
+                    }
+
                     $allLogs[] = [
                         'id' => $log->id,
                         'moduleId' => $moduleId,
                         'moduleName' => $moduleName,
-                        'date' => is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date),
-                        'time' => $log->log_time ?? ($log->created_at ? $log->created_at->format('H:i') : '12:00'),
+                        'date' => $cleanDate,
+                        'time' => $cleanTime,
                         'staffName' => $log->staff_name ?? $log->signed_by_staff_name ?? 'Staff',
                         'passed' => $passed,
                         'status' => $statusStr,
                         'signature' => $log->signature ?? null,
+                        'created_at' => $log->created_at ? $log->created_at->toIso8601String() : null,
+                        'updated_at' => $effectiveUpdatedAt,
+                        'is_really_updated' => $isReallyUpdated,
+                        'latest_amendment_reason' => $latestAmendment ? $latestAmendment->reason : null,
+                        'latest_amended_at' => $latestAmendment && $latestAmendment->created_at ? $latestAmendment->created_at->toIso8601String() : null,
+                        'latest_amended_by' => $latestAmendment ? $latestAmendment->amended_by_name : null,
+                        'cookingSummary' => $cookingSummary,
                         'formData' => [
                             'holdingUnit' => $log->holding_unit ?? null,
                             'items' => $log->items ?? null,
@@ -410,6 +570,7 @@ class HaccpReportController extends Controller
                             'contractorName' => $log->contractor_name ?? null,
                             'assessmentReason' => $log->assessment_reason ?? null,
                             'riskyAnswersCount' => $log->risky_answers_count ?? 0,
+                            'cookingSummary' => $cookingSummary,
                             'rawLog' => $log->toArray(),
                         ],
                     ];
@@ -1435,6 +1596,69 @@ class HaccpReportController extends Controller
                     ]
                 ]
             ];
+        }
+
+        $hasAmendment = $auditHistory->isNotEmpty();
+        $latestAmendment = $hasAmendment ? $auditHistory->first() : null;
+
+        $isSameCreatedUpdated = ($log->created_at && $log->updated_at && abs($log->updated_at->timestamp - $log->created_at->timestamp) < 2);
+
+        $isReallyUpdated = false;
+        $effectiveUpdatedAt = null;
+
+        if ($hasAmendment) {
+            $isReallyUpdated = true;
+            $effectiveUpdatedAt = $latestAmendment['created_at'] ?? ($log->updated_at ? $log->updated_at->toIso8601String() : null);
+        } elseif (!$isSameCreatedUpdated && $log->updated_at && $log->created_at && $log->updated_at->timestamp > $log->created_at->timestamp) {
+            $isReallyUpdated = true;
+            $effectiveUpdatedAt = $log->updated_at->toIso8601String();
+        }
+
+        $latestAmendmentReason = $hasAmendment ? ($latestAmendment['reason'] ?? null) : null;
+
+        // Ensure Overview section in all modules has 'Updated At' set to effectiveUpdatedAt and 'Amendment Reason' if amended
+        if (!empty($sections) && isset($sections[0]['fields'])) {
+            $hasUpdatedField = false;
+            foreach ($sections[0]['fields'] as &$field) {
+                if (strtolower($field['label']) === 'updated at') {
+                    $field['value'] = $effectiveUpdatedAt;
+                    $hasUpdatedField = true;
+                    break;
+                }
+            }
+            unset($field);
+
+            if (!$hasUpdatedField) {
+                $newFields = [];
+                $inserted = false;
+                foreach ($sections[0]['fields'] as $f) {
+                    $newFields[] = $f;
+                    if (strtolower($f['label']) === 'created at') {
+                        $newFields[] = ['label' => 'Updated At', 'value' => $effectiveUpdatedAt];
+                        $inserted = true;
+                    }
+                }
+                if (!$inserted) {
+                    $newFields[] = ['label' => 'Updated At', 'value' => $effectiveUpdatedAt];
+                }
+                $sections[0]['fields'] = $newFields;
+            }
+
+            if ($hasAmendment && !empty($latestAmendmentReason)) {
+                $hasAmendmentField = false;
+                foreach ($sections[0]['fields'] as $f) {
+                    if (strtolower($f['label']) === 'amendment reason') {
+                        $hasAmendmentField = true;
+                        break;
+                    }
+                }
+                if (!$hasAmendmentField) {
+                    $sections[0]['fields'][] = [
+                        'label' => 'Amendment Reason',
+                        'value' => $latestAmendmentReason,
+                    ];
+                }
+            }
         }
 
         return response()->json([

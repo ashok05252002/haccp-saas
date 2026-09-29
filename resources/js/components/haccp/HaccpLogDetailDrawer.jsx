@@ -163,8 +163,22 @@ const HaccpLogDetailDrawer = ({
   };
 
   const renderFieldValue = (value, label = '') => {
+    if (label.toLowerCase() === 'updated at') {
+      if (value === null || value === undefined || value === '' || value === 'Null' || value === 'null') {
+        return <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontSize: '13px' }}>Null</span>;
+      }
+    }
+
     if (value === null || value === undefined || value === '') {
       return <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontSize: '13px' }}>N/A</span>;
+    }
+
+    if (label.toLowerCase() === 'amendment reason') {
+      return (
+        <span style={{ fontSize: '13px', color: '#92400E', fontWeight: 600, backgroundColor: '#FEF3C7', padding: '3px 8px', borderRadius: '4px', border: '1px solid #FDE68A', display: 'inline-block' }}>
+          {String(value)}
+        </span>
+      );
     }
 
     if (typeof value === 'boolean') {
