@@ -73,6 +73,46 @@ const formatTimestamp = (val) => {
   return str;
 };
 
+const getTemperatureStorageUnit = (log) => {
+  if (log?.storageUnit) return log.storageUnit;
+  if (log?.formData?.storageUnit) return log.formData.storageUnit;
+  const zone = log?.storage_zone || log?.storageZone;
+  const name = (zone?.name || log?.formData?.storage_zone_name || log?.storage_zone_name || '').trim();
+  const rawType = (zone?.type || zone?.storage_type || log?.formData?.storage_type || '').trim();
+  const type = rawType ? (rawType.charAt(0).toUpperCase() + rawType.slice(1).toLowerCase()) : '';
+  if (name && type && type !== '-') {
+    return `${name} (${type})`;
+  }
+  if (name) return name;
+  if (type && type !== '-') return `(${type})`;
+  return null;
+};
+
+const getTemperatureRecordedTemp = (log) => {
+  if (log?.recordedTemperature) return log.recordedTemperature;
+  if (log?.formData?.recordedTemperature) return log.formData.recordedTemperature;
+  const temp = log?.formData?.temperature ?? log?.temperature;
+  if (temp !== undefined && temp !== null && String(temp).trim() !== '') {
+    return `${parseFloat(temp)}°C`;
+  }
+  return null;
+};
+
+const hasValidComment = (comment) => {
+  if (!comment) return false;
+  const str = String(comment).trim();
+  const lower = str.toLowerCase();
+  return (
+    str !== '' &&
+    lower !== 'null' &&
+    lower !== 'n/a' &&
+    lower !== 'none' &&
+    lower !== 'none recorded.' &&
+    lower !== 'no comment provided.' &&
+    lower !== 'no comments'
+  );
+};
+
 const HaccpReportsPage = () => {
   const todayObj = new Date();
   const todayStr = todayObj.toISOString().split('T')[0];
@@ -479,6 +519,21 @@ const HaccpReportsPage = () => {
                           )}
                         </div>
 
+                        {/* Temperature Monitoring Fields */}
+                        {log.moduleId === 'temperature' && getTemperatureStorageUnit(log) && (
+                          <div>
+                            <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Storage Unit</span>
+                            <strong style={{ color: 'var(--color-text-primary)' }}>{getTemperatureStorageUnit(log)}</strong>
+                          </div>
+                        )}
+
+                        {log.moduleId === 'temperature' && getTemperatureRecordedTemp(log) && (
+                          <div>
+                            <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Recorded Temperature</span>
+                            <strong style={{ color: 'var(--color-text-primary)' }}>{getTemperatureRecordedTemp(log)}</strong>
+                          </div>
+                        )}
+
                         {log.formData?.holdingUnit && (
                           <div>
                             <span style={{ fontSize: '11.5px', color: 'var(--color-text-secondary)', display: 'block', fontWeight: 600 }}>Station / Unit</span>
@@ -501,8 +556,13 @@ const HaccpReportsPage = () => {
                         )}
                       </div>
 
-                      {/* Amendment Reason Alert Box */}
-                      {log.latest_amendment_reason && (
+                      {/* Amendment Reason Alert Box - only if an amendment exists */}
+                      {Boolean(
+                        log.latest_amendment_reason &&
+                        String(log.latest_amendment_reason).trim() !== '' &&
+                        String(log.latest_amendment_reason).trim().toLowerCase() !== 'null' &&
+                        String(log.latest_amendment_reason).trim().toLowerCase() !== 'n/a'
+                      ) && (
                         <div
                           style={{
                             backgroundColor: '#FFFBEB',
@@ -517,7 +577,7 @@ const HaccpReportsPage = () => {
                           }}
                         >
                           <div>
-                            <strong>Amendment Reason:</strong> {log.latest_amendment_reason}
+                            <strong>Amendment Reason:</strong> {String(log.latest_amendment_reason).trim()}
                           </div>
                           {(log.latest_amended_by || log.latest_amended_at) && (
                             <div style={{ fontSize: '11.5px', color: '#B45309' }}>
@@ -664,10 +724,10 @@ const HaccpReportsPage = () => {
                         })()
                       )}
 
-                      {/* Form Details Summary */}
-                      {log.formData?.generalComments && (
+                      {/* Form Details Summary - only show if actual content exists */}
+                      {hasValidComment(log.formData?.generalComments) && (
                         <div style={{ padding: '10px 14px', backgroundColor: '#F9FAFB', borderRadius: '8px', border: '1px solid var(--color-border-light)', fontSize: '13px' }}>
-                          <strong>Comments / Observations:</strong> {log.formData.generalComments}
+                          <strong>Comments / Observations:</strong> {String(log.formData.generalComments).trim()}
                         </div>
                       )}
 

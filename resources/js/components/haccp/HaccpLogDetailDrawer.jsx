@@ -442,9 +442,106 @@ const HaccpLogDetailDrawer = ({
           {!loading && !error && data && (
             <>
               {/* Dynamic Checkpoint Sections */}
-              {Array.isArray(data.sections) && data.sections.map((section, sIdx) => (
+              {Array.isArray(data.sections) && data.sections.map((section, sIdx) => {
+                const visibleFields = Array.isArray(section.fields)
+                  ? section.fields.filter((field) => {
+                      if (!field) return false;
+                      const labelLower = String(field.label || '').toLowerCase().trim();
+                      const val = field.value;
+
+                      // Amendment Reason: only show if an actual reason exists
+                      if (labelLower === 'amendment reason' || labelLower.includes('amendment reason')) {
+                        if (val === null || val === undefined || String(val).trim() === '') return false;
+                        const strVal = String(val).trim().toLowerCase();
+                        if (strVal === 'null' || strVal === 'n/a') return false;
+                        return true;
+                      }
+
+                      // Comments / Notes / Observations: only show if actual content exists
+                      if (labelLower.includes('comment') || labelLower.includes('note') || labelLower.includes('observation')) {
+                        if (val === null || val === undefined || String(val).trim() === '') return false;
+                        const strVal = String(val).trim().toLowerCase();
+                        if (
+                          strVal === 'null' ||
+                          strVal === 'n/a' ||
+                          strVal === 'none' ||
+                          strVal === 'none recorded.' ||
+                          strVal === 'no comment provided.' ||
+                          strVal === 'no comments'
+                        ) {
+                          return false;
+                        }
+                        return true;
+                      }
+
+                      return true;
+                    })
+                  : [];
+
+                if (visibleFields.length === 0) return null;
+
+                return (
+                  <div
+                    key={sIdx}
+                    className="haccp-drawer-section-card"
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid var(--color-border-light)',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        color: 'var(--color-primary)',
+                        margin: '0 0 16px 0',
+                        paddingBottom: '10px',
+                        borderBottom: '1px solid var(--color-border-light)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <Tag size={16} />
+                      <span>{section.title}</span>
+                    </h3>
+
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '14px 18px',
+                      }}
+                    >
+                      {visibleFields.map((field, fIdx) => (
+                        <div key={fIdx}>
+                          <label
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: 'var(--color-text-muted)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              display: 'block',
+                              marginBottom: '3px',
+                            }}
+                          >
+                            {field.label}
+                          </label>
+                          <div>{renderFieldValue(field.value, field.label)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Complete Audit & Amendment Trail Section - only if amendments exist */}
+              {Array.isArray(data.auditHistory) && data.auditHistory.length > 0 && (
                 <div
-                  key={sIdx}
                   className="haccp-drawer-section-card"
                   style={{
                     backgroundColor: '#FFFFFF',
@@ -454,211 +551,151 @@ const HaccpLogDetailDrawer = ({
                     boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                   }}
                 >
-                  <h3
+                  <div
                     style={{
-                      fontSize: '15px',
-                      fontWeight: 700,
-                      color: 'var(--color-primary)',
-                      margin: '0 0 16px 0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '16px',
                       paddingBottom: '10px',
                       borderBottom: '1px solid var(--color-border-light)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
                     }}
                   >
-                    <Tag size={16} />
-                    <span>{section.title}</span>
-                  </h3>
+                    <h3
+                      style={{
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        color: 'var(--color-text-primary)',
+                        margin: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <History size={16} color="var(--color-primary)" />
+                      <span>Audit Trail & Amendment History</span>
+                    </h3>
 
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                      gap: '14px 18px',
-                    }}
-                  >
-                    {Array.isArray(section.fields) && section.fields.map((field, fIdx) => (
-                      <div key={fIdx}>
-                        <label
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: 'var(--color-text-muted)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
-                            display: 'block',
-                            marginBottom: '3px',
-                          }}
-                        >
-                          {field.label}
-                        </label>
-                        <div>{renderFieldValue(field.value, field.label)}</div>
-                      </div>
-                    ))}
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: '#065F46',
+                        backgroundColor: '#ECFDF5',
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                      }}
+                    >
+                      {data.auditHistory.length} Amendments
+                    </span>
                   </div>
-                </div>
-              ))}
 
-              {/* Complete Audit & Amendment Trail Section */}
-              <div
-                className="haccp-drawer-section-card"
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '16px',
-                    paddingBottom: '10px',
-                    borderBottom: '1px solid var(--color-border-light)',
-                  }}
-                >
-                  <h3
-                    style={{
-                      fontSize: '15px',
-                      fontWeight: 700,
-                      color: 'var(--color-text-primary)',
-                      margin: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <History size={16} color="var(--color-primary)" />
-                    <span>Audit Trail & Amendment History</span>
-                  </h3>
-
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      color: '#065F46',
-                      backgroundColor: '#ECFDF5',
-                      padding: '2px 8px',
-                      borderRadius: '10px',
-                    }}
-                  >
-                    {Array.isArray(data.auditHistory) ? data.auditHistory.length : 0} Amendments
-                  </span>
-                </div>
-
-                {Array.isArray(data.auditHistory) && data.auditHistory.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {data.auditHistory.map((audit, aIdx) => (
-                      <div
-                        key={aIdx}
-                        style={{
-                          backgroundColor: '#F9FAFB',
-                          border: '1px solid var(--color-border-light)',
-                          borderRadius: '10px',
-                          padding: '14px 16px',
-                          fontSize: '13px',
-                        }}
-                      >
-                        {/* Audit Header */}
+                    {data.auditHistory.map((audit, aIdx) => {
+                      const hasReason = Boolean(
+                        audit.reason &&
+                        String(audit.reason).trim() !== '' &&
+                        String(audit.reason).trim().toLowerCase() !== 'null' &&
+                        String(audit.reason).trim().toLowerCase() !== 'n/a' &&
+                        String(audit.reason).trim().toLowerCase() !== 'no reason specified'
+                      );
+
+                      return (
                         <div
+                          key={aIdx}
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: '8px',
-                            marginBottom: '8px',
+                            backgroundColor: '#F9FAFB',
+                            border: '1px solid var(--color-border-light)',
+                            borderRadius: '10px',
+                            padding: '14px 16px',
+                            fontSize: '13px',
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                            <User size={14} color="var(--color-primary)" />
-                            <span>{audit.amended_by_name || 'Staff Member'}</span>
-                            {audit.manager_approved_by_name && (
-                              <span style={{ fontSize: '11px', color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                <ShieldCheck size={12} /> Approved by {audit.manager_approved_by_name}
-                              </span>
-                            )}
-                          </div>
+                          {/* Audit Header */}
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: '8px',
+                              marginBottom: '8px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                              <User size={14} color="var(--color-primary)" />
+                              <span>{audit.amended_by_name || 'Staff Member'}</span>
+                              {audit.manager_approved_by_name && (
+                                <span style={{ fontSize: '11px', color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                  <ShieldCheck size={12} /> Approved by {audit.manager_approved_by_name}
+                                </span>
+                              )}
+                            </div>
 
-                          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                            {audit.created_at ? formatTimestamp(audit.created_at) : 'Date N/A'}
-                          </div>
-                        </div>
-
-                        {/* Amendment Reason Box */}
-                        <div
-                          style={{
-                            backgroundColor: '#FFFBEB',
-                            color: '#92400E',
-                            borderLeft: '3px solid #F59E0B',
-                            padding: '8px 12px',
-                            borderRadius: '4px',
-                            marginBottom: '10px',
-                            fontSize: '12.5px',
-                          }}
-                        >
-                          <strong>Reason for Amendment:</strong> {audit.reason || 'No reason specified'}
-                        </div>
-
-                        {/* Changed Fields Diff Grid */}
-                        {audit.changed_fields && typeof audit.changed_fields === 'object' && Object.keys(audit.changed_fields).length > 0 && (
-                          <div style={{ marginTop: '8px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
-                              Modified Fields:
-                            </span>
-                            <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              {Object.entries(audit.changed_fields).map(([fieldName, diff], dIdx) => (
-                                <div
-                                  key={dIdx}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    fontSize: '12px',
-                                    padding: '4px 8px',
-                                    backgroundColor: '#FFFFFF',
-                                    borderRadius: '6px',
-                                    border: '1px solid #E5E7EB',
-                                  }}
-                                >
-                                  <strong style={{ color: 'var(--color-text-primary)', minWidth: '140px' }}>
-                                    {formatFieldName(fieldName)}:
-                                  </strong>
-                                  <span style={{ color: '#DC2626', textDecoration: 'line-through' }}>
-                                    {diff?.old !== null && diff?.old !== undefined && diff?.old !== '' ? (typeof diff.old === 'string' ? formatTimestamp(diff.old) : String(diff.old)) : 'None'}
-                                  </span>
-                                  <span style={{ color: '#6B7280' }}>➔</span>
-                                  <span style={{ color: '#059669', fontWeight: 600 }}>
-                                    {diff?.new !== null && diff?.new !== undefined && diff?.new !== '' ? (typeof diff.new === 'string' ? formatTimestamp(diff.new) : String(diff.new)) : 'None'}
-                                  </span>
-                                </div>
-                              ))}
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                              {audit.created_at ? formatTimestamp(audit.created_at) : 'Date N/A'}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    ))}
+
+                          {/* Amendment Reason Box */}
+                          {hasReason && (
+                            <div
+                              style={{
+                                backgroundColor: '#FFFBEB',
+                                color: '#92400E',
+                                borderLeft: '3px solid #F59E0B',
+                                padding: '8px 12px',
+                                borderRadius: '4px',
+                                marginBottom: '10px',
+                                fontSize: '12.5px',
+                              }}
+                            >
+                              <strong>Amendment Reason:</strong> {String(audit.reason).trim()}
+                            </div>
+                          )}
+
+                          {/* Changed Fields Diff Grid */}
+                          {audit.changed_fields && typeof audit.changed_fields === 'object' && Object.keys(audit.changed_fields).length > 0 && (
+                            <div style={{ marginTop: '8px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                                Modified Fields:
+                              </span>
+                              <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {Object.entries(audit.changed_fields).map(([fieldName, diff], dIdx) => (
+                                  <div
+                                    key={dIdx}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      fontSize: '12px',
+                                      padding: '4px 8px',
+                                      backgroundColor: '#FFFFFF',
+                                      borderRadius: '6px',
+                                      border: '1px solid #E5E7EB',
+                                    }}
+                                  >
+                                    <strong style={{ color: 'var(--color-text-primary)', minWidth: '140px' }}>
+                                      {formatFieldName(fieldName)}:
+                                    </strong>
+                                    <span style={{ color: '#DC2626', textDecoration: 'line-through' }}>
+                                      {diff?.old !== null && diff?.old !== undefined && diff?.old !== '' ? (typeof diff.old === 'string' ? formatTimestamp(diff.old) : String(diff.old)) : 'None'}
+                                    </span>
+                                    <span style={{ color: '#6B7280' }}>➔</span>
+                                    <span style={{ color: '#059669', fontWeight: 600 }}>
+                                      {diff?.new !== null && diff?.new !== undefined && diff?.new !== '' ? (typeof diff.new === 'string' ? formatTimestamp(diff.new) : String(diff.new)) : 'None'}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                ) : (
-                  <div
-                    style={{
-                      padding: '16px',
-                      backgroundColor: '#F9FAFB',
-                      borderRadius: '8px',
-                      textAlign: 'center',
-                      color: 'var(--color-text-muted)',
-                      fontSize: '13px',
-                      fontStyle: 'italic',
-                    }}
-                  >
-                    No amendments recorded. This log record represents the original verified entry.
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
         </div>

@@ -536,6 +536,29 @@ class HaccpReportController extends Controller
                         }
                     }
 
+                    $storageUnitDisplay = null;
+                    $recordedTempDisplay = null;
+                    if ($modelClass === TemperatureLog::class) {
+                        $zone = $log->storageZone;
+                        $zoneNameClean = trim(strval($zone ? ($zone->name ?? '') : ($log->storage_zone_name ?? '')));
+                        $zoneTypeClean = trim(strval($zone ? ($zone->type ?? $zone->storage_type ?? '') : ''));
+                        if ($zoneTypeClean !== '' && $zoneTypeClean !== '-') {
+                            $zoneTypeClean = ucfirst(strtolower($zoneTypeClean));
+                        }
+
+                        if ($zoneNameClean !== '' && $zoneTypeClean !== '' && $zoneTypeClean !== '-') {
+                            $storageUnitDisplay = "{$zoneNameClean} ({$zoneTypeClean})";
+                        } elseif ($zoneNameClean !== '') {
+                            $storageUnitDisplay = $zoneNameClean;
+                        } elseif ($zoneTypeClean !== '' && $zoneTypeClean !== '-') {
+                            $storageUnitDisplay = "({$zoneTypeClean})";
+                        }
+
+                        if ($log->temperature !== null && $log->temperature !== '') {
+                            $recordedTempDisplay = floatval($log->temperature) . '°C';
+                        }
+                    }
+
                     $allLogs[] = [
                         'id' => $log->id,
                         'moduleId' => $moduleId,
@@ -553,8 +576,13 @@ class HaccpReportController extends Controller
                         'latest_amended_at' => $latestAmendment && $latestAmendment->created_at ? $latestAmendment->created_at->toIso8601String() : null,
                         'latest_amended_by' => $latestAmendment ? $latestAmendment->amended_by_name : null,
                         'cookingSummary' => $cookingSummary,
+                        'storageUnit' => $storageUnitDisplay,
+                        'recordedTemperature' => $recordedTempDisplay,
                         'formData' => [
                             'holdingUnit' => $log->holding_unit ?? null,
+                            'storageUnit' => $storageUnitDisplay,
+                            'recordedTemperature' => $recordedTempDisplay,
+                            'temperature' => $log->temperature ?? null,
                             'items' => $log->items ?? null,
                             'generalComments' => $log->general_comments ?? $log->notes ?? $log->comment ?? null,
                             'signedBy' => $log->signed_by_staff_name ?? null,
@@ -913,8 +941,25 @@ class HaccpReportController extends Controller
         } elseif ($logType === 'temperature') {
             $storageZone = $log->storageZone;
             $thermometer = $log->thermometer;
-            $zoneName = $storageZone ? $storageZone->name : 'Unknown Equipment';
-            $zoneType = $storageZone ? ($storageZone->type ?? $storageZone->storage_type ?? '-') : '-';
+            $zoneNameClean = trim(strval($storageZone ? ($storageZone->name ?? '') : ($log->storage_zone_name ?? '')));
+            $zoneTypeClean = trim(strval($storageZone ? ($storageZone->type ?? $storageZone->storage_type ?? '') : ''));
+            if ($zoneTypeClean !== '' && $zoneTypeClean !== '-') {
+                $zoneTypeClean = ucfirst(strtolower($zoneTypeClean));
+            }
+
+            if ($zoneNameClean !== '' && $zoneTypeClean !== '' && $zoneTypeClean !== '-') {
+                $storageUnitDisplay = "{$zoneNameClean} ({$zoneTypeClean})";
+            } elseif ($zoneNameClean !== '') {
+                $storageUnitDisplay = $zoneNameClean;
+            } elseif ($zoneTypeClean !== '' && $zoneTypeClean !== '-') {
+                $storageUnitDisplay = "({$zoneTypeClean})";
+            } else {
+                $storageUnitDisplay = 'Unknown Equipment';
+            }
+
+            $recordedTempFormatted = ($log->temperature !== null && $log->temperature !== '')
+                ? (floatval($log->temperature) . '°C')
+                : 'N/A';
 
             $minTemp = $storageZone ? ($storageZone->min_temp ?? $storageZone->target_temp_min ?? null) : null;
             $maxTemp = $storageZone ? ($storageZone->max_temp ?? $storageZone->target_temp_max ?? null) : null;
@@ -934,8 +979,8 @@ class HaccpReportController extends Controller
                     'fields' => [
                         ['label' => 'Log Record ID', 'value' => '#' . $log->id],
                         ['label' => 'Date & Time', 'value' => trim(($log->log_date ? (is_object($log->log_date) ? $log->log_date->format('Y-m-d') : strval($log->log_date)) : '') . ' ' . ($log->log_time ?? ''))],
-                        ['label' => 'Equipment / Storage Unit', 'value' => $zoneName],
-                        ['label' => 'Equipment Type', 'value' => $zoneType],
+                        ['label' => 'Storage Unit', 'value' => $storageUnitDisplay],
+                        ['label' => 'Recorded Temperature', 'value' => $recordedTempFormatted],
                         ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
                         ['label' => 'Status', 'value' => $statusResult],
                         ['label' => 'Created At', 'value' => $log->created_at ? $log->created_at->toIso8601String() : null],
@@ -944,25 +989,30 @@ class HaccpReportController extends Controller
                 [
                     'title' => 'Temperature Verification Check',
                     'fields' => [
+                        ['label' => 'Storage Unit', 'value' => $storageUnitDisplay],
                         ['label' => 'Target Temperature Limits', 'value' => $targetRange],
-                        ['label' => 'Recorded Temperature', 'value' => $log->temperature !== null ? $log->temperature . ' °C' : 'N/A'],
+                        ['label' => 'Recorded Temperature', 'value' => $recordedTempFormatted],
                         ['label' => 'Thermometer / Device', 'value' => $thermoName],
                         ['label' => 'Result', 'value' => $statusResult],
                     ]
                 ],
-                [
+            ];
+
+            if (!empty($log->comment) && trim($log->comment) !== '') {
+                $sections[] = [
                     'title' => 'Observations & Corrective Actions',
                     'fields' => [
-                        ['label' => 'Staff Comments / Notes', 'value' => $log->comment ?? 'No comment provided.'],
+                        ['label' => 'Staff Comments / Notes', 'value' => trim($log->comment)],
                     ]
-                ],
-                [
-                    'title' => 'Verification & Signatures',
-                    'fields' => [
-                        ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
-                        ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
-                        ['label' => 'Signature Image', 'value' => $log->signature ?? null],
-                    ]
+                ];
+            }
+
+            $sections[] = [
+                'title' => 'Verification & Signatures',
+                'fields' => [
+                    ['label' => 'Staff Member', 'value' => $log->staff_name ?? '-'],
+                    ['label' => 'Signature Recorded', 'value' => !empty($log->signature)],
+                    ['label' => 'Signature Image', 'value' => $log->signature ?? null],
                 ]
             ];
         } elseif ($logType === 'delivery-intake') {
