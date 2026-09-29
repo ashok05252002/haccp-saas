@@ -116,18 +116,37 @@ const HaccpLogDetailDrawer = ({
     );
   };
 
+  const formatDate = (dateVal) => {
+    if (!dateVal) return 'N/A';
+    const str = String(dateVal).trim();
+    if (str.includes('T')) {
+      return str.split('T')[0];
+    }
+    if (str.includes(' ')) {
+      return str.split(' ')[0];
+    }
+    return str;
+  };
+
   const formatTime = (timeStr) => {
-    if (!timeStr) return '';
-    const parts = String(timeStr).trim().split(':');
+    if (!timeStr) return 'N/A';
+    let t = String(timeStr).trim();
+    if (t.includes('T')) {
+      t = t.split('T')[1];
+    }
+    const parts = t.split(':');
     if (parts.length >= 2) {
       return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
     }
-    return String(timeStr);
+    return t || 'N/A';
   };
 
   const formatTimestamp = (val) => {
     if (!val) return '';
     const str = String(val).trim();
+    if (/^\d{4}-\d{2}-\d{2}T00:00:00(?:\.0+)?(?:Z|[+-]00:?00)?$/.test(str)) {
+      return str.split('T')[0];
+    }
     const isoRegex = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/;
     if (isoRegex.test(str)) {
       const d = new Date(str);
@@ -203,7 +222,7 @@ const HaccpLogDetailDrawer = ({
     const originalTitle = document.title;
     const moduleLabel = (data?.moduleName || 'HACCP_Log').replace(/[^a-zA-Z0-9]/g, '_');
     const logId = data?.log?.id ? `_${data.log.id}` : '';
-    const logDate = data?.log?.log_date ? `_${data.log.log_date}` : '';
+    const logDate = data?.log?.log_date ? `_${formatDate(data.log.log_date)}` : '';
     const safeFileName = `${moduleLabel}_Log${logId}${logDate}`;
 
     try {
@@ -347,7 +366,7 @@ const HaccpLogDetailDrawer = ({
           }}
         >
           <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
-            {data?.log?.log_date ? `Logged on ${data.log.log_date} at ${formatTime(data.log.log_time || '12:00')}` : 'Log Record View'}
+            {data?.log?.log_date ? `Logged on ${formatDate(data.log.log_date)} at ${formatTime(data.log.log_time)}` : 'Log Record View'}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

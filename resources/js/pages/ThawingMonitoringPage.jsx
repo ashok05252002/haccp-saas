@@ -11,6 +11,29 @@ import ManagerPinModal from '../components/common/ManagerPinModal';
 import useHaccpEditGate from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
+const formatSafeDate = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  const ymd = String(dateStr).split('T')[0].trim();
+  const parts = ymd.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
+
+const formatSafeTime = (timeStr) => {
+  if (!timeStr) return 'N/A';
+  let t = String(timeStr).trim();
+  if (t.includes('T')) {
+    t = t.split('T')[1];
+  }
+  const parts = t.split(':');
+  if (parts.length >= 2) {
+    return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+  }
+  return t || 'N/A';
+};
+
 const ThawingMonitoringPage = () => {
   const { requestEdit, pinModalOpen, handlePinSuccess, handlePinClose } = useHaccpEditGate();
   const [logs, setLogs] = useState([]);
@@ -60,12 +83,17 @@ const ThawingMonitoringPage = () => {
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
       const q = searchQuery.toLowerCase();
+      const rawDate = log.log_date ? String(log.log_date).split('T')[0] : '';
+      const formattedDate = formatSafeDate(log.log_date);
+
       const matchSearch =
         (log.food_item_name && log.food_item_name.toLowerCase().includes(q)) ||
         (log.defrost_method && log.defrost_method.toLowerCase().includes(q)) ||
-        (log.signed_by_staff_name && log.signed_by_staff_name.toLowerCase().includes(q));
+        (log.signed_by_staff_name && log.signed_by_staff_name.toLowerCase().includes(q)) ||
+        formattedDate.toLowerCase().includes(q) ||
+        rawDate.toLowerCase().includes(q);
 
-      const matchDate = !dateFilter || log.log_date === dateFilter;
+      const matchDate = !dateFilter || rawDate === dateFilter;
 
       return matchSearch && matchDate;
     });
@@ -183,8 +211,8 @@ const ThawingMonitoringPage = () => {
                   return (
                     <tr key={log.id}>
                       <td>
-                        <strong style={{ color: 'var(--color-text-primary)' }}>{log.log_date}</strong>
-                        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{log.log_time}</div>
+                        <strong style={{ color: 'var(--color-text-primary)' }}>{formatSafeDate(log.log_date)}</strong>
+                        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{formatSafeTime(log.log_time)}</div>
                       </td>
                       <td>
                         <strong style={{ color: 'var(--color-primary)' }}>{log.food_item_name}</strong>
