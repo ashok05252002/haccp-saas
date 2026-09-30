@@ -6,6 +6,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
 import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../components/common/CorrectiveActionModal';
 import axios from 'axios';
 
 const OIL_CONDITIONS = [
@@ -77,6 +78,8 @@ const FryerOilFormPage = ({ logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [showReasonModal, setShowReasonModal] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   useEffect(() => {
     // Load staff & master data options from API
@@ -170,7 +173,27 @@ const FryerOilFormPage = ({ logId }) => {
   const isTempSafe = !isNaN(tempNum) && tempNum >= 160 && tempNum <= 175;
   const passed = oilQualityAcceptable && !isTempHigh;
 
+  const getFailedFryerIssues = () => {
+    const issues = [];
+    if (!oilQualityAcceptable) {
+      issues.push(`Oil quality marked as Not Acceptable (${oilCondition}).`);
+    }
+    if (isTempHigh) {
+      issues.push(`Frying temperature (${fryingTemp}°C) exceeds recommended upper limit (175°C).`);
+    }
+    return issues;
+  };
+
   const handleFinalSubmit = async (amendmentReason = '') => {
+    const failedIssues = getFailedFryerIssues();
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(step1Comments)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setErrors(prev => ({ ...prev, step1Comments: 'Corrective Action is required when fryer oil check fails.' }));
+      setShowReasonModal(false);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -230,6 +253,13 @@ const FryerOilFormPage = ({ logId }) => {
 
     if (!oilQualityAcceptable && oilActionTaken === 'Continued use') {
       newErrors.oilActionTaken = 'Continued use is not allowed when oil quality is Not Acceptable.';
+    }
+
+    const failedIssues = getFailedFryerIssues();
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(step1Comments)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      newErrors.step1Comments = 'Corrective Action is required when fryer oil check fails.';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -422,8 +452,18 @@ const FryerOilFormPage = ({ logId }) => {
             </div>
 
             <div className="form-group" style={{ marginTop: '16px' }}>
-              <label className="form-label">Step 1 Observations / Comments</label>
-              <textarea className="form-input" rows={2} placeholder="Add observations or reason for oil change..." value={step1Comments} onChange={e => setStep1Comments(e.target.value)} />
+              <label className="form-label">
+                Step 1 Observations / Comments {getFailedFryerIssues().length > 0 && <span style={{ color: '#DC2626', fontSize: '13px', fontWeight: 600 }}>* (Corrective Action Required)</span>}
+              </label>
+              <textarea
+                className="form-input"
+                rows={2}
+                placeholder={getFailedFryerIssues().length > 0 ? "Corrective Action Required: Enter actions taken for degraded oil or high temperature..." : "Add observations or reason for oil change..."}
+                value={step1Comments}
+                onChange={e => setStep1Comments(e.target.value)}
+                style={getFailedFryerIssues().length > 0 && isInvalidCorrectiveAction(step1Comments) ? { borderColor: '#EF4444', backgroundColor: '#FEF2F2' } : {}}
+              />
+              {errors.step1Comments && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.step1Comments}</span>}
             </div>
           </Card>
 
@@ -565,6 +605,12 @@ const FryerOilFormPage = ({ logId }) => {
           onClose={() => setShowReasonModal(false)}
           onConfirm={handleFinalSubmit}
           loading={submitting}
+        />
+
+        <CorrectiveActionModal
+          isOpen={correctiveModalOpen}
+          onClose={() => setCorrectiveModalOpen(false)}
+          issueDetails={correctiveModalIssues}
         />
       </div>
     </PageLayout>

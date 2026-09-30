@@ -103,9 +103,55 @@ class CookingLogController extends Controller
                 $caLower = strtolower($ca);
                 if ($ca === '' || $caLower === 'n/a' || $caLower === 'na') {
                     return response()->json([
-                        'message' => 'Mandatory Corrective Action Required for failed blast chilling step.'
+                        'message' => 'The given data was invalid.',
+                        'errors' => [
+                            'chilling_corrective_action' => ['Mandatory Corrective Action is required for failed blast chilling step. It cannot be empty or N/A.']
+                        ]
                     ], 422);
                 }
+            }
+        }
+
+        if ($status === 'COMPLETED') {
+            $otherStepFailed = false;
+            $failedStepNames = [];
+
+            if ($request->cooking_temp !== null && $request->cooking_temp !== '') {
+                $cTemp = floatval($request->cooking_temp);
+                if ($cTemp < 75.0 || $request->cooking_passed === false || $request->cooking_passed === 0 || $request->cooking_passed === '0') {
+                    $otherStepFailed = true;
+                    $failedStepNames[] = 'Cooking Step';
+                }
+            }
+            if ($request->chiller_temp !== null && $request->chiller_temp !== '') {
+                $chTemp = floatval($request->chiller_temp);
+                if ($chTemp < 0.0 || $chTemp > 5.0 || $request->chiller_passed === false || $request->chiller_passed === 0 || $request->chiller_passed === '0') {
+                    $otherStepFailed = true;
+                    $failedStepNames[] = 'Chiller Storage Step';
+                }
+            }
+            if ($request->reheating_temp !== null && $request->reheating_temp !== '') {
+                $rTemp = floatval($request->reheating_temp);
+                if ($rTemp < 75.0 || $request->reheating_passed === false || $request->reheating_passed === 0 || $request->reheating_passed === '0') {
+                    $otherStepFailed = true;
+                    $failedStepNames[] = 'Reheating Step';
+                }
+            }
+            if ($request->hot_holding_temp !== null && $request->hot_holding_temp !== '') {
+                $hTemp = floatval($request->hot_holding_temp);
+                if ($hTemp < 63.0 || $request->hot_holding_passed === false || $request->hot_holding_passed === 0 || $request->hot_holding_passed === '0') {
+                    $otherStepFailed = true;
+                    $failedStepNames[] = 'Hot Holding Step';
+                }
+            }
+
+            if ($otherStepFailed && Controller::isInvalidCorrectiveAction($request->corrective_action ?? null)) {
+                return response()->json([
+                    'message' => 'The given data was invalid.',
+                    'errors' => [
+                        'corrective_action' => ['Mandatory Corrective Action is required for failed step(s): ' . implode(', ', $failedStepNames) . '. It cannot be empty or N/A.']
+                    ]
+                ], 422);
             }
         }
 
@@ -240,9 +286,67 @@ class CookingLogController extends Controller
                 $caLower = strtolower($ca);
                 if ($ca === '' || $caLower === 'n/a' || $caLower === 'na') {
                     return response()->json([
-                        'message' => 'Mandatory Corrective Action Required for failed blast chilling step.'
+                        'message' => 'The given data was invalid.',
+                        'errors' => [
+                            'chilling_corrective_action' => ['Mandatory Corrective Action is required for failed blast chilling step. It cannot be empty or N/A.']
+                        ]
                     ], 422);
                 }
+            }
+        }
+
+        if ($targetStatus === 'COMPLETED') {
+            $otherStepFailed = false;
+            $failedStepNames = [];
+
+            $cTemp = array_key_exists('cooking_temp', $updateData) ? $updateData['cooking_temp'] : $log->cooking_temp;
+            $cPassed = array_key_exists('cooking_passed', $updateData) ? $updateData['cooking_passed'] : $log->cooking_passed;
+            if ($cTemp !== null && $cTemp !== '') {
+                $val = floatval($cTemp);
+                if ($val < 75.0 || $cPassed === false || $cPassed === 0 || $cPassed === '0') {
+                    $otherStepFailed = true;
+                    $failedStepNames[] = 'Cooking Step';
+                }
+            }
+
+            $chillerTemp = array_key_exists('chiller_temp', $updateData) ? $updateData['chiller_temp'] : $log->chiller_temp;
+            $chillerPassed = array_key_exists('chiller_passed', $updateData) ? $updateData['chiller_passed'] : $log->chiller_passed;
+            if ($chillerTemp !== null && $chillerTemp !== '') {
+                $val = floatval($chillerTemp);
+                if ($val < 0.0 || $val > 5.0 || $chillerPassed === false || $chillerPassed === 0 || $chillerPassed === '0') {
+                    $otherStepFailed = true;
+                    $failedStepNames[] = 'Chiller Storage Step';
+                }
+            }
+
+            $rhTemp = array_key_exists('reheating_temp', $updateData) ? $updateData['reheating_temp'] : $log->reheating_temp;
+            $rhPassed = array_key_exists('reheating_passed', $updateData) ? $updateData['reheating_passed'] : $log->reheating_passed;
+            if ($rhTemp !== null && $rhTemp !== '') {
+                $val = floatval($rhTemp);
+                if ($val < 75.0 || $rhPassed === false || $rhPassed === 0 || $rhPassed === '0') {
+                    $otherStepFailed = true;
+                    $failedStepNames[] = 'Reheating Step';
+                }
+            }
+
+            $hhTemp = array_key_exists('hot_holding_temp', $updateData) ? $updateData['hot_holding_temp'] : $log->hot_holding_temp;
+            $hhPassed = array_key_exists('hot_holding_passed', $updateData) ? $updateData['hot_holding_passed'] : $log->hot_holding_passed;
+            if ($hhTemp !== null && $hhTemp !== '') {
+                $val = floatval($hhTemp);
+                if ($val < 63.0 || $hhPassed === false || $hhPassed === 0 || $hhPassed === '0') {
+                    $otherStepFailed = true;
+                    $failedStepNames[] = 'Hot Holding Step';
+                }
+            }
+
+            $caVal = array_key_exists('corrective_action', $updateData) ? $updateData['corrective_action'] : $log->corrective_action;
+            if ($otherStepFailed && Controller::isInvalidCorrectiveAction($caVal)) {
+                return response()->json([
+                    'message' => 'The given data was invalid.',
+                    'errors' => [
+                        'corrective_action' => ['Mandatory Corrective Action is required for failed step(s): ' . implode(', ', $failedStepNames) . '. It cannot be empty or N/A.']
+                    ]
+                ], 422);
             }
         }
 

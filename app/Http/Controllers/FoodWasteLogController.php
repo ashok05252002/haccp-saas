@@ -243,6 +243,13 @@ class FoodWasteLogController extends Controller
         [$unitTotals, $totalCostSum, $mainTypeId, $mainStageId, $mainReasonId, $mainMethodId, $quantitySummaryStr, $status] =
             $this->buildAggregates($items, $tenantId);
 
+        if ($status === 'Attention Required' && self::isInvalidCorrectiveAction($validated['prevention_action'] ?? null)) {
+            return response()->json([
+                'message' => 'High-risk waste reason detected (e.g. Temperature abuse, Expired materials, Contamination). Corrective Prevention Action is required.',
+                'errors' => ['prevention_action' => ['Corrective Prevention Action is required for high-risk waste reasons (cannot be empty or N/A).']]
+            ], 422);
+        }
+
         $log = FoodWasteLog::create([
             'tenant_id' => $tenantId,
             'branch_id' => $branchId,
@@ -297,6 +304,13 @@ class FoodWasteLogController extends Controller
 
         [$unitTotals, $totalCostSum, $mainTypeId, $mainStageId, $mainReasonId, $mainMethodId, $quantitySummaryStr, $status] =
             $this->buildAggregates($items, $tenantId);
+
+        if ($status === 'Attention Required' && self::isInvalidCorrectiveAction($validated['prevention_action'] ?? null)) {
+            return response()->json([
+                'message' => 'High-risk waste reason detected (e.g. Temperature abuse, Expired materials, Contamination). Corrective Prevention Action is required.',
+                'errors' => ['prevention_action' => ['Corrective Prevention Action is required for high-risk waste reasons (cannot be empty or N/A).']]
+            ], 422);
+        }
 
         $log->update([
             'log_date'            => $validated['log_date'],

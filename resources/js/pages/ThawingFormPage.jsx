@@ -6,6 +6,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
 import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../components/common/CorrectiveActionModal';
 import axios from 'axios';
 
 const DEFAULT_METHODS = [
@@ -67,6 +68,8 @@ const ThawingFormPage = ({ logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [showReasonModal, setShowReasonModal] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   useEffect(() => {
     // Fetch Staff List
@@ -141,14 +144,11 @@ const ThawingFormPage = ({ logId }) => {
     });
   }, [logId]);
 
-  // Temperature Compliance Validation (<= 5.0°C for chilled methods)
+  // Temperature Compliance Validation (<= 8.0°C)
   const tempNum = parseFloat(defrostTemp);
-  const isChilledMethod = strContains(defrostMethod, 'refrigerator') ||
-                         strContains(defrostMethod, 'chiller') ||
-                         strContains(defrostMethod, 'water');
   const isMicrowave = strContains(defrostMethod, 'microwave');
 
-  const isTempHigh = isChilledMethod && !isNaN(tempNum) && tempNum > 5.0;
+  const isTempHigh = !isNaN(tempNum) && tempNum > 8.0;
   const passed = defrostTemp !== '' && !isTempHigh;
 
   function strContains(str, substr) {
@@ -218,7 +218,23 @@ const ThawingFormPage = ({ logId }) => {
     }
   };
 
+  const getFailedThawingIssues = () => {
+    const issues = [];
+    if (isTempHigh) {
+      issues.push(`Defrost temperature (${defrostTemp}°C) exceeds the critical limit (≤ 8.0°C). Corrective Action is required.`);
+    }
+    return issues;
+  };
+
   const handleFinalSubmit = async (amendmentReason = '') => {
+    const failedIssues = getFailedThawingIssues();
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(comments)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setShowReasonModal(false);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -265,8 +281,13 @@ const ThawingFormPage = ({ logId }) => {
     if (!completedTime) newErrors.completedTime = 'Defrost completed time is required.';
     if (defrostTemp === '' || isNaN(parseFloat(defrostTemp))) newErrors.defrostTemp = 'Temperature after defrosting is required.';
 
-    if (isTempHigh && !comments.trim()) {
-      newErrors.comments = 'Comments / corrective action required when temperature exceeds 5°C limit.';
+    const failedIssues = getFailedThawingIssues();
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(comments)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      newErrors.comments = 'Corrective Action is required when defrost temperature exceeds 8°C limit (cannot be empty or N/A).';
+      setErrors(newErrors);
+      return;
     }
 
     if (!signedByStaffName) newErrors.signedBy = 'Signed by staff member is required.';
@@ -301,7 +322,7 @@ const ThawingFormPage = ({ logId }) => {
             <span className="badge badge-standard">EC 852/2004 Annex II</span>
           </div>
           <p className="page-subtitle" style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-            Log controlled defrosting methods, completion times, and core temperatures to ensure safe food thawing (≤5°C).
+            Log controlled defrosting methods, completion times, and core temperatures to ensure safe food thawing (≤8°C).
           </p>
         </div>
 
@@ -313,9 +334,9 @@ const ThawingFormPage = ({ logId }) => {
               <strong>Critical Limits & Guidelines</strong>
               <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px' }}>
                 <li>Thaw food under controlled conditions, preferably in a refrigerator/chiller.</li>
-                <li>Keep thawed food chilled at <strong>5°C or below</strong> unless it is cooked immediately.</li>
+                <li>Keep thawed food chilled at <strong>8°C or below</strong> unless it is cooked immediately.</li>
                 <li>Do not thaw food at room temperature.</li>
-                <li>Record comments/actions if the temperature is outside the safe limit (&gt;5°C).</li>
+                <li>Record comments/actions if the temperature is outside the safe limit (&gt;8°C).</li>
               </ul>
             </div>
           </div>
@@ -494,7 +515,7 @@ const ThawingFormPage = ({ logId }) => {
               {isTempHigh && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: '#FEF2F2', border: '1px solid #F8B4B4', borderRadius: '8px', color: '#9B1C1C', fontSize: '12.5px', marginTop: '8px' }}>
                   <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-                  <span>Temperature is above safe chilled limit (&gt;5°C). Comments/corrective action required.</span>
+                  <span>Temperature is above safe limit (&gt;8°C). Comments/corrective action required.</span>
                 </div>
               )}
 
@@ -511,7 +532,7 @@ const ThawingFormPage = ({ logId }) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', backgroundColor: passed ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${passed ? '#A7F3D0' : '#F8B4B4'}`, borderRadius: '8px', color: passed ? '#047857' : '#9B1C1C', fontSize: '13.5px', fontWeight: 500 }}>
                 {passed ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
                 <span>
-                  Evaluation: <strong>{passed ? 'Passed (Safe Chilled Limit ≤ 5°C)' : 'Needs Review (Temperature above 5°C limit)'}</strong>
+                  Evaluation: <strong>{passed ? 'Passed (Safe Limit ≤ 8°C)' : 'Needs Review (Temperature above 8°C limit)'}</strong>
                 </span>
               </div>
             )}
@@ -520,16 +541,17 @@ const ThawingFormPage = ({ logId }) => {
           {/* Comments Card */}
           <Card style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text-primary)', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '8px', margin: 0 }}>
-              Comments / Observations
+              Comments / Observations {isTempHigh && <span style={{ color: '#DC2626', fontSize: '13px', fontWeight: 600 }}>* (Corrective Action Required)</span>}
             </h3>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
               <textarea
                 className="form-input"
                 rows={3}
-                placeholder="Enter comments, observations, or corrective action taken if temperature exceeds 5°C..."
+                placeholder={isTempHigh ? "Corrective Action Required: Enter actions taken for high defrost temperature..." : "Enter comments, observations, or corrective action taken if temperature exceeds 8°C..."}
                 value={comments}
                 onChange={e => setComments(e.target.value)}
+                style={isTempHigh && isInvalidCorrectiveAction(comments) ? { borderColor: '#EF4444', backgroundColor: '#FEF2F2' } : {}}
               />
               {errors.comments && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.comments}</span>}
             </div>
@@ -577,6 +599,12 @@ const ThawingFormPage = ({ logId }) => {
           onClose={() => setShowReasonModal(false)}
           onConfirm={handleFinalSubmit}
           loading={submitting}
+        />
+
+        <CorrectiveActionModal
+          isOpen={correctiveModalOpen}
+          onClose={() => setCorrectiveModalOpen(false)}
+          issueDetails={correctiveModalIssues}
         />
       </div>
     </PageLayout>

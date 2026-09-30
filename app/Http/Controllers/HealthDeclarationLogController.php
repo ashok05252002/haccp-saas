@@ -104,6 +104,22 @@ class HealthDeclarationLogController extends Controller
             }
         }
 
+        if ($hasYesAnswers) {
+            $hasItemNotes = false;
+            foreach ($request->results as $resItem) {
+                if ($resItem['answer'] === 'Yes' && !empty($resItem['notes']) && !self::isInvalidCorrectiveAction($resItem['notes'])) {
+                    $hasItemNotes = true;
+                    break;
+                }
+            }
+            if (!$hasItemNotes && self::isInvalidCorrectiveAction($request->comment)) {
+                return response()->json([
+                    'message' => 'Symptoms or exclusion criteria reported. Corrective Action / Manager exclusion note is required in comments.',
+                    'errors' => ['comment' => ['Corrective Action is required when symptoms are reported (cannot be empty or N/A).']]
+                ], 422);
+            }
+        }
+
         $overallStatus = $hasYesAnswers ? 'Action Required / Unfit' : 'Fit for Work';
 
         try {
@@ -164,6 +180,22 @@ class HealthDeclarationLogController extends Controller
             if ($resItem['answer'] === 'Yes') {
                 $hasYesAnswers = true;
                 break;
+            }
+        }
+
+        if ($hasYesAnswers) {
+            $hasItemNotes = false;
+            foreach ($request->results as $resItem) {
+                if ($resItem['answer'] === 'Yes' && !empty($resItem['notes']) && !self::isInvalidCorrectiveAction($resItem['notes'])) {
+                    $hasItemNotes = true;
+                    break;
+                }
+            }
+            if (!$hasItemNotes && self::isInvalidCorrectiveAction($request->comment)) {
+                return response()->json([
+                    'message' => 'Symptoms or exclusion criteria reported. Corrective Action / Manager exclusion note is required in comments.',
+                    'errors' => ['comment' => ['Corrective Action is required when symptoms are reported (cannot be empty or N/A).']]
+                ], 422);
             }
         }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import AmendmentReasonModal from '../common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../common/CorrectiveActionModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { Snowflake, AlertTriangle, CheckCircle, Save, Droplets, Thermometer, Box } from 'lucide-react';
 import axios from 'axios';
@@ -16,6 +17,8 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
   const [existingSignature, setExistingSignature] = useState(null);
   const [editZoneId, setEditZoneId] = useState(null);
   const [reasonModalOpen, setReasonModalOpen] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   // Form State
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -193,6 +196,17 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
         return;
       }
 
+      const targetZone = storageZones.find(z => String(z.id) === String(targetZoneId));
+      const isValid = targetZone ? (validateTemperature(targetZone, reading.temperature) ?? true) : true;
+
+      if (isValid === false && isInvalidCorrectiveAction(reading.comment)) {
+        const issueMsg = `${targetZone?.name || 'Equipment'}: ${reading.temperature}°C is outside safe storage limits (${targetZone?.min_temp !== null ? targetZone.min_temp + '°C' : '-'} to ${targetZone?.max_temp !== null ? targetZone.max_temp + '°C' : '-'}). Corrective Action is required.`;
+        setCorrectiveModalIssues([issueMsg]);
+        setCorrectiveModalOpen(true);
+        setError('Temperature is outside the allowed limit. Corrective Action is required before submitting.');
+        return;
+      }
+
       setReasonModalOpen(true);
       return;
     }
@@ -201,10 +215,20 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
 
     // Filter out readings that are empty for Add mode
     const validReadings = [];
+    const failedReadingsWithoutCA = [];
+
     storageZones.forEach(zone => {
       const reading = readings[zone.id];
       if (reading && reading.temperature !== '') {
         const isValid = validateTemperature(zone, reading.temperature) ?? true;
+        if (isValid === false && isInvalidCorrectiveAction(reading.comment)) {
+          failedReadingsWithoutCA.push({
+            zoneName: zone.name,
+            temp: reading.temperature,
+            min: zone.min_temp,
+            max: zone.max_temp
+          });
+        }
         validReadings.push({
           storage_zone_id: zone.id,
           temperature: parseFloat(reading.temperature),
@@ -216,6 +240,17 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
 
     if (validReadings.length === 0) {
       setError('Please enter a temperature for at least one equipment.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (failedReadingsWithoutCA.length > 0) {
+      const issueMsgs = failedReadingsWithoutCA.map(
+        f => `${f.zoneName}: ${f.temp}°C is outside safe storage limits (${f.min !== null ? f.min + '°C' : '-'} to ${f.max !== null ? f.max + '°C' : '-'}). Corrective Action is required.`
+      );
+      setCorrectiveModalIssues(issueMsgs);
+      setCorrectiveModalOpen(true);
+      setError('A failed check or out-of-limit value has been detected. Please rectify the issue and enter the corrective action before submitting.');
       setSubmitting(false);
       return;
     }
@@ -327,10 +362,14 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="Optional comment"
+                      placeholder={isValid === false ? "Mandatory corrective action *" : "Optional comment"}
                       value={rowData.comment}
                       onChange={(e) => handleRowChange(unit.id, 'comment', e.target.value)}
-                      style={{ backgroundColor: '#ffffff', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)' }}
+                      style={{ 
+                        backgroundColor: '#ffffff', 
+                        borderColor: (isValid === false && isInvalidCorrectiveAction(rowData.comment)) ? 'var(--color-danger)' : undefined,
+                        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)' 
+                      }}
                     />
                   </div>
                 </div>
@@ -508,6 +547,12 @@ const TemperatureForm = ({ onSave, onCancel, logId }) => {
         onClose={() => setReasonModalOpen(false)}
         onConfirm={handleConfirmAmendment}
         loading={submitting}
+      />
+
+      <CorrectiveActionModal
+        isOpen={correctiveModalOpen}
+        onClose={() => setCorrectiveModalOpen(false)}
+        issueDetails={correctiveModalIssues}
       />
     </form>
   );

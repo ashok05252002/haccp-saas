@@ -60,6 +60,13 @@ class FryerOilLogController extends Controller
         $passed = $validated['oil_quality_acceptable'] && !$isTempHigh;
         $status = $passed ? 'Passed' : 'Attention Required';
 
+        if (!$passed && self::isInvalidCorrectiveAction($validated['step1_comments'] ?? null)) {
+            return response()->json([
+                'message' => 'Oil quality unacceptable or frying temperature exceeded limit. Corrective Action is required.',
+                'errors' => ['step1_comments' => ['Corrective Action is required when fryer oil check fails (cannot be empty or N/A).']]
+            ], 422);
+        }
+
         $log = FryerOilLog::create([
             'tenant_id' => $tenantId,
             'branch_id' => $branchId,
@@ -132,6 +139,13 @@ class FryerOilLogController extends Controller
             $isTempHigh = $validated['frying_temp'] > 175;
             $passed = $validated['oil_quality_acceptable'] && !$isTempHigh;
             $status = $passed ? 'Passed' : 'Attention Required';
+
+            if (!$passed && self::isInvalidCorrectiveAction($validated['step1_comments'] ?? null)) {
+                return response()->json([
+                    'message' => 'Oil quality unacceptable or frying temperature exceeded limit. Corrective Action is required.',
+                    'errors' => ['step1_comments' => ['Corrective Action is required when fryer oil check fails (cannot be empty or N/A).']]
+                ], 422);
+            }
 
             $log->update([
                 'log_date' => $validated['log_date'],

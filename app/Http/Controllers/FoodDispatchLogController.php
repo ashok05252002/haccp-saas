@@ -83,6 +83,13 @@ class FoodDispatchLogController extends Controller
         $passed = $tempInRange && $separation;
         $status = $passed ? 'Passed' : 'Needs Review';
 
+        if (!$passed && self::isInvalidCorrectiveAction($request->comments)) {
+            return response()->json([
+                'message' => 'Dispatch temperature or food separation check failed. Corrective Action is required.',
+                'errors' => ['comments' => ['Corrective Action is required when dispatch check fails (cannot be empty or N/A).']]
+            ], 422);
+        }
+
         $log = FoodDispatchLog::create([
             'tenant_id'     => $tenantId,
             'branch_id'     => $branchId,
@@ -145,6 +152,13 @@ class FoodDispatchLogController extends Controller
             $separation = filter_var($request->separation, FILTER_VALIDATE_BOOLEAN);
             $passed = $tempInRange && $separation;
             $status = $passed ? 'Passed' : 'Needs Review';
+
+            if (!$passed && self::isInvalidCorrectiveAction($request->comments)) {
+                return response()->json([
+                    'message' => 'Dispatch temperature or food separation check failed. Corrective Action is required.',
+                    'errors' => ['comments' => ['Corrective Action is required when dispatch check fails (cannot be empty or N/A).']]
+                ], 422);
+            }
 
             $log->update([
                 'log_date'      => $request->log_date,

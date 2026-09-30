@@ -5,6 +5,7 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../components/common/CorrectiveActionModal';
 import SignatureCanvas from 'react-signature-canvas';
 import axios from 'axios';
 
@@ -22,6 +23,8 @@ const HealthDeclarationFormPage = ({ logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   const [form, setForm] = useState({
     log_date: getTodayDateString(),
@@ -146,7 +149,33 @@ const HealthDeclarationFormPage = ({ logId }) => {
     }
   };
 
+  const getFailedHealthIssues = () => {
+    const issues = [];
+    sections.forEach(sec => {
+      (sec.questions || []).forEach((q, idx) => {
+        if (responses[q.id]?.answer === 'Yes') {
+          issues.push(`Condition reported: "${q.question_text || `Question ${idx + 1}`}". Corrective action / manager exclusion note required.`);
+        }
+      });
+    });
+    return issues;
+  };
+
+  const hasValidCorrectiveAction = () => {
+    if (!isInvalidCorrectiveAction(form.comment)) return true;
+    return Object.values(responses).some(r => r.answer === 'Yes' && !isInvalidCorrectiveAction(r.notes));
+  };
+
   const handleFinalSubmit = async (amendmentReason = '') => {
+    const failedIssues = getFailedHealthIssues();
+    if (failedIssues.length > 0 && !hasValidCorrectiveAction()) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setFormError('Symptoms or exclusion criteria reported. Corrective Action / Manager exclusion note is required in Comments or Question Notes.');
+      setShowReasonModal(false);
+      return;
+    }
+
     // Build results array
     const resultsArray = Object.keys(responses).map(qId => ({
       question_id: isNaN(Number(qId)) ? null : Number(qId),
@@ -183,6 +212,15 @@ const HealthDeclarationFormPage = ({ logId }) => {
 
     if (!form.staff_name.trim()) {
       setFormError('Please select or enter Staff Member Name.');
+      return;
+    }
+
+    const failedIssues = getFailedHealthIssues();
+    if (failedIssues.length > 0 && !hasValidCorrectiveAction()) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setFormError('Symptoms or exclusion criteria reported. Corrective Action / Manager exclusion note is required in Comments or Question Notes.');
+      setShowReasonModal(false);
       return;
     }
 
@@ -468,14 +506,27 @@ const HealthDeclarationFormPage = ({ logId }) => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">General Comments / Remarks</label>
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>General Comments / Remarks</span>
+                    {hasFlaggedSymptoms && (
+                      <span style={{ color: '#DC2626', fontSize: '12px', fontWeight: 600 }}>
+                        * (Corrective Action / Exclusion Note Required)
+                      </span>
+                    )}
+                  </label>
                   <textarea
                     className="form-input"
                     rows="2"
-                    placeholder="Optional general remarks..."
+                    placeholder={hasFlaggedSymptoms ? "Enter manager corrective action / staff exclusion instructions..." : "Optional general remarks..."}
                     value={form.comment}
                     onChange={e => setForm({ ...form, comment: e.target.value })}
+                    style={hasFlaggedSymptoms && !hasValidCorrectiveAction() ? { borderColor: '#DC2626', backgroundColor: '#FEF2F2' } : {}}
                   />
+                  {hasFlaggedSymptoms && !hasValidCorrectiveAction() && (
+                    <p style={{ color: '#DC2626', fontSize: '12px', marginTop: '4px', margin: 0, fontWeight: 500 }}>
+                      Corrective action cannot be blank or N/A when health concerns are flagged.
+                    </p>
+                  )}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
@@ -551,6 +602,12 @@ const HealthDeclarationFormPage = ({ logId }) => {
           onClose={() => setShowReasonModal(false)}
           onConfirm={handleFinalSubmit}
           loading={submitting}
+        />
+
+        <CorrectiveActionModal
+          isOpen={correctiveModalOpen}
+          onClose={() => setCorrectiveModalOpen(false)}
+          issueDetails={correctiveModalIssues}
         />
       </div>
     </PageLayout>

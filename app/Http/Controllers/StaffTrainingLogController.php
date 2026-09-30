@@ -50,6 +50,13 @@ class StaffTrainingLogController extends Controller
         $passed = $validated['understanding_confirmed'] && !empty($validated['signature']);
         $status = $passed ? 'Passed' : 'Requires Attention';
 
+        if (!$validated['understanding_confirmed'] && self::isInvalidCorrectiveAction($validated['notes'] ?? null)) {
+            return response()->json([
+                'message' => 'Staff understanding was not confirmed. Corrective Action notes are required.',
+                'errors' => ['notes' => ['Corrective Action notes are required when understanding is not confirmed (cannot be empty or N/A).']]
+            ], 422);
+        }
+
         $log = StaffTrainingLog::create([
             'tenant_id' => $tenantId,
             'branch_id' => $branchId,
@@ -105,6 +112,13 @@ class StaffTrainingLogController extends Controller
 
             $passed = $validated['understanding_confirmed'] && (!empty($validated['signature']) || !empty($log->signature));
             $status = $passed ? 'Passed' : 'Requires Attention';
+
+            if (!$validated['understanding_confirmed'] && self::isInvalidCorrectiveAction($validated['notes'] ?? null)) {
+                return response()->json([
+                    'message' => 'Staff understanding was not confirmed. Corrective Action notes are required.',
+                    'errors' => ['notes' => ['Corrective Action notes are required when understanding is not confirmed (cannot be empty or N/A).']]
+                ], 422);
+            }
 
             $log->update([
                 'log_date' => $validated['log_date'],

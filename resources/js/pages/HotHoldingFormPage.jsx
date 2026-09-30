@@ -6,6 +6,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
 import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../components/common/CorrectiveActionModal';
 import axios from 'axios';
 
 const DEFAULT_UNITS = ['Bain Marie', 'Hot Display Counter', 'Soup Station', 'Buffet Counter'];
@@ -62,6 +63,8 @@ const HotHoldingFormPage = ({ logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [showReasonModal, setShowReasonModal] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   useEffect(() => {
     // Fetch Staff List
@@ -220,7 +223,28 @@ const HotHoldingFormPage = ({ logId }) => {
   const hasAnyTempBelowLimit = rows.some(r => isTempInvalid(r.check1) || isTempInvalid(r.check2) || isTempInvalid(r.check3) || isTempInvalid(r.check4));
   const passed = hasAnyEnteredTemp && !hasAnyTempBelowLimit;
 
+  const getFailedHotHoldingIssues = () => {
+    const issues = [];
+    rows.forEach((r, idx) => {
+      ['check1', 'check2', 'check3', 'check4'].forEach((chk, cIdx) => {
+        if (isTempInvalid(r[chk])) {
+          issues.push(`${r.foodName || `Item #${idx + 1}`} Check ${cIdx + 1} (${r[chk]}°C) is below minimum safe hot holding limit (≥ 63.0°C).`);
+        }
+      });
+    });
+    return issues;
+  };
+
   const handleFinalSubmit = async (amendmentReason = '') => {
+    const failedIssues = getFailedHotHoldingIssues();
+    const hasRowCorrectiveAction = rows.some(r => (isTempInvalid(r.check1) || isTempInvalid(r.check2) || isTempInvalid(r.check3) || isTempInvalid(r.check4)) && !isInvalidCorrectiveAction(r.comments));
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(generalComments) && !hasRowCorrectiveAction) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setShowReasonModal(false);
+      return;
+    }
+
     const sanitizedItems = rows.map(r => ({
       id: r.id || ('h_' + Date.now()),
       foodName: r.foodName || 'Hot Food Item',
@@ -272,6 +296,16 @@ const HotHoldingFormPage = ({ logId }) => {
 
     if (!hasAnyEnteredTemp) {
       newErrors.temps = 'Please enter at least one temperature check.';
+    }
+
+    const failedIssues = getFailedHotHoldingIssues();
+    const hasRowCorrectiveAction = rows.some(r => (isTempInvalid(r.check1) || isTempInvalid(r.check2) || isTempInvalid(r.check3) || isTempInvalid(r.check4)) && !isInvalidCorrectiveAction(r.comments));
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(generalComments) && !hasRowCorrectiveAction) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      newErrors.generalComments = 'Corrective Action is required when hot holding temperature is below 63°C.';
+      setErrors(newErrors);
+      return;
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -601,8 +635,18 @@ const HotHoldingFormPage = ({ logId }) => {
             {/* General Comments */}
             <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '20px' }}>
               <div className="form-group">
-                <label className="form-label">General Comments for {selectedUnit}</label>
-                <textarea className="form-input" rows={2} placeholder="Add general holding comments..." value={generalComments} onChange={e => setGeneralComments(e.target.value)} />
+                <label className="form-label">
+                  General Comments for {selectedUnit} {hasAnyTempBelowLimit && <span style={{ color: '#DC2626', fontSize: '13px', fontWeight: 600 }}>* (Corrective Action Required)</span>}
+                </label>
+                <textarea
+                  className="form-input"
+                  rows={2}
+                  placeholder={hasAnyTempBelowLimit ? "Corrective Action Required: Describe reheat, discard, or holding equipment adjustment..." : "Add general holding comments..."}
+                  value={generalComments}
+                  onChange={e => setGeneralComments(e.target.value)}
+                  style={hasAnyTempBelowLimit && isInvalidCorrectiveAction(generalComments) ? { borderColor: '#EF4444', backgroundColor: '#FEF2F2' } : {}}
+                />
+                {errors.generalComments && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.generalComments}</span>}
               </div>
             </div>
 
@@ -645,6 +689,12 @@ const HotHoldingFormPage = ({ logId }) => {
           onClose={() => setShowReasonModal(false)}
           onConfirm={handleFinalSubmit}
           loading={submitting}
+        />
+
+        <CorrectiveActionModal
+          isOpen={correctiveModalOpen}
+          onClose={() => setCorrectiveModalOpen(false)}
+          issueDetails={correctiveModalIssues}
         />
       </div>
     </PageLayout>

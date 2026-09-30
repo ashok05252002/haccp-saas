@@ -7,6 +7,7 @@ import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
 import SignaturePad from '../components/common/SignaturePad';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../components/common/CorrectiveActionModal';
 import { useHaccpEditGate } from '../hooks/useHaccpEditGate';
 import axios from 'axios';
 
@@ -29,6 +30,8 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [showReasonModal, setShowReasonModal] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   const today = new Date().toISOString().split('T')[0];
   const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -144,6 +147,13 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
   };
 
   const handleFinalSaveCompletion = async (amendmentReason = '') => {
+    if (!understandingConfirmed && isInvalidCorrectiveAction(notes)) {
+      setCorrectiveModalIssues(['Staff member understanding was marked "No". Corrective Action / Retraining notes are required before submission.']);
+      setCorrectiveModalOpen(true);
+      setShowReasonModal(false);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -185,6 +195,14 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
 
     if (!trainerName.trim()) newErrors.trainerName = 'Trainer / Supervisor name is required.';
     if (!signature) newErrors.signature = 'Staff signature is required.';
+
+    if (!understandingConfirmed && isInvalidCorrectiveAction(notes)) {
+      setCorrectiveModalIssues(['Staff member understanding was marked "No". Corrective Action / Retraining notes are required before submission.']);
+      setCorrectiveModalOpen(true);
+      newErrors.notes = 'Corrective Action notes are required when understanding is not confirmed (cannot be empty or N/A).';
+      setErrors(newErrors);
+      return;
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -341,14 +359,18 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Notes / Instructions Given</label>
+              <label className="form-label">
+                Notes / Instructions Given {!understandingConfirmed && <span style={{ color: '#DC2626', fontSize: '13px', fontWeight: 600 }}>* (Corrective Action Required)</span>}
+              </label>
               <textarea
                 className="form-input"
                 rows={3}
-                placeholder="Optional notes or training details..."
+                placeholder={!understandingConfirmed ? "Corrective Action Required: Enter retraining plan or follow-up details..." : "Optional notes or training details..."}
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
+                style={!understandingConfirmed && isInvalidCorrectiveAction(notes) ? { borderColor: '#EF4444', backgroundColor: '#FEF2F2' } : {}}
               />
+              {errors.notes && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.notes}</span>}
             </div>
 
             <div className="form-group">
@@ -403,6 +425,12 @@ const StaffTrainingTaskPage = ({ staffId, logId }) => {
           onClose={() => setShowReasonModal(false)}
           onConfirm={handleFinalSaveCompletion}
           loading={submitting}
+        />
+
+        <CorrectiveActionModal
+          isOpen={correctiveModalOpen}
+          onClose={() => setCorrectiveModalOpen(false)}
+          issueDetails={correctiveModalIssues}
         />
       </div>
     </PageLayout>

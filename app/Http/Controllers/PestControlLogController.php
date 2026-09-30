@@ -69,6 +69,24 @@ class PestControlLogController extends Controller
         $passed = !$hasChecklistNo && !$validated['pest_activity_observed'];
         $status = $passed ? 'Passed' : 'Attention Required';
 
+        if ($validated['pest_activity_observed'] && self::isInvalidCorrectiveAction($validated['action_notes'] ?? null)) {
+            return response()->json([
+                'message' => 'Pest activity was observed. Corrective Action notes are required.',
+                'errors' => ['action_notes' => ['Corrective Action notes are required when pest activity is observed (cannot be empty or N/A).']]
+            ], 422);
+        }
+
+        if ($hasChecklistNo) {
+            foreach ($validated['checklist_answers'] as $item) {
+                if (isset($item['answer']) && $item['answer'] === false && self::isInvalidCorrectiveAction($item['note'] ?? null)) {
+                    return response()->json([
+                        'message' => 'A checklist check failed. Corrective Action follow-up note is required.',
+                        'errors' => ['checklist_answers' => ['Follow-up corrective action note is required for any question answered No (cannot be empty or N/A).']]
+                    ], 422);
+                }
+            }
+        }
+
         $log = PestControlLog::create([
             'tenant_id' => $tenantId,
             'branch_id' => $branchId,
@@ -150,6 +168,24 @@ class PestControlLogController extends Controller
 
             $passed = !$hasChecklistNo && !$validated['pest_activity_observed'];
             $status = $passed ? 'Passed' : 'Attention Required';
+
+            if ($validated['pest_activity_observed'] && self::isInvalidCorrectiveAction($validated['action_notes'] ?? null)) {
+                return response()->json([
+                    'message' => 'Pest activity was observed. Corrective Action notes are required.',
+                    'errors' => ['action_notes' => ['Corrective Action notes are required when pest activity is observed (cannot be empty or N/A).']]
+                ], 422);
+            }
+
+            if ($hasChecklistNo) {
+                foreach ($validated['checklist_answers'] as $item) {
+                    if (isset($item['answer']) && $item['answer'] === false && self::isInvalidCorrectiveAction($item['note'] ?? null)) {
+                        return response()->json([
+                            'message' => 'A checklist check failed. Corrective Action follow-up note is required.',
+                            'errors' => ['checklist_answers' => ['Follow-up corrective action note is required for any question answered No (cannot be empty or N/A).']]
+                        ], 422);
+                    }
+                }
+            }
 
             $log->update([
                 'log_date' => $validated['log_date'],

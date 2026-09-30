@@ -6,6 +6,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
 import AmendmentReasonModal from '../components/common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../components/common/CorrectiveActionModal';
 import axios from 'axios';
 
 const PestControlFormPage = ({ logId }) => {
@@ -44,6 +45,8 @@ const PestControlFormPage = ({ logId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [showReasonModal, setShowReasonModal] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   useEffect(() => {
     // Fetch Staff List
@@ -134,7 +137,32 @@ const PestControlFormPage = ({ logId }) => {
   const hasFailedChecklist = Object.values(checklistAnswers).some(a => a.answer === false);
   const passed = !hasFailedChecklist && isPestFree;
 
+  const getFailedPestIssues = () => {
+    const issues = [];
+    if (!isPestFree) {
+      issues.push('Premises is not free of pest activity (pest activity observed). Corrective action notes required.');
+    }
+    Object.entries(checklistAnswers).forEach(([qId, data]) => {
+      if (data.answer === false) {
+        const q = masterQuestions.find(mq => String(mq.id) === String(qId));
+        issues.push(`Checklist issue: "${q?.question_text || q?.text || 'Question'}" marked No. Follow-up corrective note required.`);
+      }
+    });
+    return issues;
+  };
+
   const handleFinalSubmit = async (amendmentReason = '') => {
+    const failedIssues = getFailedPestIssues();
+    const pestRemarksInvalid = !isPestFree && isInvalidCorrectiveAction(remarks);
+    const checklistNotesInvalid = Object.values(checklistAnswers).some(a => a.answer === false && isInvalidCorrectiveAction(a.note));
+
+    if (failedIssues.length > 0 && (pestRemarksInvalid || checklistNotesInvalid)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setShowReasonModal(false);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const checklistData = masterQuestions.map(q => ({
@@ -187,19 +215,17 @@ const PestControlFormPage = ({ logId }) => {
     if (!signedByStaffName) newErrors.signedBy = 'Signed by staff member is required.';
     if (!signature) newErrors.signature = 'Signature is required.';
 
-    // Check notes for any No answers in master questions
-    let failedNoteMissing = false;
-    Object.entries(checklistAnswers).forEach(([qId, data]) => {
-      if (data.answer === false && !data.note.trim()) {
-        failedNoteMissing = true;
-      }
-    });
-    if (failedNoteMissing) {
-      newErrors.checklist = 'Please add follow-up notes for any questions marked No.';
-    }
+    const failedIssues = getFailedPestIssues();
+    const pestRemarksInvalid = !isPestFree && isInvalidCorrectiveAction(remarks);
+    const checklistNotesInvalid = Object.values(checklistAnswers).some(a => a.answer === false && isInvalidCorrectiveAction(a.note));
 
-    if (!isPestFree && !remarks.trim()) {
-      newErrors.remarks = 'Remarks / Action Notes are required when pest activity is observed.';
+    if (failedIssues.length > 0 && (pestRemarksInvalid || checklistNotesInvalid)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      if (pestRemarksInvalid) newErrors.remarks = 'Corrective action notes are required when pest activity is observed (cannot be empty or N/A).';
+      if (checklistNotesInvalid) newErrors.checklist = 'Please provide corrective action notes for questions marked No (cannot be empty or N/A).';
+      setErrors(newErrors);
+      return;
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -333,10 +359,10 @@ const PestControlFormPage = ({ logId }) => {
                           <div className="form-group" style={{ marginTop: '6px', marginBottom: 0 }}>
                             <input
                               className="form-input"
-                              placeholder="Add note / follow-up required * (Mandatory for No)"
+                              placeholder="Add corrective action / follow-up required * (Mandatory for No)"
                               value={currentNote}
                               onChange={e => handleChecklistNoteChange(q.id, e.target.value)}
-                              style={{ borderColor: !currentNote.trim() ? 'var(--color-danger)' : 'var(--color-border-light)', backgroundColor: '#FFF5F5', fontSize: '13px' }}
+                              style={{ borderColor: isInvalidCorrectiveAction(currentNote) ? 'var(--color-danger)' : 'var(--color-border-light)', backgroundColor: '#FFF5F5', fontSize: '13px' }}
                             />
                           </div>
                         )}
@@ -385,14 +411,14 @@ const PestControlFormPage = ({ logId }) => {
               {/* If NO (Pest Activity Found), show only Remarks text field */}
               {!isPestFree && (
                 <div className="form-group" style={{ marginTop: '12px' }}>
-                  <label className="form-label" style={{ color: '#DC2626', fontWeight: 600 }}>Remarks / Action Notes *</label>
+                  <label className="form-label" style={{ color: '#DC2626', fontWeight: 600 }}>Remarks / Action Notes * (Corrective Action Required)</label>
                   <textarea
                     className="form-input"
                     rows={3}
-                    placeholder="Type remarks regarding pest activity observed and corrective actions taken..."
+                    placeholder="Corrective Action Required: Type remarks regarding pest activity observed and corrective actions taken..."
                     value={remarks}
                     onChange={e => setRemarks(e.target.value)}
-                    style={{ backgroundColor: '#FFF5F5', borderColor: !remarks.trim() ? '#DC2626' : 'var(--color-border-light)' }}
+                    style={{ backgroundColor: '#FFF5F5', borderColor: isInvalidCorrectiveAction(remarks) ? '#DC2626' : 'var(--color-border-light)' }}
                     required
                   />
                   {errors.remarks && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.remarks}</span>}
@@ -456,6 +482,12 @@ const PestControlFormPage = ({ logId }) => {
           onClose={() => setShowReasonModal(false)}
           onConfirm={handleFinalSubmit}
           loading={submitting}
+        />
+
+        <CorrectiveActionModal
+          isOpen={correctiveModalOpen}
+          onClose={() => setCorrectiveModalOpen(false)}
+          issueDetails={correctiveModalIssues}
         />
       </div>
     </PageLayout>

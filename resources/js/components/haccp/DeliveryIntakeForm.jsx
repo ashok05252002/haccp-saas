@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
 import AmendmentReasonModal from '../common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../common/CorrectiveActionModal';
 import axios from 'axios';
 import { Save, AlertCircle, Trash2, Plus, X, Info } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
@@ -92,6 +93,8 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [reasonModalOpen, setReasonModalOpen] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   // Quick Add Food Item Modal State
   const [foodModalOpen, setFoodModalOpen] = useState(false);
@@ -301,9 +304,39 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
     }
   };
 
+  const getFailedIssues = () => {
+    const issues = [];
+    if (!form.packaging_intact) {
+      issues.push('Packaging check failed: Outer packaging is not intact or damaged.');
+    }
+    if (!form.vehicle_safe) {
+      issues.push('Delivery vehicle check failed: Vehicle is unsafe, unclean, or at incorrect temperature.');
+    }
+    products.forEach(p => {
+      const selectedFoodItem = foodItems.find(f => String(f.id) === String(p.food_item_id));
+      if (selectedFoodItem && isTemperatureInvalid(p.temperature, selectedFoodItem)) {
+        const st = selectedFoodItem.storage_type || selectedFoodItem.storageType;
+        issues.push(`Temperature out of limit: ${selectedFoodItem.name} reading is ${p.temperature}°C (Limit: ${getStorageTypeRuleText(st)}).`);
+      }
+    });
+    return issues;
+  };
+
   const handleConfirmAmendment = async (amendmentReason) => {
     setSaving(true);
     setError(null);
+
+    const failedIssues = getFailedIssues();
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(form.comment)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setError('A failed check or out-of-limit value has been detected. Please rectify the issue and enter the corrective action before submitting.');
+      setSaving(false);
+      setReasonModalOpen(false);
+      const el = document.getElementById('delivery_intake_comment');
+      if (el) el.focus();
+      return;
+    }
 
     let sigData = form.signature;
     if (sigCanvas.current) {
@@ -336,6 +369,7 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
       console.error(err);
       const errMsg = err.response?.data?.errors?.staff_name?.[0] ||
                      err.response?.data?.errors?.signature?.[0] ||
+                     err.response?.data?.errors?.comment?.[0] ||
                      err.response?.data?.errors?.['products.0.temperature']?.[0] ||
                      err.response?.data?.errors?.products?.[0] ||
                      err.response?.data?.error ||
@@ -383,6 +417,17 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
     const hasEmptyTemp = products.some(p => p.temperature === undefined || p.temperature === null || String(p.temperature).trim() === '');
     if (hasEmptyTemp) {
       setError('Please enter temperature for all products.');
+      return;
+    }
+
+    // 4. Corrective Action Validation if any check or temperature failed
+    const failedIssues = getFailedIssues();
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(form.comment)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setError('A failed check or out-of-limit value has been detected. Please rectify the issue and enter the corrective action before submitting.');
+      const el = document.getElementById('delivery_intake_comment');
+      if (el) el.focus();
       return;
     }
 
@@ -510,14 +555,24 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
             </div>
 
             <div className="form-group" style={{ flex: 1, display: 'flex', flexDirection: 'column', marginTop: '8px' }}>
-              <label className="form-label">Comments / Issues</label>
+              <label className="form-label">
+                Comments / Corrective Action
+                {getFailedIssues().length > 0 && <span style={{ color: 'var(--color-danger)' }}> (Mandatory Corrective Action *)</span>}
+              </label>
               <textarea 
+                id="delivery_intake_comment"
                 className="form-input" 
                 name="comment" 
                 value={form.comment} 
                 onChange={handleChange} 
-                placeholder="Enter any comments or note issues..." 
-                style={{ flex: 1, resize: 'none', minHeight: '60px', fontFamily: 'inherit' }}
+                placeholder={getFailedIssues().length > 0 ? "Mandatory corrective action required for failed check / temperature..." : "Enter any comments or note issues..."} 
+                style={{ 
+                  flex: 1, 
+                  resize: 'none', 
+                  minHeight: '60px', 
+                  fontFamily: 'inherit',
+                  borderColor: (getFailedIssues().length > 0 && isInvalidCorrectiveAction(form.comment)) ? 'var(--color-danger)' : undefined
+                }}
               />
             </div>
           </div>
@@ -676,6 +731,12 @@ const DeliveryIntakeForm = ({ onSave, onCancel, logId }) => {
         onClose={() => setReasonModalOpen(false)}
         onConfirm={handleConfirmAmendment}
         loading={saving}
+      />
+
+      <CorrectiveActionModal
+        isOpen={correctiveModalOpen}
+        onClose={() => setCorrectiveModalOpen(false)}
+        issueDetails={correctiveModalIssues}
       />
 
       {/* Quick Add Food Item Modal */}

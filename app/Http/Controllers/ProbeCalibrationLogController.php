@@ -77,6 +77,13 @@ class ProbeCalibrationLogController extends Controller
         $passed = $boilingValid && $iceValid;
         $status = $passed ? 'Passed' : 'Needs Review';
 
+        if (!$passed && self::isInvalidCorrectiveAction($request->comments)) {
+            return response()->json([
+                'message' => 'Boiling or ice temperature is outside the calibration limit. Corrective Action is required.',
+                'errors' => ['comments' => ['Corrective Action is required when calibration readings fail (cannot be empty or N/A).']]
+            ], 422);
+        }
+
         $log = ProbeCalibrationLog::create([
             'tenant_id'           => $tenantId,
             'branch_id'           => $branchId,
@@ -130,6 +137,13 @@ class ProbeCalibrationLogController extends Controller
 
             $passed = $boilingValid && $iceValid;
             $status = $passed ? 'Passed' : 'Needs Review';
+
+            if (!$passed && self::isInvalidCorrectiveAction($request->comments)) {
+                return response()->json([
+                    'message' => 'Boiling or ice temperature is outside the calibration limit. Corrective Action is required.',
+                    'errors' => ['comments' => ['Corrective Action is required when calibration readings fail (cannot be empty or N/A).']]
+                ], 422);
+            }
 
             $log->update([
                 'log_date'            => $request->log_date,

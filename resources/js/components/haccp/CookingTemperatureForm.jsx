@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/react';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
 import AmendmentReasonModal from '../common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../common/CorrectiveActionModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { AlertTriangle, Save, Flame, Snowflake, Snowflake as RefrigeratorIcon, RefreshCw, Soup, CheckCircle, ArrowRight, ArrowLeft, Plus, Clock } from 'lucide-react';
 import axios from 'axios';
@@ -17,6 +18,8 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
   const [draftKey, setDraftKey] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [showReasonModal, setShowReasonModal] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   // Stepper State (Step 0 to 5 -> 6 steps total)
   const [currentStep, setCurrentStep] = useState(0);
@@ -492,6 +495,48 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
 
   const isCompletedLog = Boolean(logId) && existingStatus === 'COMPLETED';
 
+  const getFailedCookingIssues = () => {
+    const issues = [];
+    if (!cookingNa && validateCooking() === false) {
+      issues.push(`Cooking Step: Temperature (${cookingTemp}°C) failed to reach the required limit (≥ 75°C).`);
+    }
+    if (!chillingNa && validateChilling() === false) {
+      issues.push(`Blast Chilling Step: Rapid cooling cycle failed (End temp: ${chillingEndTemp}°C, Duration: ${chillingDurationMinutes} mins; Limit: ≤ 5°C within 150 mins).`);
+    }
+    if (!chillerNa && validateChiller() === false) {
+      issues.push(`Chiller Storage Step: Temperature (${chillerTemp}°C) is outside safe limits (0°C to 5°C).`);
+    }
+    if (!reheatingNa && validateReheating() === false) {
+      issues.push(`Reheating Step: Temperature (${reheatingTemp}°C) is below the required limit (≥ 75°C).`);
+    }
+    if (!hotHoldingNa && validateHotHolding() === false) {
+      issues.push(`Hot Holding Step: Temperature (${hotHoldingTemp}°C) is below the safe holding limit (≥ 63°C).`);
+    }
+    return issues;
+  };
+
+  const checkCookingCorrectiveActions = () => {
+    const issues = getFailedCookingIssues();
+    if (issues.length === 0) return true;
+
+    const chillingFailed = !chillingNa && validateChilling() === false;
+    const chillingMissingCA = chillingFailed && isInvalidCorrectiveAction(chillingCorrectiveAction);
+
+    const otherFailed = (!cookingNa && validateCooking() === false) ||
+                        (!chillerNa && validateChiller() === false) ||
+                        (!reheatingNa && validateReheating() === false) ||
+                        (!hotHoldingNa && validateHotHolding() === false);
+    const otherMissingCA = otherFailed && isInvalidCorrectiveAction(correctiveAction);
+
+    if (chillingMissingCA || otherMissingCA) {
+      setCorrectiveModalIssues(issues);
+      setCorrectiveModalOpen(true);
+      setError('A failed check or out-of-limit value has been detected. Please rectify the issue and enter the corrective action before submitting.');
+      return false;
+    }
+    return true;
+  };
+
   const handleFinalSignOff = async () => {
     setError(null);
 
@@ -511,8 +556,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
-    if (!chillingNa && validateChilling() === false && !isChillingCorrectiveActionValid(chillingCorrectiveAction)) {
-      setError('Mandatory Corrective Action Required');
+    if (!checkCookingCorrectiveActions()) {
       return;
     }
 
@@ -557,8 +601,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
-    if (!chillingNa && validateChilling() === false && !isChillingCorrectiveActionValid(chillingCorrectiveAction)) {
-      setError('Mandatory Corrective Action Required');
+    if (!checkCookingCorrectiveActions()) {
       setShowReasonModal(false);
       return;
     }
@@ -600,8 +643,7 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
-    if (!chillingNa && validateChilling() === false && !isChillingCorrectiveActionValid(chillingCorrectiveAction)) {
-      setError('Mandatory Corrective Action Required');
+    if (!checkCookingCorrectiveActions()) {
       return;
     }
 
@@ -1290,6 +1332,12 @@ const CookingTemperatureForm = ({ onSave, onCancel, logId }) => {
         onClose={() => setShowReasonModal(false)}
         onConfirm={handleFinalSubmit}
         loading={submitting}
+      />
+
+      <CorrectiveActionModal
+        isOpen={correctiveModalOpen}
+        onClose={() => setCorrectiveModalOpen(false)}
+        issueDetails={correctiveModalIssues}
       />
     </div>
   );

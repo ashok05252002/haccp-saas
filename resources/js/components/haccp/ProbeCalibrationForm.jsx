@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
 import AmendmentReasonModal from '../common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../common/CorrectiveActionModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { Info, AlertTriangle, CheckCircle, Plus, UserPlus, RotateCcw } from 'lucide-react';
 import axios from 'axios';
@@ -25,6 +26,8 @@ const ProbeCalibrationForm = ({ onSave, onCancel, logId }) => {
   const [existingSignature, setExistingSignature] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [showReasonModal, setShowReasonModal] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const nowTimeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -220,7 +223,29 @@ const ProbeCalibrationForm = ({ onSave, onCancel, logId }) => {
     }
   };
 
+  const getFailedCalibrationIssues = () => {
+    const issues = [];
+    const b = parseFloat(boilingTemp);
+    if (!isNaN(b) && (b < 99.0 || b > 101.0)) {
+      issues.push(`Boiling water test reading (${boilingTemp}°C) is outside acceptable limit (99.0°C - 101.0°C).`);
+    }
+    const i = parseFloat(iceTemp);
+    if (!isNaN(i) && (i < -1.0 || i > 1.0)) {
+      issues.push(`Ice water test reading (${iceTemp}°C) is outside acceptable limit (-1.0°C - 1.0°C).`);
+    }
+    return issues;
+  };
+
   const handleFinalSubmit = async (amendmentReason = '') => {
+    const failedIssues = getFailedCalibrationIssues();
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(comments)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setError('A failed check or out-of-limit value has been detected. Please rectify the issue and enter the corrective action before submitting.');
+      setShowReasonModal(false);
+      return;
+    }
+
     let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
       signatureData = sigPad.current.getCanvas().toDataURL('image/png');
@@ -282,6 +307,15 @@ const ProbeCalibrationForm = ({ onSave, onCancel, logId }) => {
       setError('Ice water test reading is required.');
       return;
     }
+
+    const failedIssues = getFailedCalibrationIssues();
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(comments)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setError('A failed check or out-of-limit value has been detected. Please rectify the issue and enter the corrective action before submitting.');
+      return;
+    }
+
     let signatureData = existingSignature;
     if (sigPad.current && !sigPad.current.isEmpty()) {
       signatureData = sigPad.current.getCanvas().toDataURL('image/png');
@@ -557,16 +591,17 @@ const ProbeCalibrationForm = ({ onSave, onCancel, logId }) => {
         <div className="card card-padded">
           <div style={{ borderBottom: '1px solid var(--color-border-light)', paddingBottom: '12px', marginBottom: '20px' }}>
             <h3 className="section-title" style={{ fontSize: '16px', margin: 0, color: 'var(--color-text-primary)' }}>
-              Comments / Actions
+              Comments / Actions {getFailedCalibrationIssues().length > 0 && <span style={{ color: '#DC2626', fontSize: '13px', fontWeight: 600 }}>* (Corrective Action Required)</span>}
             </h3>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <textarea
               className="form-textarea"
               rows="3"
-              placeholder="Enter comments or action taken if needed..."
+              placeholder={getFailedCalibrationIssues().length > 0 ? "Corrective Action Required: Describe calibration adjustment, probe re-testing, or probe replacement..." : "Enter comments or action taken if needed..."}
               value={comments}
               onChange={e => setComments(e.target.value)}
+              style={getFailedCalibrationIssues().length > 0 && isInvalidCorrectiveAction(comments) ? { borderColor: '#EF4444', backgroundColor: '#FEF2F2' } : {}}
             />
           </div>
         </div>
@@ -734,6 +769,12 @@ const ProbeCalibrationForm = ({ onSave, onCancel, logId }) => {
         onClose={() => setShowReasonModal(false)}
         onConfirm={handleFinalSubmit}
         loading={submitting}
+      />
+
+      <CorrectiveActionModal
+        isOpen={correctiveModalOpen}
+        onClose={() => setCorrectiveModalOpen(false)}
+        issueDetails={correctiveModalIssues}
       />
     </div>
   );

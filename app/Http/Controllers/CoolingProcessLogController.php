@@ -78,11 +78,11 @@ class CoolingProcessLogController extends Controller
         $duration = (int) ($request->duration_minutes ?? 0);
         $checkPassed = ($endTemp <= 8.0) && ($duration <= 120);
 
-        if (!$checkPassed && empty($request->comments)) {
+        if (!$checkPassed && Controller::isInvalidCorrectiveAction($request->comments ?? null)) {
             return response()->json([
                 'message' => 'The given data was invalid.',
                 'errors'  => [
-                    'comments' => ['Comments / corrective action taken is mandatory when temperature or duration exceeds limits (≤8°C within 2 hours).']
+                    'comments' => ['Comments / corrective action taken is mandatory when temperature or duration exceeds limits (≤8°C within 2 hours). It cannot be empty or N/A.']
                 ]
             ], 422);
         }
@@ -140,6 +140,15 @@ class CoolingProcessLogController extends Controller
             $endTemp = (float) $request->end_temp;
             $duration = (int) ($request->duration_minutes ?? 0);
             $checkPassed = ($endTemp <= 8.0) && ($duration <= 120);
+
+            if (!$checkPassed && Controller::isInvalidCorrectiveAction($request->comments ?? null)) {
+                return response()->json([
+                    'message' => 'The given data was invalid.',
+                    'errors'  => [
+                        'comments' => ['Comments / corrective action taken is mandatory when temperature or duration exceeds limits (≤8°C within 2 hours). It cannot be empty or N/A.']
+                    ]
+                ], 422);
+            }
 
             $log->update([
                 'log_date'         => $request->end_date ?? $log->log_date,

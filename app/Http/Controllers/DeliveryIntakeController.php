@@ -57,6 +57,39 @@ class DeliveryIntakeController extends Controller
             'products.*.temperature.numeric' => 'Temperature must be a valid number.',
         ]);
 
+        $hasFailedCheck = !$validated['packaging_intact'] || !$validated['vehicle_safe'];
+        if (!$hasFailedCheck) {
+            $foodItemIds = array_column($validated['products'], 'food_item_id');
+            $foodItems = \App\Models\FoodItem::with('storageType')->whereIn('id', $foodItemIds)->get()->keyBy('id');
+            foreach ($validated['products'] as $pData) {
+                $fItem = $foodItems->get($pData['food_item_id']);
+                if ($fItem && $fItem->storageType) {
+                    $temp = (float) $pData['temperature'];
+                    $stName = strtolower($fItem->storageType->name ?? '');
+                    if (str_contains($stName, 'chilled')) {
+                        $min = $fItem->storageType->min_temp !== null ? (float)$fItem->storageType->min_temp : 0.0;
+                        $max = $fItem->storageType->max_temp !== null ? (float)$fItem->storageType->max_temp : 5.0;
+                        if ($temp < $min || $temp > $max) { $hasFailedCheck = true; break; }
+                    } elseif (str_contains($stName, 'frozen')) {
+                        $max = $fItem->storageType->max_temp !== null ? (float)$fItem->storageType->max_temp : -18.0;
+                        if ($temp > $max) { $hasFailedCheck = true; break; }
+                    } elseif (str_contains($stName, 'hot')) {
+                        $min = $fItem->storageType->min_temp !== null ? (float)$fItem->storageType->min_temp : 63.0;
+                        if ($temp < $min) { $hasFailedCheck = true; break; }
+                    }
+                }
+            }
+        }
+
+        if ($hasFailedCheck && Controller::isInvalidCorrectiveAction($validated['comment'] ?? null)) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'comment' => ['Corrective Action is required when packaging/vehicle checks or food temperatures fail. It cannot be empty or N/A.']
+                ]
+            ], 422);
+        }
+
         DB::beginTransaction();
 
         try {
@@ -122,6 +155,39 @@ class DeliveryIntakeController extends Controller
             'amendment_reason.required' => 'Reason for amendment is required.',
             'amendment_reason.min' => 'Reason for amendment must be at least 3 characters.',
         ]);
+
+        $hasFailedCheck = !$validated['packaging_intact'] || !$validated['vehicle_safe'];
+        if (!$hasFailedCheck) {
+            $foodItemIds = array_column($validated['products'], 'food_item_id');
+            $foodItems = \App\Models\FoodItem::with('storageType')->whereIn('id', $foodItemIds)->get()->keyBy('id');
+            foreach ($validated['products'] as $pData) {
+                $fItem = $foodItems->get($pData['food_item_id']);
+                if ($fItem && $fItem->storageType) {
+                    $temp = (float) $pData['temperature'];
+                    $stName = strtolower($fItem->storageType->name ?? '');
+                    if (str_contains($stName, 'chilled')) {
+                        $min = $fItem->storageType->min_temp !== null ? (float)$fItem->storageType->min_temp : 0.0;
+                        $max = $fItem->storageType->max_temp !== null ? (float)$fItem->storageType->max_temp : 5.0;
+                        if ($temp < $min || $temp > $max) { $hasFailedCheck = true; break; }
+                    } elseif (str_contains($stName, 'frozen')) {
+                        $max = $fItem->storageType->max_temp !== null ? (float)$fItem->storageType->max_temp : -18.0;
+                        if ($temp > $max) { $hasFailedCheck = true; break; }
+                    } elseif (str_contains($stName, 'hot')) {
+                        $min = $fItem->storageType->min_temp !== null ? (float)$fItem->storageType->min_temp : 63.0;
+                        if ($temp < $min) { $hasFailedCheck = true; break; }
+                    }
+                }
+            }
+        }
+
+        if ($hasFailedCheck && Controller::isInvalidCorrectiveAction($validated['comment'] ?? null)) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'comment' => ['Corrective Action is required when packaging/vehicle checks or food temperatures fail. It cannot be empty or N/A.']
+                ]
+            ], 422);
+        }
 
         DB::beginTransaction();
 

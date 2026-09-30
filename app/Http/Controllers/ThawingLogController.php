@@ -48,15 +48,17 @@ class ThawingLogController extends Controller
             'signature' => 'required|string',
         ]);
 
-        // Compliance check (CCP limit: <= 5.0°C for chilled defrosting methods)
+        // Compliance check (CCP limit: <= 8.0°C)
         $defrostTemp = floatval($validated['defrost_temp']);
-        $defrostMethod = $validated['defrost_method'];
-        $isChilledMethod = str_contains(strtolower($defrostMethod), 'refrigerator') ||
-                           str_contains(strtolower($defrostMethod), 'chiller') ||
-                           str_contains(strtolower($defrostMethod), 'water');
-
-        $passed = !($isChilledMethod && $defrostTemp > 5.0);
+        $passed = ($defrostTemp <= 8.0);
         $status = $passed ? 'Passed' : 'Needs Review';
+
+        if (!$passed && self::isInvalidCorrectiveAction($validated['comments'] ?? null)) {
+            return response()->json([
+                'message' => 'Defrost temperature exceeded the critical limit (≤ 8.0°C). Corrective Action is required.',
+                'errors' => ['comments' => ['Corrective Action is required when thawing check fails (cannot be empty or N/A).']]
+            ], 422);
+        }
 
         $log = ThawingLog::create([
             'tenant_id' => $tenantId,
@@ -114,13 +116,15 @@ class ThawingLogController extends Controller
             $originalData = $log->toArray();
 
             $defrostTemp = floatval($validated['defrost_temp']);
-            $defrostMethod = $validated['defrost_method'];
-            $isChilledMethod = str_contains(strtolower($defrostMethod), 'refrigerator') ||
-                               str_contains(strtolower($defrostMethod), 'chiller') ||
-                               str_contains(strtolower($defrostMethod), 'water');
-
-            $passed = !($isChilledMethod && $defrostTemp > 5.0);
+            $passed = ($defrostTemp <= 8.0);
             $status = $passed ? 'Passed' : 'Needs Review';
+
+            if (!$passed && self::isInvalidCorrectiveAction($validated['comments'] ?? null)) {
+                return response()->json([
+                    'message' => 'Defrost temperature exceeded the critical limit (≤ 8.0°C). Corrective Action is required.',
+                    'errors' => ['comments' => ['Corrective Action is required when thawing check fails (cannot be empty or N/A).']]
+                ], 422);
+            }
 
             $log->update([
                 'log_date' => $validated['log_date'],

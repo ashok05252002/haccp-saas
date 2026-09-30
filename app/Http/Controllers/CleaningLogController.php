@@ -85,6 +85,34 @@ class CleaningLogController extends Controller
             'signature.required' => 'Please add signature before saving.',
         ]);
 
+        $hasFailedItem = false;
+        foreach ($request->results as $res) {
+            if (($res['result'] ?? '') === 'No') {
+                $hasFailedItem = true;
+                break;
+            }
+        }
+
+        if ($hasFailedItem) {
+            $hasValidItemCA = false;
+            foreach ($request->results as $res) {
+                if (($res['result'] ?? '') === 'No' && !Controller::isInvalidCorrectiveAction($res['comment'] ?? null)) {
+                    $hasValidItemCA = true;
+                    break;
+                }
+            }
+            $hasValidOverallCA = !Controller::isInvalidCorrectiveAction($request->comment ?? null);
+
+            if (!$hasValidItemCA && !$hasValidOverallCA) {
+                return response()->json([
+                    'message' => 'The given data was invalid.',
+                    'errors' => [
+                        'comment' => ['Corrective Action is required when any cleaning task is marked as not completed (No). It cannot be empty or N/A.']
+                    ]
+                ], 422);
+            }
+        }
+
         $tenantId = Auth::user()->tenant_id;
         $branchId = Auth::user()->branch_id ?? session('active_branch_id');
         if (!$tenantId) {
@@ -143,6 +171,34 @@ class CleaningLogController extends Controller
             'staff_name.required' => 'Please select staff member.',
             'signature.required' => 'Please add signature before saving.',
         ]);
+
+        $hasFailedItem = false;
+        foreach ($request->results as $res) {
+            if (($res['result'] ?? '') === 'No') {
+                $hasFailedItem = true;
+                break;
+            }
+        }
+
+        if ($hasFailedItem) {
+            $hasValidItemCA = false;
+            foreach ($request->results as $res) {
+                if (($res['result'] ?? '') === 'No' && !Controller::isInvalidCorrectiveAction($res['comment'] ?? null)) {
+                    $hasValidItemCA = true;
+                    break;
+                }
+            }
+            $hasValidOverallCA = !Controller::isInvalidCorrectiveAction($request->comment ?? null);
+
+            if (!$hasValidItemCA && !$hasValidOverallCA) {
+                return response()->json([
+                    'message' => 'The given data was invalid.',
+                    'errors' => [
+                        'comment' => ['Corrective Action is required when any cleaning task is marked as not completed (No). It cannot be empty or N/A.']
+                    ]
+                ], 422);
+            }
+        }
 
         try {
             DB::beginTransaction();

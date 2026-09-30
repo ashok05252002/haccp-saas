@@ -70,6 +70,22 @@ class HotHoldingLogController extends Controller
 
         $status = ($hasEnteredTemp && !$hasBelowThreshold) ? 'Passed' : 'Needs Review';
 
+        if ($hasBelowThreshold) {
+            $hasRowAction = false;
+            foreach ($items as $item) {
+                if (!empty($item['comments']) && !self::isInvalidCorrectiveAction($item['comments'])) {
+                    $hasRowAction = true;
+                    break;
+                }
+            }
+            if (!$hasRowAction && self::isInvalidCorrectiveAction($validated['general_comments'] ?? null)) {
+                return response()->json([
+                    'message' => 'Hot holding temperature is below the safe critical limit (63°C). Corrective Action is required in comments.',
+                    'errors' => ['general_comments' => ['Corrective Action is required when hot holding temperature is below 63°C (cannot be empty or N/A).']]
+                ], 422);
+            }
+        }
+
         $log = HotHoldingLog::create([
             'tenant_id' => $tenantId,
             'branch_id' => $branchId,
@@ -135,6 +151,22 @@ class HotHoldingLogController extends Controller
             }
 
             $status = ($hasEnteredTemp && !$hasBelowThreshold) ? 'Passed' : 'Needs Review';
+
+            if ($hasBelowThreshold) {
+                $hasRowAction = false;
+                foreach ($items as $item) {
+                    if (!empty($item['comments']) && !self::isInvalidCorrectiveAction($item['comments'])) {
+                        $hasRowAction = true;
+                        break;
+                    }
+                }
+                if (!$hasRowAction && self::isInvalidCorrectiveAction($validated['general_comments'] ?? null)) {
+                    return response()->json([
+                        'message' => 'Hot holding temperature is below the safe critical limit (63°C). Corrective Action is required in comments.',
+                        'errors' => ['general_comments' => ['Corrective Action is required when hot holding temperature is below 63°C (cannot be empty or N/A).']]
+                    ], 422);
+                }
+            }
 
             $log->update([
                 'items' => $items,

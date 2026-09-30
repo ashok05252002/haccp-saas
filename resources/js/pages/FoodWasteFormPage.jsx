@@ -5,6 +5,7 @@ import PageLayout from '../components/layout/PageLayout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SignaturePad from '../components/common/SignaturePad';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../components/common/CorrectiveActionModal';
 import axios from 'axios';
 
 const UNITS = ['kg', 'g', 'litres', 'portions', 'units', 'trays'];
@@ -83,6 +84,8 @@ const FoodWasteFormPage = ({ logId }) => {
 
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   useEffect(() => {
     // Fetch Staff List
@@ -711,6 +714,16 @@ const FoodWasteFormPage = ({ logId }) => {
       return;
     }
 
+    const severeItems = wasteItems.filter(i => severeReasons.includes(i.reason));
+    if (severeItems.length > 0 && isInvalidCorrectiveAction(preventionAction)) {
+      const issues = severeItems.map(i => `Food waste item "${i.foodItem || 'Item'}" has high-risk reason: "${i.reason}". Corrective prevention action is required.`);
+      setCorrectiveModalIssues(issues);
+      setCorrectiveModalOpen(true);
+      setErrors({ preventionAction: 'Corrective Action is required for high-risk waste reasons (cannot be empty or N/A).' });
+      focusAndScrollToField('field-prevention-action');
+      return;
+    }
+
     setErrors({});
 
     setSubmitting(true);
@@ -1203,8 +1216,19 @@ const FoodWasteFormPage = ({ logId }) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Prevention Action / Follow-up</label>
-                <textarea className="form-input" rows={2} placeholder="e.g. Adjust prep quantity, check stock rotation..." value={preventionAction} onChange={e => setPreventionAction(e.target.value)} />
+                <label className="form-label">
+                  Prevention Action / Follow-up {hasSevereReason && <span style={{ color: '#DC2626', fontSize: '13px', fontWeight: 600 }}>* (Corrective Action Required)</span>}
+                </label>
+                <textarea
+                  id="field-prevention-action"
+                  className="form-input"
+                  rows={2}
+                  placeholder={hasSevereReason ? "Corrective Action Required: Describe actions to prevent temperature abuse, expired food, or contamination..." : "e.g. Adjust prep quantity, check stock rotation..."}
+                  value={preventionAction}
+                  onChange={e => setPreventionAction(e.target.value)}
+                  style={hasSevereReason && isInvalidCorrectiveAction(preventionAction) ? { borderColor: '#EF4444', backgroundColor: '#FEF2F2' } : {}}
+                />
+                {errors.preventionAction && <span style={{ color: 'var(--color-danger)', fontSize: '12px' }}>{errors.preventionAction}</span>}
               </div>
 
               {/* Status Banner */}
@@ -1282,6 +1306,12 @@ const FoodWasteFormPage = ({ logId }) => {
             </Button>
           </div>
         </form>
+
+        <CorrectiveActionModal
+          isOpen={correctiveModalOpen}
+          onClose={() => setCorrectiveModalOpen(false)}
+          issueDetails={correctiveModalIssues}
+        />
       </div>
     </PageLayout>
   );

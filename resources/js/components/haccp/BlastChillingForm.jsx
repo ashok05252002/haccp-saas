@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
 import AmendmentReasonModal from '../common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../common/CorrectiveActionModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { Snowflake, AlertTriangle, CheckCircle, Plus, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
@@ -35,6 +36,8 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
   const [existingSignature, setExistingSignature] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [showReasonModal, setShowReasonModal] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   // Form Fields matching mock schema
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -254,18 +257,27 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
     }
   };
 
-  const handleFinalSubmit = async (amendmentReason = '') => {
+  const getFailedBlastChillingIssues = () => {
     const end = parseFloat(endTemp);
     const dur = durationMinutes !== '' && durationMinutes !== null ? parseFloat(durationMinutes) : NaN;
-    const isPassed = (!isNaN(end) && end <= 5.0) && (!isNaN(dur) && dur <= 150);
+    const issues = [];
+    if (!isNaN(end) && end > 5.0) {
+      issues.push(`End temperature (${endTemp}°C) exceeds the CCP-4 limit (≤ 5.0°C).`);
+    }
+    if (!isNaN(dur) && dur > 150) {
+      issues.push(`Chilling duration (${durationMinutes} mins) exceeds maximum allowed cycle time (≤ 150 mins).`);
+    }
+    return issues;
+  };
 
-    if (!isPassed) {
-      const trimmedAction = (correctiveAction || '').trim();
-      if (!trimmedAction || trimmedAction.toLowerCase() === 'n/a' || trimmedAction.toLowerCase() === 'na') {
-        setError('Mandatory Corrective Action is required when blast chilling limit is failed. It cannot be empty or N/A.');
-        setShowReasonModal(false);
-        return;
-      }
+  const handleFinalSubmit = async (amendmentReason = '') => {
+    const failedIssues = getFailedBlastChillingIssues();
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(correctiveAction)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setError('A failed check or out-of-limit value has been detected. Please rectify the issue and enter the corrective action before submitting.');
+      setShowReasonModal(false);
+      return;
     }
 
     let signatureData = existingSignature;
@@ -327,16 +339,12 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
       return;
     }
 
-    const end = parseFloat(endTemp);
-    const dur = durationMinutes !== '' && durationMinutes !== null ? parseFloat(durationMinutes) : NaN;
-    const isPassed = (!isNaN(end) && end <= 5.0) && (!isNaN(dur) && dur <= 150);
-
-    if (!isPassed) {
-      const trimmedAction = (correctiveAction || '').trim();
-      if (!trimmedAction || trimmedAction.toLowerCase() === 'n/a' || trimmedAction.toLowerCase() === 'na') {
-        setError('Mandatory Corrective Action is required when blast chilling limit is failed. It cannot be empty or N/A.');
-        return;
-      }
+    const failedIssues = getFailedBlastChillingIssues();
+    if (failedIssues.length > 0 && isInvalidCorrectiveAction(correctiveAction)) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setError('A failed check or out-of-limit value has been detected. Please rectify the issue and enter the corrective action before submitting.');
+      return;
     }
 
     let signatureData = existingSignature;
@@ -821,6 +829,12 @@ const BlastChillingForm = ({ onSave, onCancel, logId }) => {
         onClose={() => setShowReasonModal(false)}
         onConfirm={handleFinalSubmit}
         loading={submitting}
+      />
+
+      <CorrectiveActionModal
+        isOpen={correctiveModalOpen}
+        onClose={() => setCorrectiveModalOpen(false)}
+        issueDetails={correctiveModalIssues}
       />
     </div>
   );

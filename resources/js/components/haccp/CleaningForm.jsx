@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import AmendmentReasonModal from '../common/AmendmentReasonModal';
+import CorrectiveActionModal, { isInvalidCorrectiveAction } from '../common/CorrectiveActionModal';
 import SignatureCanvas from 'react-signature-canvas';
 import { AlertTriangle, Save, CheckCircle, XCircle, MinusCircle, ClipboardCheck, ArrowRight, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
@@ -13,6 +14,8 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
   const [error, setError] = useState(null);
   const [existingSignature, setExistingSignature] = useState(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
+  const [correctiveModalOpen, setCorrectiveModalOpen] = useState(false);
+  const [correctiveModalIssues, setCorrectiveModalIssues] = useState([]);
 
   // Stepper State
   const [currentStep, setCurrentStep] = useState(0);
@@ -125,7 +128,42 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
     setCurrentStep(prev => prev - 1);
   };
 
+  const getFailedIssues = () => {
+    const issues = [];
+    sections.forEach(section => {
+      (section.questions || []).forEach(q => {
+        const ans = answers[q.id];
+        if (ans && ans.result === 'No') {
+          issues.push(`${q.question_text || 'Cleaning task'}: Marked as not completed (No).`);
+        }
+      });
+    });
+    return issues;
+  };
+
+  const checkCorrectiveAction = () => {
+    const failedIssues = getFailedIssues();
+    if (failedIssues.length === 0) return true;
+
+    const hasItemCA = Object.entries(answers).some(([qId, ans]) => ans.result === 'No' && !isInvalidCorrectiveAction(ans.comment));
+    const hasOverallCA = !isInvalidCorrectiveAction(overallComment);
+
+    if (!hasItemCA && !hasOverallCA) {
+      setCorrectiveModalIssues(failedIssues);
+      setCorrectiveModalOpen(true);
+      setError('A failed check or out-of-limit value has been detected. Please rectify the issue and enter the corrective action before submitting.');
+      return false;
+    }
+    return true;
+  };
+
   const handleFinalSubmit = async (amendmentReason = '') => {
+    if (!checkCorrectiveAction()) {
+      setSubmitting(false);
+      setShowReasonModal(false);
+      return;
+    }
+
     // Format results
     const results = [];
     sections.forEach(section => {
@@ -170,7 +208,10 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
       onSave();
     } catch (err) {
       console.error('Failed to save logs', err);
-      const errMsg = err.response?.data?.errors?.signature?.[0] || err.response?.data?.errors?.staff_name?.[0] || err.response?.data?.message || 'Failed to save logs.';
+      const errMsg = err.response?.data?.errors?.signature?.[0] || 
+                     err.response?.data?.errors?.staff_name?.[0] || 
+                     err.response?.data?.errors?.comment?.[0] || 
+                     err.response?.data?.message || 'Failed to save logs.';
       setError(errMsg);
     } finally {
       setSubmitting(false);
@@ -198,6 +239,10 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
 
     if (!signatureData || !signatureData.trim()) {
       setError("Please add signature before saving.");
+      return;
+    }
+
+    if (!checkCorrectiveAction()) {
       return;
     }
 
@@ -455,14 +500,20 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
 
             <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '32px' }}>
               <div className="form-group">
-                <label className="form-label" style={{ color: 'var(--color-text-primary)', fontSize: '15px' }}>Overall Comments</label>
+                <label className="form-label" style={{ color: 'var(--color-text-primary)', fontSize: '15px' }}>
+                  Overall Comments / Corrective Action
+                  {getFailedIssues().length > 0 && <span style={{ color: 'var(--color-danger)' }}> (Mandatory Corrective Action *)</span>}
+                </label>
                 <textarea 
                   className="form-input" 
                   rows="4" 
-                  placeholder="Any additional notes about the cleaning process..."
+                  placeholder={getFailedIssues().length > 0 ? "Mandatory corrective action required for uncompleted cleaning tasks..." : "Any additional notes about the cleaning process..."}
                   value={overallComment}
                   onChange={e => setOverallComment(e.target.value)}
-                  style={{ resize: 'vertical' }}
+                  style={{ 
+                    resize: 'vertical',
+                    borderColor: (getFailedIssues().length > 0 && isInvalidCorrectiveAction(overallComment)) ? 'var(--color-danger)' : undefined
+                  }}
                 ></textarea>
               </div>
             </div>
@@ -521,6 +572,12 @@ const CleaningForm = ({ onSave, onCancel, logId }) => {
         onClose={() => setShowReasonModal(false)}
         onConfirm={handleFinalSubmit}
         loading={submitting}
+      />
+
+      <CorrectiveActionModal
+        isOpen={correctiveModalOpen}
+        onClose={() => setCorrectiveModalOpen(false)}
+        issueDetails={correctiveModalIssues}
       />
     </div>
   );

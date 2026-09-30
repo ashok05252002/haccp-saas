@@ -63,7 +63,33 @@ class TemperatureLogController extends Controller
         }
 
         $logs = [];
-        foreach ($request->readings as $reading) {
+        foreach ($request->readings as $idx => $reading) {
+            $isValid = filter_var($reading['is_valid'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            if (isset($reading['storage_zone_id']) && isset($reading['temperature'])) {
+                $zone = StorageZone::where('tenant_id', $tenantId)->find($reading['storage_zone_id']);
+                if ($zone) {
+                    $temp = floatval($reading['temperature']);
+                    $minVal = $zone->min_temp ?? $zone->target_temp_min;
+                    $maxVal = $zone->max_temp ?? $zone->target_temp_max;
+                    $min = $minVal !== null ? floatval($minVal) : -999;
+                    $max = $maxVal !== null ? floatval($maxVal) : 999;
+                    if ($temp < $min || $temp > $max) {
+                        $isValid = false;
+                    }
+                }
+            }
+
+            if (!$isValid) {
+                if (Controller::isInvalidCorrectiveAction($reading['comment'] ?? null)) {
+                    return response()->json([
+                        'message' => 'The given data was invalid.',
+                        'errors' => [
+                            "readings.{$idx}.comment" => ['Corrective Action is required when temperature is outside the allowed limit. It cannot be empty or N/A.']
+                        ]
+                    ], 422);
+                }
+            }
+
             $logs[] = TemperatureLog::create([
                 'tenant_id' => $tenantId,
                 'branch_id' => $branchId,
@@ -118,9 +144,23 @@ class TemperatureLogController extends Controller
                 $zone = StorageZone::where('tenant_id', $tenantId)->find($storageZoneId);
                 if ($zone) {
                     $temp = floatval($validated['temperature']);
-                    $min = $zone->target_temp_min !== null ? floatval($zone->target_temp_min) : -999;
-                    $max = $zone->target_temp_max !== null ? floatval($zone->target_temp_max) : 999;
+                    $minVal = $zone->min_temp ?? $zone->target_temp_min;
+                    $maxVal = $zone->max_temp ?? $zone->target_temp_max;
+                    $min = $minVal !== null ? floatval($minVal) : -999;
+                    $max = $maxVal !== null ? floatval($maxVal) : 999;
                     $isValid = ($temp >= $min && $temp <= $max);
+                }
+            }
+
+            if (!$isValid) {
+                $comment = $validated['comment'] ?? $log->comment;
+                if (Controller::isInvalidCorrectiveAction($comment)) {
+                    abort(response()->json([
+                        'message' => 'The given data was invalid.',
+                        'errors' => [
+                            'comment' => ['Corrective Action is required when temperature is outside the allowed limit. It cannot be empty or N/A.']
+                        ]
+                    ], 422));
                 }
             }
 
